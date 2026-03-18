@@ -111,7 +111,9 @@ public class MainForm : Form
 
     private UserControl CreateTab(int index) => index switch
     {
-        0 => new ReservationSalesTab(_sp.GetRequiredService<ISalesService>()),
+        0 => new ReservationSalesTab(
+                _sp.GetRequiredService<ISalesService>(),
+                _sp.GetRequiredService<IReservationScraperService>()),
         1 => new ScheduleTab(
                 _sp.GetRequiredService<IScheduleService>(),
                 _sp.GetRequiredService<IEmployeeService>()),
@@ -123,7 +125,10 @@ public class MainForm : Form
                 _sp.GetRequiredService<IAttendanceService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IScheduleService>()),
-        7 => new SettingsTab(_sp.GetRequiredService<IEmployeeService>()),
+        7 => new SettingsTab(
+                _sp.GetRequiredService<IEmployeeService>(),
+                _sp.GetRequiredService<IReservationScraperService>(),
+                _sp.GetRequiredService<IConfigRepository>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

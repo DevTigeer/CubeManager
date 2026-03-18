@@ -8,14 +8,17 @@ namespace CubeManager.Forms;
 public class ReservationSalesTab : UserControl
 {
     private readonly ISalesService _salesService;
+    private readonly IReservationScraperService _scraperService;
     private readonly DateTimePicker _dtpDate;
     private readonly DataGridView _gridItems;
+    private readonly DataGridView _gridReservations;
     private readonly Label _lblCard, _lblCash, _lblTransfer, _lblTotal, _lblCashBalance;
     private string _currentDate;
 
-    public ReservationSalesTab(ISalesService salesService)
+    public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService)
     {
         _salesService = salesService;
+        _scraperService = scraperService;
         _currentDate = DateTime.Today.ToString("yyyy-MM-dd");
         Dock = DockStyle.Fill;
         BackColor = Color.White;
@@ -50,6 +53,10 @@ public class ReservationSalesTab : UserControl
             _ = LoadDataAsync();
         };
         topPanel.Controls.Add(_dtpDate);
+
+        var btnFetchWeb = CreateBtn("웹 조회", ColorPalette.Info);
+        btnFetchWeb.Click += BtnFetchWeb_Click;
+        topPanel.Controls.Add(btnFetchWeb);
 
         var btnAddRevenue = CreateBtn("+ 매출", ColorPalette.Primary);
         btnAddRevenue.Click += (_, _) => AddItem("revenue");
@@ -114,11 +121,75 @@ public class ReservationSalesTab : UserControl
 
         summaryPanel.Controls.AddRange([_lblCard, _lblCash, _lblTransfer, _lblTotal, _lblCashBalance]);
 
+        // 예약 테이블 (상단)
+        _gridReservations = new DataGridView
+        {
+            Dock = DockStyle.Top, Height = 180,
+            AllowUserToAddRows = false, ReadOnly = true,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            RowHeadersVisible = false, BackgroundColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle, GridColor = ColorPalette.Border,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            EnableHeadersVisualStyles = false,
+            DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("맑은 고딕", 9f) },
+            ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+            {
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold), BackColor = ColorPalette.Background
+            }
+        };
+        _gridReservations.Columns.AddRange(
+            new DataGridViewTextBoxColumn { HeaderText = "시간", FillWeight = 10 },
+            new DataGridViewTextBoxColumn { HeaderText = "방", FillWeight = 15 },
+            new DataGridViewTextBoxColumn { HeaderText = "예약자", FillWeight = 15 },
+            new DataGridViewTextBoxColumn { HeaderText = "연락처", FillWeight = 20 },
+            new DataGridViewTextBoxColumn { HeaderText = "인원", FillWeight = 8 },
+            new DataGridViewTextBoxColumn { HeaderText = "상태", FillWeight = 10 });
+
+        var lblReserve = new Label
+        {
+            Text = "예약 현황 (웹 조회)", Dock = DockStyle.Top, Height = 22,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextSecondary, Padding = new Padding(0, 5, 0, 0)
+        };
+
         Controls.Add(_gridItems);
+        Controls.Add(_gridReservations);
+        Controls.Add(lblReserve);
         Controls.Add(summaryPanel);
         Controls.Add(topPanel);
 
         _ = LoadDataAsync();
+    }
+
+    private async void BtnFetchWeb_Click(object? sender, EventArgs e)
+    {
+        if (sender is Button btn) { btn.Enabled = false; btn.Text = "조회 중..."; }
+        try
+        {
+            var reservations = (await _scraperService.FetchReservationsAsync(_dtpDate.Value)).ToList();
+            _gridReservations.Rows.Clear();
+
+            if (reservations.Count == 0)
+            {
+                ToastNotification.Show("예약 데이터가 없거나 웹 연동 설정을 확인하세요.", ToastType.Warning);
+                return;
+            }
+
+            foreach (var r in reservations)
+            {
+                _gridReservations.Rows.Add(r.TimeSlot, r.RoomName, r.CustomerName,
+                    r.CustomerPhone ?? "", r.Headcount > 0 ? $"{r.Headcount}명" : "", r.Status);
+            }
+            ToastNotification.Show($"예약 {reservations.Count}건 조회 완료.", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"예약 조회 실패: {ex.Message}", ToastType.Error);
+        }
+        finally
+        {
+            if (sender is Button btn2) { btn2.Enabled = true; btn2.Text = "웹 조회"; }
+        }
     }
 
     private async Task LoadDataAsync()

@@ -89,6 +89,7 @@ static class Program
         services.AddSingleton<IAttendanceService, AttendanceService>();
         services.AddSingleton<ISalesService, SalesService>();
         services.AddSingleton<ISalaryService, SalaryService>();
+        services.AddSingleton<IReservationScraperService, ReservationScraperService>();
     }
 
     private static void EnsureAdminPassword()
