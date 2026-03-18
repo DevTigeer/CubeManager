@@ -213,8 +213,8 @@ SQLite 기반 로컬 데이터베이스. 파일명: `cubemanager.db`
 
 **기본 설정 키**:
 - `admin_password_hash`: 관리자 비밀번호 해시
-- `web_login_id`: cubeescape 로그인 ID (암호화)
-- `web_login_pw`: cubeescape 로그인 PW (암호화)
+- `web_login_id`: 웹 관리자 로그인 ID (DPAPI 암호화 저장)
+- `web_login_pw`: 웹 관리자 로그인 PW (DPAPI 암호화 저장)
 - `default_meal_allowance`: 식비 기본금액
 - `taxi_allowance`: 택시비 기본금액 (10000)
 - `taxi_cutoff_time`: 택시비 기준 시간 (23:30)
