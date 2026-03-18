@@ -1,0 +1,41 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+# IDE
+.vs/
+.idea/
+*.sln.DotSettings.user
+.vscode/
+
+# DB (운영 데이터는 커밋 금지)
+*.db
+*.db-wal
+*.db-shm
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 빌드 산출물
+publish/
+packages/
+
+# 사용자 설정
+appsettings.local.json
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Logs
+logs/
+
+# Claude plans (로컬 전용)
+.claude/

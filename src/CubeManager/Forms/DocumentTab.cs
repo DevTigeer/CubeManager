@@ -1,0 +1,199 @@
+using System.Drawing;
+using CubeManager.Helpers;
+
+namespace CubeManager.Forms;
+
+public class DocumentTab : UserControl
+{
+    private readonly TreeView _treeView;
+    private readonly RichTextBox _richViewer;
+    private readonly TextBox _txtEditor;
+    private readonly string _docsRoot;
+    private string? _currentFile;
+    private bool _isEditMode;
+
+    public DocumentTab()
+    {
+        Dock = DockStyle.Fill;
+        BackColor = Color.White;
+        Padding = new Padding(10);
+
+        _docsRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "CubeManager", "documents");
+        Directory.CreateDirectory(_docsRoot);
+
+        // Top bar
+        var topBar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 45, Padding = new Padding(0, 5, 0, 5) };
+        topBar.Controls.Add(new Label
+        {
+            Text = "업무자료", Size = new Size(100, 32),
+            Font = new Font("맑은 고딕", 14f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
+        });
+
+        var btnNew = new Button
+        {
+            Text = "+ 새 문서", Size = new Size(90, 32),
+            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
+        };
+        btnNew.FlatAppearance.BorderSize = 0;
+        btnNew.Click += BtnNew_Click;
+
+        var btnEdit = new Button
+        {
+            Text = "편집", Size = new Size(60, 32),
+            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
+        };
+        btnEdit.Click += BtnEdit_Click;
+
+        var btnSave = new Button
+        {
+            Text = "저장", Size = new Size(60, 32),
+            BackColor = ColorPalette.Success, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat, Margin = new Padding(5, 0, 0, 0)
+        };
+        btnSave.FlatAppearance.BorderSize = 0;
+        btnSave.Click += BtnSave_Click;
+
+        var btnDelete = new Button
+        {
+            Text = "삭제", Size = new Size(60, 32),
+            BackColor = ColorPalette.Danger, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat, Margin = new Padding(5, 0, 0, 0)
+        };
+        btnDelete.FlatAppearance.BorderSize = 0;
+        btnDelete.Click += BtnDelete_Click;
+
+        topBar.Controls.AddRange([btnNew, btnEdit, btnSave, btnDelete]);
+
+        // Split: Tree + Content
+        var split = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            SplitterDistance = 200,
+            Orientation = Orientation.Vertical
+        };
+
+        _treeView = new TreeView
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 10f),
+            ShowLines = true
+        };
+        _treeView.AfterSelect += TreeView_AfterSelect;
+
+        _richViewer = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            Font = new Font("맑은 고딕", 11f),
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.None
+        };
+
+        _txtEditor = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Multiline = true,
+            ScrollBars = ScrollBars.Both,
+            Font = new Font("Consolas", 11f),
+            Visible = false
+        };
+
+        split.Panel1.Controls.Add(_treeView);
+        split.Panel2.Controls.Add(_richViewer);
+        split.Panel2.Controls.Add(_txtEditor);
+
+        Controls.Add(split);
+        Controls.Add(topBar);
+
+        LoadTree();
+    }
+
+    private void LoadTree()
+    {
+        _treeView.Nodes.Clear();
+        var root = new TreeNode("문서") { Tag = _docsRoot };
+        LoadDirectory(root, _docsRoot);
+        _treeView.Nodes.Add(root);
+        root.Expand();
+    }
+
+    private static void LoadDirectory(TreeNode parentNode, string path)
+    {
+        foreach (var dir in Directory.GetDirectories(path))
+        {
+            var node = new TreeNode(Path.GetFileName(dir)) { Tag = dir };
+            LoadDirectory(node, dir);
+            parentNode.Nodes.Add(node);
+        }
+        foreach (var file in Directory.GetFiles(path, "*.md"))
+        {
+            parentNode.Nodes.Add(new TreeNode(Path.GetFileNameWithoutExtension(file)) { Tag = file });
+        }
+    }
+
+    private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e)
+    {
+        var path = e.Node?.Tag as string;
+        if (path == null || !File.Exists(path)) return;
+
+        _currentFile = path;
+        var content = File.ReadAllText(path);
+        _richViewer.Text = content;
+        _txtEditor.Text = content;
+        _isEditMode = false;
+        _richViewer.Visible = true;
+        _txtEditor.Visible = false;
+    }
+
+    private void BtnEdit_Click(object? sender, EventArgs e)
+    {
+        if (_currentFile == null) return;
+        _isEditMode = !_isEditMode;
+        _richViewer.Visible = !_isEditMode;
+        _txtEditor.Visible = _isEditMode;
+        if (_isEditMode) _txtEditor.Text = File.ReadAllText(_currentFile);
+    }
+
+    private void BtnSave_Click(object? sender, EventArgs e)
+    {
+        if (_currentFile == null || !_isEditMode) return;
+        File.WriteAllText(_currentFile, _txtEditor.Text);
+        _richViewer.Text = _txtEditor.Text;
+        _isEditMode = false;
+        _richViewer.Visible = true;
+        _txtEditor.Visible = false;
+        ToastNotification.Show("저장되었습니다.", ToastType.Success);
+    }
+
+    private void BtnNew_Click(object? sender, EventArgs e)
+    {
+        var name = InputDialog.Show("파일명 (확장자 제외):", "새 문서");
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var path = Path.Combine(_docsRoot, $"{name.Trim()}.md");
+        File.WriteAllText(path, $"# {name.Trim()}\n\n");
+        LoadTree();
+        ToastNotification.Show("문서가 생성되었습니다.", ToastType.Success);
+    }
+
+    private void BtnDelete_Click(object? sender, EventArgs e)
+    {
+        if (_currentFile == null || !File.Exists(_currentFile)) return;
+        if (MessageBox.Show("이 문서를 삭제하시겠습니까?", "확인",
+                MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+
+        // 휴지통으로 이동
+        var trashDir = Path.Combine(_docsRoot, ".trash");
+        Directory.CreateDirectory(trashDir);
+        var trashName = $"{Path.GetFileNameWithoutExtension(_currentFile)}_{DateTime.Now:yyyyMMddHHmmss}.md";
+        File.Move(_currentFile, Path.Combine(trashDir, trashName));
+
+        _currentFile = null;
+        _richViewer.Text = "";
+        LoadTree();
+        ToastNotification.Show("문서가 삭제되었습니다.", ToastType.Success);
+    }
+}
