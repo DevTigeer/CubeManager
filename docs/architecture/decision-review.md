@@ -227,7 +227,7 @@ var context = BrowsingContext.New(config);
 // 로그인
 var loginPage = await context.OpenAsync("http://www.cubeescape.co.kr/bbs/login.php");
 var form = loginPage.QuerySelector<IHtmlFormElement>("form");
-await form.SubmitAsync(new { mb_id = "cubeic", mb_password = "****" });
+await form.SubmitAsync(new { mb_id = id, mb_password = password });
 
 // 예약 조회 (쿠키 자동 유지)
 var page = await context.OpenAsync("http://www.cubeescape.co.kr/adm/room_list.php?sfl=r_date&stx=26-03-18");

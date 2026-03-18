@@ -12,7 +12,7 @@ cubeescape.co.kr의 예약 테이블을 연동하여 일별 예약 현황을 조
 ### 2.1 로그인 프로세스
 
 1. `POST http://www.cubeescape.co.kr/bbs/login.php` 로 로그인
-   - Form Data: `mb_id=cubeic`, `mb_password=1111`
+   - Form Data: `mb_id=<설정에서 입력>`, `mb_password=<설정에서 입력>`
    - 응답 Cookie(세션) 저장
 2. 세션 유지하며 예약 테이블 조회
 
