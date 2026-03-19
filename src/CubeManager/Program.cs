@@ -86,6 +86,7 @@ static class Program
         services.AddSingleton<ISalaryRepository, SalaryRepository>();
         services.AddSingleton<IHandoverRepository, HandoverRepository>();
         services.AddSingleton<IInventoryRepository, InventoryRepository>();
+        services.AddSingleton<IThemeRepository, ThemeRepository>();
 
         // Services
         services.AddSingleton<IEmployeeService, EmployeeService>();
@@ -94,6 +95,7 @@ static class Program
         services.AddSingleton<ISalesService, SalesService>();
         services.AddSingleton<ISalaryService, SalaryService>();
         services.AddSingleton<IReservationScraperService, ReservationScraperService>();
+        services.AddSingleton<IThemeExportService, ThemeExportService>();
     }
 
     private static void EnsureAdminPassword()
