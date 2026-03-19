@@ -2,6 +2,7 @@ using System.Drawing;
 using Microsoft.Extensions.DependencyInjection;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
+using CubeManager.Controls;
 using CubeManager.Forms;
 using CubeManager.Helpers;
 using Serilog;
@@ -11,10 +12,9 @@ namespace CubeManager;
 public class MainForm : Form
 {
     private readonly IServiceProvider _sp;
-    private readonly TabControl _tabControl;
-    private readonly Label _statusLabel;
+    private readonly SideNavPanel _sideNav;
+    private readonly Panel _contentPanel;
     private readonly Dictionary<int, UserControl?> _tabCache = new();
-    private readonly System.Windows.Forms.Timer _clockTimer;
 
     private static readonly string[] TabNames =
     [
@@ -25,88 +25,83 @@ public class MainForm : Form
     public MainForm(IServiceProvider serviceProvider)
     {
         _sp = serviceProvider;
-        Text = "CubeManager v0.1.0";
+        Text = "CubeManager v0.2.0";
         Size = new Size(1280, 768);
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = ColorPalette.Background;
         Font = new Font("맑은 고딕", 10f);
 
-        // Tab Control
-        _tabControl = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font("맑은 고딕", 11f),
-            Padding = new Point(12, 6)
-        };
-
-        foreach (var name in TabNames)
-        {
-            _tabControl.TabPages.Add(new TabPage(name) { BackColor = Color.White });
-        }
-
-        _tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
-
-        // Status Bar
-        var statusPanel = new Panel
+        // === 레이아웃 구조 ===
+        // StatusBar (하단)
+        var statusBar = new Panel
         {
             Dock = DockStyle.Bottom,
             Height = 28,
-            BackColor = ColorPalette.Primary,
+            BackColor = ColorPalette.Primary900,
             Padding = new Padding(10, 0, 10, 0)
         };
-
-        _statusLabel = new Label
+        var statusLabel = new Label
         {
-            Dock = DockStyle.Right,
-            ForeColor = Color.White,
-            Font = new Font("맑은 고딕", 9f),
-            TextAlign = ContentAlignment.MiddleRight,
-            AutoSize = true,
-            Text = DateTime.Now.ToString("yyyy-MM-dd (ddd) HH:mm:ss")
-        };
-
-        var appLabel = new Label
-        {
+            Text = "CubeManager v0.2.0",
+            ForeColor = Color.FromArgb(180, 200, 255),
+            Font = new Font("맑은 고딕", 8.5f),
             Dock = DockStyle.Left,
-            ForeColor = Color.White,
-            Font = new Font("맑은 고딕", 9f),
-            TextAlign = ContentAlignment.MiddleLeft,
             AutoSize = true,
-            Text = "CubeManager"
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        statusBar.Controls.Add(statusLabel);
+
+        // HeaderPanel (상단)
+        var header = new HeaderPanel();
+
+        // SideNavPanel (좌측)
+        _sideNav = new SideNavPanel();
+        _sideNav.TabSelected += OnTabSelected;
+
+        // ContentPanel (중앙)
+        _contentPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = ColorPalette.Background,
+            Padding = new Padding(0)
         };
 
-        statusPanel.Controls.Add(_statusLabel);
-        statusPanel.Controls.Add(appLabel);
-
-        Controls.Add(_tabControl);
-        Controls.Add(statusPanel);
-
-        // Clock Timer
-        _clockTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-        _clockTimer.Tick += (_, _) =>
-            _statusLabel.Text = DateTime.Now.ToString("yyyy-MM-dd (ddd) HH:mm:ss");
-        _clockTimer.Start();
+        // 중요: Dock 순서 = 바깥부터 안으로
+        Controls.Add(_contentPanel);   // Fill (마지막 추가 = 남은 공간)
+        Controls.Add(_sideNav);        // Left
+        Controls.Add(header);          // Top
+        Controls.Add(statusBar);       // Bottom
 
         // 첫 번째 탭 로드
         LoadTab(0);
     }
 
-    private void TabControl_SelectedIndexChanged(object? sender, EventArgs e)
+    private void OnTabSelected(int index)
     {
-        LoadTab(_tabControl.SelectedIndex);
+        LoadTab(index);
     }
 
     private void LoadTab(int index)
     {
-        if (_tabCache.ContainsKey(index))
-            return;
+        if (!_tabCache.ContainsKey(index))
+        {
+            Log.Information("탭 로드: {TabName}", TabNames[index]);
+            _tabCache[index] = CreateTab(index);
+        }
 
-        Log.Information("탭 로드: {TabName}", TabNames[index]);
+        // ContentPanel 콘텐츠 교체
+        _contentPanel.SuspendLayout();
+        _contentPanel.Controls.Clear();
+        var tab = _tabCache[index];
+        if (tab != null)
+        {
+            tab.Dock = DockStyle.Fill;
+            _contentPanel.Controls.Add(tab);
+        }
+        _contentPanel.ResumeLayout();
 
-        var tab = CreateTab(index);
-        _tabCache[index] = tab;
-        _tabControl.TabPages[index].Controls.Add(tab);
+        _sideNav.SelectedIndex = index;
     }
 
     private UserControl CreateTab(int index) => index switch
@@ -134,9 +129,6 @@ public class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        _clockTimer.Stop();
-        _clockTimer.Dispose();
-
         // DB 종료 처리
         try
         {
