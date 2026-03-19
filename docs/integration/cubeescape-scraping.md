@@ -1,5 +1,7 @@
 # cubeescape.co.kr 스크래핑 명세
 
+> 최종 확인일: 2026-03-19 (실제 사이트 HTML 검증 완료)
+
 ## 1. 사이트 정보
 
 ```
@@ -17,51 +19,49 @@ CMS: 그누보드 (PHP 기반)
 ### 2.1 로그인 URL
 
 ```
-POST http://www.cubeescape.co.kr/bbs/login.php
+POST http://www.cubeescape.co.kr/bbs/login_check.php
+(폼 action이 login_check.php로 향함)
 ```
 
-### 2.2 AngleSharp 로그인
+### 2.2 로그인 폼 구조 (실제 확인됨)
 
-```csharp
-public async Task<IBrowsingContext> LoginAsync(string id, string password)
-{
-    var config = Configuration.Default
-        .WithDefaultLoader()
-        .WithCookies();
-    var context = BrowsingContext.New(config);
-
-    // 로그인 페이지 열기
-    var loginPage = await context.OpenAsync(
-        "http://www.cubeescape.co.kr/bbs/login.php");
-
-    // 폼 찾기 (그누보드 표준 로그인 폼)
-    var form = loginPage.QuerySelector<IHtmlFormElement>("form[name='flogin']")
-            ?? loginPage.QuerySelector<IHtmlFormElement>("form");
-
-    if (form == null)
-        throw new ScrapingException("로그인 폼을 찾을 수 없습니다.");
-
-    // 폼 서밋 (쿠키 자동 관리)
-    await form.SubmitAsync(new
-    {
-        mb_id = id,
-        mb_password = password
-    });
-
-    return context; // 이후 요청에서 세션 유지
-}
+```html
+<div id="mb_login" class="ms-confirm">
+  <form name="flogin" action=".../bbs/login_check.php" method="post">
+    <input type="hidden" name="url" value="...">
+    <input type="text" name="mb_id" id="login_id" required maxLength="20">
+    <input type="password" name="mb_password" id="login_pw" required maxLength="20">
+    <input type="submit" value="로그인">
+  </form>
+</div>
 ```
 
-### 2.3 로그인 실패 감지
+### 2.3 AngleSharp 로그인
 
 ```csharp
-// 로그인 후 리다이렉트된 URL 또는 페이지 내용으로 판별
-var testPage = await context.OpenAsync(
-    "http://www.cubeescape.co.kr/adm/room_list.php");
+var config = Configuration.Default
+    .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = false })
+    .WithCookies();
+var context = BrowsingContext.New(config);
+
+var loginPage = await context.OpenAsync(
+    "http://www.cubeescape.co.kr/bbs/login.php");
+
+// 그누보드 표준 로그인 폼
+var form = loginPage.QuerySelector<IHtmlFormElement>("form[name='flogin']")
+        ?? loginPage.QuerySelector<IHtmlFormElement>("form");
+
+await form.SubmitAsync(new { mb_id = id, mb_password = password });
+```
+
+### 2.4 로그인 성공 판별
+
+```csharp
+var testPage = await context.OpenAsync("http://www.cubeescape.co.kr/adm/");
 var body = testPage.Body?.TextContent ?? "";
 
-if (body.Contains("로그인") && !body.Contains("예약"))
-    throw new AuthenticationException("로그인 실패: ID/PW 확인 필요");
+// 관리자 페이지에 "예약" 키워드가 있으면 성공
+var success = !body.Contains("로그인") || body.Contains("예약");
 ```
 
 ---
@@ -73,125 +73,94 @@ if (body.Contains("로그인") && !body.Contains("예약"))
 ```
 GET http://www.cubeescape.co.kr/adm/room_list.php?sfl=r_date&stx={YY-MM-DD}
 
-날짜 형식: 2자리 연도 (26-03-18 = 2026년 3월 18일)
+날짜 형식: 2자리 연도 (26-03-19 = 2026년 3월 19일)
 ```
 
-### 3.2 HTML 구조 (예상)
-
-> 실제 HTML 구조는 최초 스크래핑 시 확인 후 이 문서를 업데이트한다.
-> 아래는 그누보드 관리자 테이블의 일반적 구조를 기반으로 한 예상이다.
+### 3.2 HTML 구조 (실제 확인됨 - 2026-03-19)
 
 ```html
-<!-- 예상 구조 (실제와 다를 수 있음) -->
-<table class="table" or id="room_table">
+<table>
+  <caption>예약문의 관리 목록</caption>
   <thead>
     <tr>
-      <th>시간</th>
-      <th>방1 이름</th>
-      <th>방2 이름</th>
-      <th>방3 이름</th>
-      ...
+      <th><!-- 체크박스 --></th>
+      <th>지점명</th>
+      <th>예약번호</th>
+      <th>예약일</th>
+      <th>시간</th>        <!-- 정렬 링크 포함 -->
+      <th>선택테마</th>     <!-- 정렬 링크 포함 -->
+      <th>인원</th>
+      <th>예약자</th>
+      <th>연락처</th>
+      <th>아이피</th>
+      <th>등록일</th>
+      <th>관리</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>10:00</td>
-      <td>홍길동 (4명) 010-1234-5678</td>
-      <td></td>
-      <td>김철수 (3명)</td>
-      ...
+    <tr class="bg0">
+      <td class="td_chk"><!-- 체크박스 + hidden r_num --></td>
+      <td class="txt_center">인천구월점</td>
+      <td class="txt_center">55911880</td>
+      <td class="txt_center">2026-03-19</td>
+      <td class="txt_center">11:45-12:45</td>
+      <td class="txt_center">집착</td>
+      <td class="txt_center">2 명</td>
+      <td class="txt_center">ㅁ</td>
+      <td class="txt_center">010-1111-1111</td>
+      <td class="txt_center">121.142.110.213</td>
+      <td class="td_datetime">2026-03-06</td>
+      <td class="td_mngsmall"><a href="...">보기</a></td>
     </tr>
-    <tr>
-      <td>11:00</td>
-      ...
-    </tr>
+    <!-- 한 행 = 한 예약건 (반복) -->
   </tbody>
 </table>
 ```
 
-### 3.3 파싱 전략
+### 3.3 핵심 포인트
 
-```csharp
-public async Task<List<Reservation>> FetchReservationsAsync(
-    IBrowsingContext context, DateTime date)
-{
-    var dateStr = date.ToString("yy-MM-dd");
-    var url = $"http://www.cubeescape.co.kr/adm/room_list.php?sfl=r_date&stx={dateStr}";
-
-    var page = await context.OpenAsync(url);
-
-    // 1차 시도: 테이블 찾기 (여러 선택자 시도)
-    var table = page.QuerySelector("table.room-table")
-             ?? page.QuerySelector("table#room_table")
-             ?? page.QuerySelector("table.table")
-             ?? page.QuerySelectorAll("table").LastOrDefault();
-
-    if (table == null)
-    {
-        Log.Warning("예약 테이블을 찾을 수 없습니다: {Url}", url);
-        return new List<Reservation>();
-    }
-
-    var rows = table.QuerySelectorAll("tbody tr, tr");
-    var reservations = new List<Reservation>();
-
-    // 헤더에서 방 이름 추출
-    var headers = table.QuerySelectorAll("thead th, th")
-        .Select(th => th.TextContent.Trim())
-        .ToList();
-
-    foreach (var row in rows)
-    {
-        var cells = row.QuerySelectorAll("td").ToList();
-        if (cells.Count < 2) continue;
-
-        var timeSlot = cells[0].TextContent.Trim();
-
-        for (int i = 1; i < cells.Count && i < headers.Count; i++)
-        {
-            var cellText = cells[i].TextContent.Trim();
-            if (string.IsNullOrEmpty(cellText)) continue;
-
-            reservations.Add(ParseCellToReservation(
-                date, timeSlot, headers[i], cellText));
-        }
-    }
-
-    return reservations;
-}
+```
+구조: 한 행 = 한 예약건 (NOT 시간슬롯 × 방 매트릭스)
+행 교차 배경: bg0, bg1 클래스 교번
+헤더 정렬: <th> 안에 <a> 링크로 정렬 가능 (TextContent로 추출 가능)
+인원 형식: "2 명" (숫자 + 공백 + 명)
+시간 형식: "11:45-12:45" (시작-종료)
+테마 = 방 이름: "집착", "Towering", "신데렐라", "타이타닉" 등
 ```
 
-### 3.4 셀 텍스트 파싱
+### 3.4 컬럼 매핑
+
+| 헤더 (실제) | 인덱스 | → Reservation 모델 |
+|-------------|--------|---------------------|
+| (체크박스) | 0 | 무시 |
+| 지점명 | 1 | (참조용, 현재 단일 지점) |
+| 예약번호 | 2 | (향후 확장용) |
+| 예약일 | 3 | `ReservationDate` |
+| 시간 | 4 | `TimeSlot` |
+| 선택테마 | 5 | `RoomName` |
+| 인원 | 6 | `Headcount` |
+| 예약자 | 7 | `CustomerName` |
+| 연락처 | 8 | `CustomerPhone` |
+| 아이피 | 9 | 무시 |
+| 등록일 | 10 | 무시 |
+| 관리 | 11 | 무시 |
+
+### 3.5 파싱 전략
 
 ```csharp
-// 셀 내용 예: "홍길동 (4명) 010-1234-5678"
-// 또는: "홍길동\n4명"
-// 또는: "예약자: 홍길동 / 인원: 4"
-// → 패턴이 불확실하므로 유연하게 파싱
+// 헤더 기반 동적 인덱스 매핑 (컬럼 순서 변경에 강건)
+var headers = table.QuerySelectorAll("thead th")
+    .Select((h, i) => (text: h.TextContent.Trim(), index: i))
+    .ToList();
 
-private Reservation ParseCellToReservation(
-    DateTime date, string timeSlot, string roomName, string cellText)
-{
-    // 이름: 첫 번째 단어 또는 괄호 이전
-    // 인원: 숫자 + "명" 패턴
-    // 전화번호: 010-XXXX-XXXX 패턴
+int ColIndex(string keyword) =>
+    headers.FirstOrDefault(h => h.text.Contains(keyword)).index;
 
-    var nameMatch = Regex.Match(cellText, @"^([가-힣a-zA-Z]+)");
-    var countMatch = Regex.Match(cellText, @"(\d+)\s*명");
-    var phoneMatch = Regex.Match(cellText, @"(01[016789]-?\d{3,4}-?\d{4})");
-
-    return new Reservation
-    {
-        ReservationDate = date,
-        TimeSlot = timeSlot,
-        RoomName = roomName,
-        CustomerName = nameMatch.Success ? nameMatch.Groups[1].Value : cellText,
-        Headcount = countMatch.Success ? int.Parse(countMatch.Groups[1].Value) : 0,
-        CustomerPhone = phoneMatch.Success ? phoneMatch.Groups[1].Value : null,
-        Status = "confirmed",
-        SyncedAt = DateTime.Now
-    };
-}
+var idxTime  = ColIndex("시간");
+var idxTheme = ColIndex("테마");
+var idxCount = ColIndex("인원");
+var idxName  = ColIndex("예약자");
+var idxPhone = ColIndex("연락처");
 ```
 
 ---
@@ -201,29 +170,31 @@ private Reservation ParseCellToReservation(
 | 상황 | 대응 |
 |------|------|
 | 테이블 못 찾음 | 경고 로그 + 빈 목록 반환 + UI에 "파싱 실패" 표시 |
-| 셀 형식 변경 | 원본 텍스트를 `raw_html`에 저장 + 기본 파싱 시도 |
-| 사이트 다운 | 타임아웃(10초) 후 캐시 데이터 반환 |
+| 컬럼 순서 변경 | 헤더 키워드 기반 동적 매핑으로 대응 |
+| 사이트 다운 | 타임아웃(10초) 후 빈 목록 반환 |
 | 세션 만료 | 자동 재로그인 1회 시도 → 실패 시 UI 알림 |
-| HTML 구조 변경 | 로그에 원본 HTML 기록 → 개발자가 선택자 업데이트 |
+| HTML 구조 변경 | 로그에 원본 HTML 기록 → 개발자가 업데이트 |
+| 데이터 없는 날 | `<tbody>` 비어있음 → 빈 목록 정상 반환 |
 
 ---
 
-## 5. 최초 개발 시 해야 할 것
+## 5. 스크래핑 데이터 → 앱 내 활용
 
 ```
-1. 실제 사이트에 로그인하여 room_list.php의 HTML 소스 확보
-2. 이 문서의 "3.2 HTML 구조" 섹션을 실제 구조로 업데이트
-3. CSS 셀렉터 확정
-4. 셀 텍스트 형식 확인 후 ParseCellToReservation 정규식 조정
-5. 테스트: 실제 HTML 스냅샷을 파일로 저장 → 오프라인 파싱 테스트
+[웹 조회] 버튼 클릭
+  → FetchReservationsAsync(date)
+  → List<Reservation> 반환
+  → DataGridView에 표시
+  → 사용자가 결제 정보 수동 추가 (카드/현금/계좌 태그)
+  → Sales 테이블에 저장 (매출 집계용)
 ```
 
 ---
 
-## 6. 오프라인 테스트용 HTML 스냅샷
+## 6. 오프라인 테스트
 
 ```
-개발 시:
+테스트 시:
   1. 실제 사이트에서 예약 페이지 HTML을 저장
   2. tests/fixtures/room_list_sample.html 로 저장
   3. 단위 테스트에서 이 파일을 로드하여 파싱 검증
