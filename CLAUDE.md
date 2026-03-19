@@ -142,15 +142,17 @@ CubeManager.Data     →  Core 참조 (모델+인터페이스)
 
 ## UI 규칙
 
-> 상세: docs/policies/ui-policy.md
+> 상세: docs/policies/ui-policy.md, docs/design/design-system.md
 
-- **색상 체계**: Primary=#1976D2, Success=#4CAF50, Warning=#FFC107, Danger=#F44336
-- **결제 태그**: 카드=#2196F3, 현금=#4CAF50, 계좌=#FFC107, 지출=#F44336
-- **출퇴근**: 정상=파란(#2196F3), 지각/조퇴=빨간(#F44336)
-- **수기 수정 셀**: 노란 배경 #FFF9C4
-- **타임테이블**: 커스텀 Panel(GDI+), 직원별 고유 배경색 자동 할당
-- **일반 테이블**: DataGridView (예약, 급여, 물품, 출퇴근 이력)
-- **토스트**: 하단 우측 3초 표시 (Success/Warning/Error)
+- **레이아웃**: 좌측 SideNavPanel(60px↔200px) + 상단 HeaderPanel(50px) + 콘텐츠
+- **색상 체계**: ColorPalette.cs 참조 (Primary계열, Semantic, Light변형, ~80개)
+- **DataGridView**: 반드시 `GridTheme.ApplyTheme(grid)` 호출 (인라인 스타일 금지)
+- **버튼**: `ButtonFactory.CreatePrimary/Secondary/Danger/Ghost()` 사용
+- **통계 카드**: SummaryCardRow + SummaryCard 컴포넌트 (주요 탭 상단)
+- **결제 태그**: 카드=#E3F2FD/#1565C0, 현금=#E8F5E9/#2E7D32, 계좌=#FFF3E0/#E65100, 지출=#FFEBEE/#C62828
+- **토스트**: 좌측 4px 컬러바 + 라이트 배경 패턴 (3초)
+- **타임테이블**: 커스텀 Panel(GDI+), DoubleBuffered 필수
+- **수기 수정 셀**: `GridTheme.MarkManualEdit(cell)` → 노란 배경 #FFF9C4
 
 ---
 
