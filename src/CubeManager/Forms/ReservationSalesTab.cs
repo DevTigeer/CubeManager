@@ -1,4 +1,5 @@
 using System.Drawing;
+using CubeManager.Controls;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
 using CubeManager.Helpers;
@@ -92,7 +93,15 @@ public class ReservationSalesTab : UserControl
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } },
             new DataGridViewTextBoxColumn { HeaderText = "결제", FillWeight = 15 },
             new DataGridViewTextBoxColumn { HeaderText = "구분", FillWeight = 10 });
+        GridTheme.ApplyTheme(_gridItems);
         _gridItems.KeyDown += GridItems_KeyDown;
+
+        // Summary Cards (통계 카드)
+        var cards = new SummaryCardRow();
+        cards.AddCard("오늘 예약", "0건", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
+        cards.AddCard("총 매출", "₩0", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
+        cards.AddCard("카드 매출", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
+        cards.AddCard("현금 잔액", "₩0", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
 
         // Summary panel
         var summaryPanel = new Panel
@@ -152,10 +161,13 @@ public class ReservationSalesTab : UserControl
             ForeColor = ColorPalette.TextSecondary, Padding = new Padding(0, 5, 0, 0)
         };
 
+        GridTheme.ApplyTheme(_gridReservations);
+
         Controls.Add(_gridItems);
         Controls.Add(_gridReservations);
         Controls.Add(lblReserve);
         Controls.Add(summaryPanel);
+        Controls.Add(cards);
         Controls.Add(topPanel);
 
         _ = LoadDataAsync();

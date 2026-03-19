@@ -1,4 +1,5 @@
 using System.Drawing;
+using CubeManager.Controls;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Helpers;
 
@@ -98,7 +99,17 @@ public class SalaryTab : UserControl
             new DataGridViewTextBoxColumn { HeaderText = "3.3%", FillWeight = 8 },
             new DataGridViewTextBoxColumn { HeaderText = "실수령", FillWeight = 10 });
 
+        GridTheme.ApplyTheme(_grid);
+
+        // Summary Cards
+        var cards = new SummaryCardRow();
+        cards.AddCard("총 급여", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
+        cards.AddCard("대상 인원", "0명", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
+        cards.AddCard("공휴일수당", "₩0", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
+        cards.AddCard("식비+택시", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
+
         Controls.Add(_grid);
+        Controls.Add(cards);
         Controls.Add(topBar);
 
         _ = LoadAsync();

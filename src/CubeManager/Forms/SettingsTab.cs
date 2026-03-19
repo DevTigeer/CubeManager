@@ -53,33 +53,8 @@ public class SettingsTab : UserControl
         toolbar.Controls.AddRange([btnAdd, btnDeactivate]);
 
         // DataGridView
-        _grid = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            MultiSelect = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            RowHeadersVisible = false,
-            BackgroundColor = Color.White,
-            BorderStyle = BorderStyle.FixedSingle,
-            GridColor = ColorPalette.Border,
-            EnableHeadersVisualStyles = false,
-            DefaultCellStyle = new DataGridViewCellStyle
-            {
-                Font = new Font("맑은 고딕", 10f),
-                SelectionBackColor = ColorPalette.Primary,
-                SelectionForeColor = Color.White,
-                Padding = new Padding(4)
-            },
-            ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-            {
-                Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-                BackColor = ColorPalette.Background,
-                ForeColor = ColorPalette.Text
-            }
-        };
+        _grid = new DataGridView { Dock = DockStyle.Fill };
+        GridTheme.ApplyTheme(_grid);
 
         SetupColumns();
         _grid.CellDoubleClick += Grid_CellDoubleClick;

@@ -34,21 +34,8 @@ public class InventoryTab : UserControl
         btnAdd.Click += BtnAdd_Click;
         topBar.Controls.Add(btnAdd);
 
-        _grid = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            AllowUserToAddRows = false, AllowUserToDeleteRows = false,
-            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowHeadersVisible = false, BackgroundColor = Color.White,
-            BorderStyle = BorderStyle.FixedSingle, GridColor = ColorPalette.Border,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            EnableHeadersVisualStyles = false,
-            DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("맑은 고딕", 10f) },
-            ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-            {
-                Font = new Font("맑은 고딕", 10f, FontStyle.Bold), BackColor = ColorPalette.Background
-            }
-        };
+        _grid = new DataGridView { Dock = DockStyle.Fill };
+        GridTheme.ApplyTheme(_grid);
 
         _grid.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "Id", Visible = false },

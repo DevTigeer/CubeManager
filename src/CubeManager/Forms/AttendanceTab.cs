@@ -258,20 +258,12 @@ public class AttendanceTab : UserControl
         catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
     }
 
-    private static DataGridView CreateGrid() => new()
+    private static DataGridView CreateGrid()
     {
-        AllowUserToAddRows = false, ReadOnly = true,
-        SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-        RowHeadersVisible = false, BackgroundColor = Color.White,
-        BorderStyle = BorderStyle.FixedSingle, GridColor = ColorPalette.Border,
-        EnableHeadersVisualStyles = false,
-        DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("맑은 고딕", 9f) },
-        ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-        {
-            Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
-            BackColor = ColorPalette.Background
-        }
-    };
+        var grid = new DataGridView();
+        GridTheme.ApplyTheme(grid);
+        return grid;
+    }
 
     private static DataGridViewTextBoxColumn Col(string header, int width) => new()
     {
