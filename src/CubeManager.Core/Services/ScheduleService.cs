@@ -51,14 +51,15 @@ public class ScheduleService : IScheduleService
             await _scheduleRepo.BulkInsertAsync(schedules);
     }
 
-    public Task<bool> UpdateScheduleAsync(int id, string startTime, string endTime)
+    public async Task<bool> UpdateScheduleAsync(int id, string startTime, string endTime)
     {
-        return _scheduleRepo.UpdateAsync(new Schedule
-        {
-            Id = id,
-            StartTime = startTime,
-            EndTime = endTime
-        });
+        // 기존 데이터 보존: 먼저 조회 후 시간만 변경
+        var existing = await _scheduleRepo.GetByIdAsync(id);
+        if (existing == null) return false;
+
+        existing.StartTime = startTime;
+        existing.EndTime = endTime;
+        return await _scheduleRepo.UpdateAsync(existing);
     }
 
     public Task<bool> DeleteScheduleAsync(int id) =>

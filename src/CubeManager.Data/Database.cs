@@ -23,6 +23,8 @@ public class Database
     {
         var conn = new SqliteConnection(_connectionString);
         conn.Open();
+        // FK는 per-connection 설정이므로 매 연결마다 활성화 필수
+        conn.Execute("PRAGMA foreign_keys = ON");
         return conn;
     }
 
