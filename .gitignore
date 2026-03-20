@@ -23,6 +23,9 @@ obj/
 Thumbs.db
 .DS_Store
 
+# ISO images
+*.iso
+
 # 빌드 산출물
 publish/
 packages/

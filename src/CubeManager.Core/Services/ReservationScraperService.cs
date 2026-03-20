@@ -182,7 +182,7 @@ public class ReservationScraperService : IReservationScraperService
             {
                 ReservationDate = date.ToString("yyyy-MM-dd"),
                 TimeSlot = timeText,
-                RoomName = themeText,
+                ThemeName = themeText,
                 CustomerName = nameText,
                 Headcount = headcount,
                 CustomerPhone = phoneMatch.Success ? phoneMatch.Groups[1].Value : null,
@@ -193,7 +193,7 @@ public class ReservationScraperService : IReservationScraperService
 
         Log.Information("예약 파싱 완료: {Count}건 ({Branch})",
             reservations.Count,
-            reservations.FirstOrDefault()?.RoomName ?? "N/A");
+            reservations.FirstOrDefault()?.ThemeName ?? "N/A");
         return reservations;
     }
 

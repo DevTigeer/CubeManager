@@ -62,4 +62,12 @@ public class SummaryCardRow : Panel
 
     /// <summary>인덱스로 카드 접근 (값 업데이트용)</summary>
     public SummaryCard this[int index] => _cards[index];
+
+    /// <summary>카드 값 업데이트</summary>
+    public void UpdateCard(int index, string value, string? subText = null)
+    {
+        if (index < 0 || index >= _cards.Count) return;
+        _cards[index].Value = value;
+        if (subText != null) _cards[index].SubText = subText;
+    }
 }

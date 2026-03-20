@@ -5,7 +5,7 @@ using CubeManager.Helpers;
 namespace CubeManager.Controls;
 
 /// <summary>
-/// 좌측 사이드바 네비게이션. 접힘(60px) / 펼침(200px, hover).
+/// 좌측 사이드바 네비게이션. 상시 200px 고정.
 /// GDI+ 렌더링, 선택 시 좌측 3px Primary 바.
 /// </summary>
 public class SideNavPanel : Panel
@@ -14,13 +14,12 @@ public class SideNavPanel : Panel
 
     private int _selectedIndex;
     private int _hoverIndex = -1;
-    private bool _isExpanded;
 
-    private const int CollapsedWidth = 60;
-    private const int ExpandedWidth = 200;
+    private const int NavWidth = 200;
     private const int ItemHeight = 48;
     private const int LogoHeight = 56;
     private const int ActiveBarWidth = 3;
+    private const int IconAreaWidth = 48;
 
     private static readonly string[] Labels =
         ["예약/매출", "스케줄", "급여", "업무자료", "인수인계", "물품", "출퇴근", "테마힌트", "설정"];
@@ -40,32 +39,10 @@ public class SideNavPanel : Panel
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer, true);
-        Width = CollapsedWidth;
+        Width = NavWidth;
         Dock = DockStyle.Left;
         BackColor = ColorPalette.Surface;
         Cursor = Cursors.Hand;
-    }
-
-    protected override void OnMouseEnter(EventArgs e)
-    {
-        base.OnMouseEnter(e);
-        _isExpanded = true;
-        Width = ExpandedWidth;
-        Invalidate();
-    }
-
-    protected override void OnMouseLeave(EventArgs e)
-    {
-        base.OnMouseLeave(e);
-        // 마우스가 실제로 패널 바깥인지 확인
-        var pos = PointToClient(Cursor.Position);
-        if (!ClientRectangle.Contains(pos))
-        {
-            _isExpanded = false;
-            Width = CollapsedWidth;
-            _hoverIndex = -1;
-            Invalidate();
-        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -124,17 +101,9 @@ public class SideNavPanel : Panel
     private void DrawLogo(Graphics g)
     {
         using var logoBrush = new SolidBrush(ColorPalette.Primary);
-        using var logoFont = new Font("맑은 고딕", 14f, FontStyle.Bold);
         using var smallFont = new Font("맑은 고딕", 10f, FontStyle.Bold);
 
-        if (_isExpanded)
-        {
-            g.DrawString("CubeManager", smallFont, logoBrush, 14, 18);
-        }
-        else
-        {
-            g.DrawString("C", logoFont, logoBrush, 20, 14);
-        }
+        g.DrawString("CubeManager", smallFont, logoBrush, 14, 18);
 
         // 하단 구분선
         using var divPen = new Pen(ColorPalette.Border, 1);
@@ -173,18 +142,15 @@ public class SideNavPanel : Panel
         // 아이콘 (이모지)
         using var iconFont = new Font("Segoe UI Emoji", 14f);
         using var iconBrush = new SolidBrush(iconColor);
-        var iconX = (CollapsedWidth - 24) / 2f;
+        var iconX = (IconAreaWidth - 24) / 2f;
         g.DrawString(Icons[index], iconFont, iconBrush, iconX, y + 12);
 
-        // 텍스트 (펼침 시)
-        if (_isExpanded)
-        {
-            var textColor = isSelected ? ColorPalette.NavActive :
-                            isHover ? ColorPalette.Text :
-                            ColorPalette.TextSecondary;
-            using var textFont = new Font("맑은 고딕", 10.5f, isSelected ? FontStyle.Bold : FontStyle.Regular);
-            using var textBrush = new SolidBrush(textColor);
-            g.DrawString(Labels[index], textFont, textBrush, CollapsedWidth + 4, y + 14);
-        }
+        // 텍스트 (항상 표시)
+        var textColor = isSelected ? ColorPalette.NavActive :
+                        isHover ? ColorPalette.Text :
+                        ColorPalette.TextSecondary;
+        using var textFont = new Font("맑은 고딕", 10.5f, isSelected ? FontStyle.Bold : FontStyle.Regular);
+        using var textBrush = new SolidBrush(textColor);
+        g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
     }
 }
