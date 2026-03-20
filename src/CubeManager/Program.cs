@@ -48,6 +48,23 @@ static class Program
             var migrator = ServiceProvider.GetRequiredService<MigrationRunner>();
             migrator.RunAll();
 
+            // 공휴일 동기화 (백그라운드, 비차단)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var holidayService = ServiceProvider.GetRequiredService<IHolidayService>();
+                    await holidayService.SyncHolidaysAsync(DateTime.Today.Year);
+                    // 다음 해도 미리 동기화 (12월이면)
+                    if (DateTime.Today.Month >= 11)
+                        await holidayService.SyncHolidaysAsync(DateTime.Today.Year + 1);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "공휴일 동기화 실패 (무시)");
+                }
+            });
+
             // 최초 실행: 관리자 비밀번호 설정
             EnsureAdminPassword();
 
@@ -97,6 +114,7 @@ static class Program
         services.AddSingleton<ISalaryService, SalaryService>();
         services.AddSingleton<IReservationScraperService, ReservationScraperService>();
         services.AddSingleton<IThemeExportService, ThemeExportService>();
+        services.AddSingleton<IHolidayService, HolidayService>();
     }
 
     private static void EnsureAdminPassword()

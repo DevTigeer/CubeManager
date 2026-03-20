@@ -15,6 +15,7 @@ public class MainForm : Form
     private readonly SideNavPanel _sideNav;
     private readonly Panel _contentPanel;
     private readonly Dictionary<int, UserControl?> _tabCache = new();
+    private readonly System.Windows.Forms.Timer _backupTimer;
 
     private static readonly string[] TabNames =
     [
@@ -73,8 +74,38 @@ public class MainForm : Form
         Controls.Add(header);          // Top
         Controls.Add(statusBar);       // Bottom
 
+        // 자동 백업 타이머 (10분마다 체크, 월/금 17시에 실행)
+        _backupTimer = new System.Windows.Forms.Timer { Interval = 600_000 }; // 10분
+        _backupTimer.Tick += BackupTimer_Tick;
+        _backupTimer.Enabled = true;
+
         // 첫 번째 탭 로드
         LoadTab(0);
+    }
+
+    private DateTime _lastBackupDate = DateTime.MinValue;
+
+    private async void BackupTimer_Tick(object? sender, EventArgs e)
+    {
+        var now = DateTime.Now;
+
+        // 월요일 or 금요일, 17시대(17:00~17:09), 오늘 아직 안 했으면
+        if (now.DayOfWeek is DayOfWeek.Monday or DayOfWeek.Friday
+            && now.Hour == 17 && now.Minute < 10
+            && _lastBackupDate.Date != now.Date)
+        {
+            _lastBackupDate = now;
+            try
+            {
+                var db = _sp.GetRequiredService<Data.Database>();
+                var path = await db.BackupAsync();
+                Log.Information("자동 백업 완료: {Path}", path);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "자동 백업 실패");
+            }
+        }
     }
 
     private void OnTabSelected(int index)
@@ -132,7 +163,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IConfigRepository>(),
                 _sp.GetRequiredService<ISalesService>(),
                 _sp.GetRequiredService<IAttendanceService>(),
-                _sp.GetRequiredService<IEmployeeService>()),
+                _sp.GetRequiredService<IEmployeeService>(),
+                _sp.GetRequiredService<Data.Database>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

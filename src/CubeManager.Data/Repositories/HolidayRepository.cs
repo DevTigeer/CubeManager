@@ -43,4 +43,28 @@ public class HolidayRepository : IHolidayRepository
             "FROM holidays WHERE holiday_date LIKE @pattern ORDER BY holiday_date",
             new { pattern = $"{yearMonth}%" });
     }
+
+    public async Task UpsertHolidaysAsync(IEnumerable<Holiday> holidays)
+    {
+        using var conn = _db.CreateConnection();
+        using var tx = conn.BeginTransaction();
+
+        foreach (var h in holidays)
+        {
+            await conn.ExecuteAsync(
+                "INSERT OR IGNORE INTO holidays (holiday_date, holiday_name, is_weekend, year) " +
+                "VALUES (@HolidayDate, @HolidayName, @IsWeekend, @Year)",
+                h, tx);
+        }
+
+        tx.Commit();
+    }
+
+    public async Task<int> GetCountByYearAsync(int year)
+    {
+        using var conn = _db.CreateConnection();
+        return await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(1) FROM holidays WHERE year = @year",
+            new { year });
+    }
 }

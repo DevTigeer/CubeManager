@@ -11,4 +11,10 @@ public interface IHolidayRepository
     Task<bool> IsWeekdayHolidayAsync(string date);
 
     Task<IEnumerable<Holiday>> GetByMonthAsync(string yearMonth);
+
+    /// <summary>공휴일 Upsert (holiday_date 기준 중복 무시)</summary>
+    Task UpsertHolidaysAsync(IEnumerable<Holiday> holidays);
+
+    /// <summary>특정 연도의 공휴일 수</summary>
+    Task<int> GetCountByYearAsync(int year);
 }

@@ -18,6 +18,7 @@ public class AdminTab : UserControl
     private readonly ISalesService _salesService;
     private readonly IAttendanceService _attendanceService;
     private readonly IEmployeeService _employeeService;
+    private readonly Data.Database? _database;
 
     private Panel _authPanel = null!;
     private Panel _mainPanel = null!;
@@ -38,12 +39,14 @@ public class AdminTab : UserControl
     private readonly SummaryCardRow _summaryCards;
 
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
-        IAttendanceService attendanceService, IEmployeeService employeeService)
+        IAttendanceService attendanceService, IEmployeeService employeeService,
+        Data.Database database)
     {
         _configRepo = configRepo;
         _salesService = salesService;
         _attendanceService = attendanceService;
         _employeeService = employeeService;
+        _database = database;
         Dock = DockStyle.Fill;
         BackColor = Color.White;
 
@@ -153,6 +156,35 @@ public class AdminTab : UserControl
         _summaryCards.AddCard("이번 달 지출", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
         _summaryCards.AddCard("지각 건수", "0건", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
         _summaryCards.AddCard("현금 잔액", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
+
+        // === DB 백업 + 현금 보정 패널 (한 줄) ===
+        var utilPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 40,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 5, 0, 0)
+        };
+
+        var btnBackup = new Button
+        {
+            Text = "💾 DB 백업", Size = new Size(120, 32),
+            BackColor = ColorPalette.AccentGreen.Main, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 10f)
+        };
+        btnBackup.FlatAppearance.BorderSize = 0;
+        btnBackup.Click += BtnBackup_Click;
+        utilPanel.Controls.Add(btnBackup);
+
+        var lblBackupInfo = new Label
+        {
+            Text = "자동 백업: 매주 월/금 오후 5시",
+            Font = new Font("맑은 고딕", 9f),
+            ForeColor = ColorPalette.TextTertiary,
+            Size = new Size(250, 32),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(10, 0, 0, 0)
+        };
+        utilPanel.Controls.Add(lblBackupInfo);
 
         // === 현금 보정 패널 ===
         var cashPanel = new GroupBox
@@ -274,8 +306,30 @@ public class AdminTab : UserControl
         // 레이아웃 조립 (역순)
         _mainPanel.Controls.Add(bottomSplit);
         _mainPanel.Controls.Add(cashPanel);
+        _mainPanel.Controls.Add(utilPanel);
         _mainPanel.Controls.Add(_summaryCards);
         _mainPanel.Controls.Add(header);
+    }
+
+    // ========== DB 백업 ==========
+    private async void BtnBackup_Click(object? sender, EventArgs e)
+    {
+        if (_database == null) return;
+        if (sender is Button btn) { btn.Enabled = false; btn.Text = "백업 중..."; }
+
+        try
+        {
+            var path = await _database.BackupAsync();
+            ToastNotification.Show($"백업 완료: {Path.GetFileName(path)}", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"백업 실패: {ex.Message}", ToastType.Error);
+        }
+        finally
+        {
+            if (sender is Button btn2) { btn2.Enabled = true; btn2.Text = "💾 DB 백업"; }
+        }
     }
 
     // ========== 현금 보정 ==========
