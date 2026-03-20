@@ -24,6 +24,7 @@ public class ReservationSalesTab : UserControl
 
     private string _currentDate;
     private List<Reservation> _reservations = [];
+    private List<SaleItem> _existingSaleItems = [];
     private int _sortState; // 0=원래, 1=오름차순, 2=내림차순
 
     public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService)
@@ -87,9 +88,13 @@ public class ReservationSalesTab : UserControl
         btnSort.Click += (_, _) => ToggleSort(btnSort);
         topPanel.Controls.Add(btnSort);
 
-        var btnAddWalkin = CreateBtn("+ 매출", ColorPalette.Primary);
-        btnAddWalkin.Click += (_, _) => AddRevenueManual();
+        var btnAddWalkin = CreateBtn("+ 워크인", ColorPalette.Primary);
+        btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
+
+        var btnDelete = CreateBtn("매출 삭제", ColorPalette.Danger);
+        btnDelete.Click += (_, _) => DeleteRevenueItem();
+        topPanel.Controls.Add(btnDelete);
 
         _lblLastFetch = new Label
         {
@@ -291,6 +296,8 @@ public class ReservationSalesTab : UserControl
     private async Task FetchWebAndUpdate()
     {
         _reservations = (await _scraperService.FetchReservationsAsync(_dtpDate.Value)).ToList();
+        _existingSaleItems = (await _salesService.GetSaleItemsAsync(_currentDate))
+            .Where(i => i.Category == "revenue").ToList();
         _lblLastFetch.Text = $"마지막 조회: {DateTime.Now:HH:mm:ss}";
         PopulateMainGrid();
     }
@@ -333,11 +340,23 @@ public class ReservationSalesTab : UserControl
 
             // 상태 표시
             var isRemoved = r.Status == "removed";
-            row.Cells["Status"].Value = isRemoved ? "취소" : "확정";
-            row.Cells["Status"].Style.BackColor = isRemoved
-                ? ColorPalette.PaymentExpense.Item1 : ColorPalette.PaymentCash.Item1;
-            row.Cells["Status"].Style.ForeColor = isRemoved
-                ? ColorPalette.PaymentExpense.Item2 : ColorPalette.PaymentCash.Item2;
+            var isWalkin = r.Status == "walkin";
+            row.Cells["Status"].Value = isRemoved ? "취소" : isWalkin ? "워크인" : "확정";
+            if (isRemoved)
+            {
+                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentExpense.Item1;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentExpense.Item2;
+            }
+            else if (isWalkin)
+            {
+                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentTransfer.Item1;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentTransfer.Item2;
+            }
+            else
+            {
+                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentCash.Item1;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentCash.Item2;
+            }
 
             // 취소된 행 스타일
             if (isRemoved)
@@ -353,7 +372,8 @@ public class ReservationSalesTab : UserControl
                 row.Cells["TransferAmt"].ReadOnly = true;
             }
 
-            // TODO: 기존 결제 데이터 로드하여 금액 셀 채우기
+            // 기존 결제 데이터 로드하여 금액 셀 채우기
+            LoadExistingPayments(row, r);
         }
 
         UpdateSummaryCards();
@@ -403,13 +423,15 @@ public class ReservationSalesTab : UserControl
         row.Cells[e.ColumnIndex].Style.ForeColor = tagColor.Item2;
         row.Cells[e.ColumnIndex].Value = amount.ToString("N0");
 
-        // 테마명을 항목 설명으로 사용
+        // 테마명 + 예약자 조합으로 고유 설명 생성 (Upsert 키)
         var theme = row.Cells["Theme"].Value?.ToString() ?? "매출";
-        var desc = $"{theme} ({paymentType switch { "card" => "카드", "cash" => "현금", _ => "계좌" }})";
+        var customer = row.Cells["Customer"].Value?.ToString() ?? "";
+        var time = row.Cells["Time"].Value?.ToString() ?? "";
+        var desc = $"{time} {theme} {customer}".Trim();
 
         try
         {
-            await _salesService.AddSaleItemAsync(_currentDate, desc, amount, paymentType, "revenue");
+            await _salesService.UpsertSaleItemAsync(_currentDate, desc, amount, paymentType, "revenue");
             await LoadSummaryAsync();
         }
         catch (Exception ex)
@@ -567,17 +589,47 @@ public class ReservationSalesTab : UserControl
         }
     }
 
-    // ===== 수동 매출 추가 (워크인) =====
-    private async void AddRevenueManual()
+    // ===== 워크인 추가 =====
+    private void AddWalkinReservation()
     {
-        using var dlg = new SaleItemDialog("revenue");
+        using var dlg = new WalkinDialog();
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
+        // 예약 목록에 워크인 추가 (메모리)
+        _reservations.Add(new Reservation
+        {
+            ReservationDate = _currentDate,
+            TimeSlot = dlg.TimeSlot,
+            ThemeName = dlg.ThemeName,
+            CustomerName = dlg.CustomerName,
+            CustomerPhone = dlg.Phone,
+            Headcount = dlg.Headcount,
+            Status = "walkin"
+        });
+
+        PopulateMainGrid();
+        ToastNotification.Show("워크인 추가 완료.", ToastType.Success);
+    }
+
+    // ===== 매출 삭제 =====
+    private async void DeleteRevenueItem()
+    {
         try
         {
-            await _salesService.AddSaleItemAsync(_currentDate,
-                dlg.ItemDescription, dlg.Amount, dlg.PaymentType, "revenue");
-            ToastNotification.Show("매출 추가 완료.", ToastType.Success);
+            var items = (await _salesService.GetSaleItemsAsync(_currentDate))
+                .Where(i => i.Category == "revenue").ToList();
+
+            if (items.Count == 0)
+            {
+                ToastNotification.Show("삭제할 매출 항목이 없습니다.", ToastType.Warning);
+                return;
+            }
+
+            using var dlg = new DeleteSaleItemDialog(items);
+            if (dlg.ShowDialog(this) != DialogResult.OK || dlg.SelectedItemId == null) return;
+
+            await _salesService.DeleteSaleItemAsync(_currentDate, dlg.SelectedItemId.Value);
+            ToastNotification.Show("매출 항목 삭제 완료.", ToastType.Success);
             await LoadAllAsync();
         }
         catch (Exception ex)
@@ -596,6 +648,37 @@ public class ReservationSalesTab : UserControl
 
         await _salesService.DeleteSaleItemAsync(_currentDate, id);
         await LoadAllAsync();
+    }
+
+    // ===== 기존 결제 데이터를 그리드 셀에 채우기 =====
+    private void LoadExistingPayments(DataGridViewRow row, Reservation r)
+    {
+        var prefix = $"{r.TimeSlot} {r.ThemeName} {r.CustomerName}".Trim();
+
+        foreach (var item in _existingSaleItems)
+        {
+            if (item.Description == null || !item.Description.StartsWith(prefix)) continue;
+
+            var colName = item.PaymentType switch
+            {
+                "card" => "CardAmt",
+                "cash" => "CashAmt",
+                "transfer" => "TransferAmt",
+                _ => null
+            };
+            if (colName == null) continue;
+
+            row.Cells[colName].Value = item.Amount.ToString("N0");
+            var tagColor = item.PaymentType switch
+            {
+                "card" => ColorPalette.PaymentCard,
+                "cash" => ColorPalette.PaymentCash,
+                "transfer" => ColorPalette.PaymentTransfer,
+                _ => (Color.White, ColorPalette.Text)
+            };
+            row.Cells[colName].Style.BackColor = tagColor.Item1;
+            row.Cells[colName].Style.ForeColor = tagColor.Item2;
+        }
     }
 
     // ===== 헬퍼 메서드 =====
@@ -620,6 +703,91 @@ public class ReservationSalesTab : UserControl
     }
 }
 
+/// <summary>워크인 손님 추가 다이얼로그</summary>
+internal class WalkinDialog : Form
+{
+    public string ThemeName => _txtTheme.Text.Trim();
+    public string TimeSlot => $"{_dtpTime.Value:HH:mm}";
+    public string CustomerName => _txtName.Text.Trim();
+    public string? Phone => string.IsNullOrWhiteSpace(_txtPhone.Text) ? null : _txtPhone.Text.Trim();
+    public int Headcount => (int)_numCount.Value;
+
+    private readonly TextBox _txtTheme, _txtName, _txtPhone;
+    private readonly DateTimePicker _dtpTime;
+    private readonly NumericUpDown _numCount;
+
+    public WalkinDialog()
+    {
+        Text = "워크인 추가";
+        Size = new Size(380, 300);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        StartPosition = FormStartPosition.CenterParent;
+        MaximizeBox = false; MinimizeBox = false;
+        Font = new Font("맑은 고딕", 10f);
+
+        var y = 15;
+        AddLabel("테마:", ref y);
+        _txtTheme = new TextBox { Location = new Point(90, y - 2), Size = new Size(250, 25) };
+        Controls.Add(_txtTheme);
+        y += 35;
+
+        AddLabel("시간:", ref y);
+        _dtpTime = new DateTimePicker
+        {
+            Location = new Point(90, y - 2), Size = new Size(120, 25),
+            Format = DateTimePickerFormat.Custom, CustomFormat = "HH:mm",
+            ShowUpDown = true, Value = DateTime.Now
+        };
+        Controls.Add(_dtpTime);
+        y += 35;
+
+        AddLabel("예약자:", ref y);
+        _txtName = new TextBox { Location = new Point(90, y - 2), Size = new Size(150, 25) };
+        Controls.Add(_txtName);
+        y += 35;
+
+        AddLabel("연락처:", ref y);
+        _txtPhone = new TextBox { Location = new Point(90, y - 2), Size = new Size(180, 25) };
+        Controls.Add(_txtPhone);
+        y += 35;
+
+        AddLabel("인원:", ref y);
+        _numCount = new NumericUpDown
+        {
+            Location = new Point(90, y - 2), Size = new Size(80, 25),
+            Minimum = 1, Maximum = 50, Value = 2
+        };
+        Controls.Add(_numCount);
+        y += 40;
+
+        var btnOk = new Button
+        {
+            Text = "추가", Location = new Point(170, y), Size = new Size(80, 35),
+            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.None
+        };
+        btnOk.FlatAppearance.BorderSize = 0;
+        btnOk.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(_txtTheme.Text))
+            {
+                MessageBox.Show("테마를 입력하세요.", "알림"); _txtTheme.Focus(); return;
+            }
+            DialogResult = DialogResult.OK;
+        };
+        Controls.Add(btnOk);
+        Controls.Add(new Button { Text = "취소", Location = new Point(260, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
+        AcceptButton = btnOk;
+    }
+
+    private void AddLabel(string text, ref int y)
+    {
+        Controls.Add(new Label { Text = text, Location = new Point(20, y), Size = new Size(65, 22) });
+        y += 2;
+    }
+}
+
+/// <summary>지출 추가 다이얼로그</summary>
 internal class SaleItemDialog : Form
 {
     public string ItemDescription => _txtDesc.Text.Trim();
@@ -678,5 +846,84 @@ internal class SaleItemDialog : Form
         Controls.Add(btnOk);
         Controls.Add(new Button { Text = "취소", Location = new Point(240, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
         AcceptButton = btnOk;
+    }
+}
+
+/// <summary>매출 항목 삭제 다이얼로그 — 당일 매출 목록에서 선택 삭제</summary>
+internal class DeleteSaleItemDialog : Form
+{
+    public int? SelectedItemId { get; private set; }
+    private readonly DataGridView _grid;
+
+    public DeleteSaleItemDialog(List<SaleItem> items)
+    {
+        Text = "매출 삭제";
+        Size = new Size(500, 350);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        StartPosition = FormStartPosition.CenterParent;
+        MaximizeBox = false; MinimizeBox = false;
+        Font = new Font("맑은 고딕", 10f);
+
+        Controls.Add(new Label
+        {
+            Text = "삭제할 매출 항목을 선택하세요:",
+            Dock = DockStyle.Top, Height = 30, Padding = new Padding(10, 8, 0, 0)
+        });
+
+        _grid = new DataGridView
+        {
+            Dock = DockStyle.Fill, ReadOnly = true,
+            AllowUserToAddRows = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = false, RowHeadersVisible = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            BackgroundColor = Color.White
+        };
+
+        _grid.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "ItemId", Visible = false },
+            new DataGridViewTextBoxColumn { Name = "Desc", HeaderText = "항목", FillWeight = 45 },
+            new DataGridViewTextBoxColumn { Name = "Amt", HeaderText = "금액", FillWeight = 25 },
+            new DataGridViewTextBoxColumn { Name = "Pay", HeaderText = "결제", FillWeight = 15 },
+            new DataGridViewTextBoxColumn { Name = "Time", HeaderText = "등록시간", FillWeight = 15 }
+        );
+
+        foreach (var item in items)
+        {
+            var idx = _grid.Rows.Add();
+            _grid.Rows[idx].Cells["ItemId"].Value = item.Id;
+            _grid.Rows[idx].Cells["Desc"].Value = item.Description;
+            _grid.Rows[idx].Cells["Amt"].Value = $"₩{item.Amount:N0}";
+            _grid.Rows[idx].Cells["Pay"].Value = item.PaymentType switch
+            {
+                "card" => "카드", "cash" => "현금", "transfer" => "계좌", _ => item.PaymentType
+            };
+            _grid.Rows[idx].Cells["Time"].Value = item.CreatedAt.ToString("HH:mm");
+        }
+
+        var btnPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom, Height = 45,
+            FlowDirection = FlowDirection.RightToLeft,
+            Padding = new Padding(10, 5, 10, 5)
+        };
+        var btnCancel = new Button { Text = "취소", Size = new Size(80, 32), DialogResult = DialogResult.Cancel };
+        var btnDelete = new Button
+        {
+            Text = "삭제", Size = new Size(80, 32),
+            BackColor = ColorPalette.Danger, ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        btnDelete.FlatAppearance.BorderSize = 0;
+        btnDelete.Click += (_, _) =>
+        {
+            if (_grid.CurrentRow == null) return;
+            SelectedItemId = (int)_grid.CurrentRow.Cells["ItemId"].Value;
+            DialogResult = DialogResult.OK;
+        };
+
+        btnPanel.Controls.AddRange([btnCancel, btnDelete]);
+        Controls.Add(_grid);
+        Controls.Add(btnPanel);
+        CancelButton = btnCancel;
     }
 }

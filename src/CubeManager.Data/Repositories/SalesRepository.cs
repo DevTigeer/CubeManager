@@ -49,6 +49,32 @@ public class SalesRepository : ISalesRepository
             "SELECT last_insert_rowid()", item);
     }
 
+    public async Task UpsertSaleItemByDescAsync(int dailySalesId, string description, int amount, string paymentType, string category)
+    {
+        using var conn = _db.CreateConnection();
+
+        // 같은 일자 + 같은 설명의 기존 항목 찾기
+        var existing = await conn.QuerySingleOrDefaultAsync<int?>(
+            "SELECT id FROM sale_items WHERE daily_sales_id = @dailySalesId AND description = @description AND payment_type = @paymentType AND category = @category",
+            new { dailySalesId, description, paymentType, category });
+
+        if (existing.HasValue)
+        {
+            // 기존 항목 금액 업데이트
+            await conn.ExecuteAsync(
+                "UPDATE sale_items SET amount = @amount WHERE id = @id",
+                new { amount, id = existing.Value });
+        }
+        else
+        {
+            // 새 항목 추가
+            await conn.ExecuteAsync(
+                "INSERT INTO sale_items (daily_sales_id, description, amount, payment_type, category) " +
+                "VALUES (@dailySalesId, @description, @amount, @paymentType, @category)",
+                new { dailySalesId, description, amount, paymentType, category });
+        }
+    }
+
     public async Task<bool> DeleteSaleItemAsync(int id)
     {
         using var conn = _db.CreateConnection();

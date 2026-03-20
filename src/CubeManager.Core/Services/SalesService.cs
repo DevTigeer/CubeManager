@@ -40,6 +40,18 @@ public class SalesService : ISalesService
         await _salesRepo.UpdateCashBalanceAsync(date);
     }
 
+    public async Task UpsertSaleItemAsync(string date, string description, int amount,
+        string paymentType, string category)
+    {
+        if (amount <= 0)
+            throw new ArgumentException("금액은 양수여야 합니다.");
+
+        var dailyId = await _salesRepo.EnsureDailySalesAsync(date);
+        await _salesRepo.UpsertSaleItemByDescAsync(dailyId, description, amount, paymentType, category);
+        await _salesRepo.UpdateDailySalesTotalsAsync(dailyId);
+        await _salesRepo.UpdateCashBalanceAsync(date);
+    }
+
     public async Task DeleteSaleItemAsync(string date, int itemId)
     {
         await _salesRepo.DeleteSaleItemAsync(itemId);

@@ -8,6 +8,7 @@ public interface ISalesRepository
     Task<int> EnsureDailySalesAsync(string date);
     Task<IEnumerable<SaleItem>> GetSaleItemsAsync(int dailySalesId);
     Task<int> InsertSaleItemAsync(SaleItem item);
+    Task UpsertSaleItemByDescAsync(int dailySalesId, string description, int amount, string paymentType, string category);
     Task<bool> DeleteSaleItemAsync(int id);
     Task UpdateDailySalesTotalsAsync(int dailySalesId);
     Task<CashBalance?> GetCashBalanceAsync(string date);
