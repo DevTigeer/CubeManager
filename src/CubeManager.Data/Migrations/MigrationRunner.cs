@@ -19,7 +19,8 @@ public class MigrationRunner
             new V004_ReservationSales(),
             new V005_Salary(),
             new V006_HandoverInventory(),
-            new V007_ThemeHints()
+            new V007_ThemeHints(),
+            new V008_ReservationThemeName()
         ];
     }
 

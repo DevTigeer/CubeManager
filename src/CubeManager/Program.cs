@@ -87,6 +87,7 @@ static class Program
         services.AddSingleton<IHandoverRepository, HandoverRepository>();
         services.AddSingleton<IInventoryRepository, InventoryRepository>();
         services.AddSingleton<IThemeRepository, ThemeRepository>();
+        services.AddSingleton<IReservationRepository, ReservationRepository>();
 
         // Services
         services.AddSingleton<IEmployeeService, EmployeeService>();

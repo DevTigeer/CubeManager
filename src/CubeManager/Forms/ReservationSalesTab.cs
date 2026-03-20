@@ -1,5 +1,6 @@
 using System.Drawing;
 using CubeManager.Controls;
+using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
 using CubeManager.Helpers;
@@ -10,6 +11,7 @@ public class ReservationSalesTab : UserControl
 {
     private readonly ISalesService _salesService;
     private readonly IReservationScraperService _scraperService;
+    private readonly IReservationRepository _reservationRepo;
     private readonly DateTimePicker _dtpDate;
     private readonly DataGridView _gridMain;       // 예약+결제 통합
     private readonly DataGridView _gridExpense;    // 지출 내역
@@ -27,10 +29,12 @@ public class ReservationSalesTab : UserControl
     private List<SaleItem> _existingSaleItems = [];
     private int _sortState; // 0=원래, 1=오름차순, 2=내림차순
 
-    public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService)
+    public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService,
+        IReservationRepository reservationRepo)
     {
         _salesService = salesService;
         _scraperService = scraperService;
+        _reservationRepo = reservationRepo;
         _currentDate = DateTime.Today.ToString("yyyy-MM-dd");
         Dock = DockStyle.Fill;
         BackColor = Color.White;
@@ -292,13 +296,28 @@ public class ReservationSalesTab : UserControl
         }
     }
 
-    // ===== 웹 스크래핑 + 그리드 갱신 =====
+    // ===== 웹 스크래핑 + DB 저장 + 그리드 갱신 =====
     private async Task FetchWebAndUpdate()
     {
-        _reservations = (await _scraperService.FetchReservationsAsync(_dtpDate.Value)).ToList();
+        // 1. 웹에서 스크래핑
+        var scraped = (await _scraperService.FetchReservationsAsync(_dtpDate.Value)).ToList();
+
+        // 2. DB에 Upsert (기존 예약 상태는 보존됨)
+        foreach (var r in scraped)
+            await _reservationRepo.UpsertAsync(r);
+
+        // 3. DB에서 읽기 (사용자가 변경한 상태 + 웹 데이터 통합)
+        await LoadReservationsFromDb();
+
+        _lblLastFetch.Text = $"마지막 조회: {DateTime.Now:HH:mm:ss}";
+    }
+
+    // ===== DB에서 예약 + 매출 로드 =====
+    private async Task LoadReservationsFromDb()
+    {
+        _reservations = (await _reservationRepo.GetByDateAsync(_currentDate)).ToList();
         _existingSaleItems = (await _salesService.GetSaleItemsAsync(_currentDate))
             .Where(i => i.Category == "revenue").ToList();
-        _lblLastFetch.Text = $"마지막 조회: {DateTime.Now:HH:mm:ss}";
         PopulateMainGrid();
     }
 
@@ -423,11 +442,14 @@ public class ReservationSalesTab : UserControl
         row.Cells[e.ColumnIndex].Style.ForeColor = tagColor.Item2;
         row.Cells[e.ColumnIndex].Value = amount.ToString("N0");
 
-        // 테마명 + 예약자 조합으로 고유 설명 생성 (Upsert 키)
+        // 예약 ID 기반으로 고유 설명 생성
+        var resId = row.Cells["ResId"].Value;
         var theme = row.Cells["Theme"].Value?.ToString() ?? "매출";
         var customer = row.Cells["Customer"].Value?.ToString() ?? "";
         var time = row.Cells["Time"].Value?.ToString() ?? "";
-        var desc = $"{time} {theme} {customer}".Trim();
+        var desc = resId != null && (int)resId > 0
+            ? $"[R{resId}] {time} {theme} {customer}".Trim()
+            : $"{time} {theme} {customer}".Trim();
 
         try
         {
@@ -468,17 +490,24 @@ public class ReservationSalesTab : UserControl
         menu.Show(_gridMain, _gridMain.PointToClient(Cursor.Position));
     }
 
-    private void SetReservationStatus(int rowIndex, string status)
+    private async void SetReservationStatus(int rowIndex, string status)
     {
         if (rowIndex < 0 || rowIndex >= _reservations.Count) return;
 
-        _reservations[rowIndex].Status = status;
+        var reservation = _reservations[rowIndex];
+        reservation.Status = status;
+
+        // DB에 상태 저장 (Id가 있으면 DB 레코드)
+        if (reservation.Id > 0)
+            await _reservationRepo.UpdateStatusAsync(reservation.Id, status);
+
         PopulateMainGrid();
     }
 
     // ===== 전체 데이터 로드 =====
     private async Task LoadAllAsync()
     {
+        await LoadReservationsFromDb();
         await LoadExpenseGridAsync();
         await LoadSummaryAsync();
     }
@@ -590,13 +619,13 @@ public class ReservationSalesTab : UserControl
     }
 
     // ===== 워크인 추가 =====
-    private void AddWalkinReservation()
+    private async void AddWalkinReservation()
     {
         using var dlg = new WalkinDialog();
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-        // 예약 목록에 워크인 추가 (메모리)
-        _reservations.Add(new Reservation
+        // DB에 워크인 예약 저장
+        var walkin = new Reservation
         {
             ReservationDate = _currentDate,
             TimeSlot = dlg.TimeSlot,
@@ -604,10 +633,13 @@ public class ReservationSalesTab : UserControl
             CustomerName = dlg.CustomerName,
             CustomerPhone = dlg.Phone,
             Headcount = dlg.Headcount,
-            Status = "walkin"
-        });
+            Status = "walkin",
+            SyncedAt = DateTime.Now
+        };
+        await _reservationRepo.UpsertAsync(walkin);
 
-        PopulateMainGrid();
+        // DB에서 다시 로드 (ID 포함)
+        await LoadReservationsFromDb();
         ToastNotification.Show("워크인 추가 완료.", ToastType.Success);
     }
 
@@ -653,11 +685,16 @@ public class ReservationSalesTab : UserControl
     // ===== 기존 결제 데이터를 그리드 셀에 채우기 =====
     private void LoadExistingPayments(DataGridViewRow row, Reservation r)
     {
-        var prefix = $"{r.TimeSlot} {r.ThemeName} {r.CustomerName}".Trim();
+        // ID 기반 또는 시간+테마+이름 기반으로 매칭
+        var prefixById = r.Id > 0 ? $"[R{r.Id}]" : null;
+        var prefixByName = $"{r.TimeSlot} {r.ThemeName} {r.CustomerName}".Trim();
 
         foreach (var item in _existingSaleItems)
         {
-            if (item.Description == null || !item.Description.StartsWith(prefix)) continue;
+            if (item.Description == null) continue;
+            var matched = (prefixById != null && item.Description.StartsWith(prefixById))
+                          || item.Description.StartsWith(prefixByName);
+            if (!matched) continue;
 
             var colName = item.PaymentType switch
             {

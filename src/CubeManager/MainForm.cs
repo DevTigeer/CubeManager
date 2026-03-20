@@ -108,7 +108,8 @@ public class MainForm : Form
     {
         0 => new ReservationSalesTab(
                 _sp.GetRequiredService<ISalesService>(),
-                _sp.GetRequiredService<IReservationScraperService>()),
+                _sp.GetRequiredService<IReservationScraperService>(),
+                _sp.GetRequiredService<IReservationRepository>()),
         1 => new ScheduleTab(
                 _sp.GetRequiredService<IScheduleService>(),
                 _sp.GetRequiredService<IEmployeeService>()),
