@@ -1,5 +1,4 @@
 using System.Drawing;
-using CubeManager.Controls;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
@@ -18,11 +17,14 @@ public class ReservationSalesTab : UserControl
     private readonly CheckBox _chkAutoRefresh;
     private readonly Label _lblLastFetch;
     private readonly System.Windows.Forms.Timer _autoRefreshTimer;
-    private readonly SummaryCardRow _summaryCards;
 
-    // 우측 요약 라벨들
+    // 우측 결제 요약 라벨들
     private readonly Label _lblSumCard, _lblSumCash, _lblSumTransfer;
     private readonly Label _lblSumTotal, _lblSumExpense, _lblSumCashBalance, _lblSumBalanceDetail;
+
+    // 중앙 통계 라벨들
+    private readonly Label _lblStatTotal, _lblStatRemoved, _lblStatNoshow, _lblStatConfirmed;
+    private readonly Label _lblStatHeadcount, _lblStatAvgPrice, _lblStatYesterdayCash;
 
     private string _currentDate;
     private List<Reservation> _reservations = [];
@@ -110,14 +112,7 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(_lblLastFetch);
 
-        // ========== 2. Summary Cards ==========
-        _summaryCards = new SummaryCardRow();
-        _summaryCards.AddCard("오늘 예약", "0건", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
-        _summaryCards.AddCard("총 매출", "₩0", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
-        _summaryCards.AddCard("카드 매출", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
-        _summaryCards.AddCard("현금 잔액", "₩0", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
-
-        // ========== 3. 통합 그리드 (예약+결제) ==========
+        // ========== 2. 통합 그리드 (예약+결제) ==========
         _gridMain = new DataGridView { Dock = DockStyle.Fill };
         GridTheme.ApplyTheme(_gridMain);
         _gridMain.AllowUserToAddRows = false;
@@ -149,15 +144,15 @@ public class ReservationSalesTab : UserControl
             ForeColor = ColorPalette.TextSecondary, Padding = new Padding(0, 5, 0, 0)
         };
 
-        // ========== 4. 하단 패널 (지출 + 요약) ==========
+        // ========== 3. 하단 패널 (지출 + 통계 + 결제 요약) ==========
         var bottomPanel = new Panel
         {
-            Dock = DockStyle.Bottom, Height = 200,
+            Dock = DockStyle.Bottom, Height = 210,
             BackColor = ColorPalette.Background,
             Padding = new Padding(0)
         };
 
-        // 4-1. 지출 그리드 (좌측 60%)
+        // 3-1. 지출 그리드 (좌측 40%)
         var expensePanel = new Panel
         {
             Dock = DockStyle.Left, Width = 1, // Resize에서 설정
@@ -188,14 +183,54 @@ public class ReservationSalesTab : UserControl
         var btnAddExpense = CreateBtn("+ 지출 추가", ColorPalette.Danger);
         btnAddExpense.Dock = DockStyle.Bottom;
         btnAddExpense.Height = 32;
-        btnAddExpense.Width = 0; // Fill
+        btnAddExpense.Width = 0;
         btnAddExpense.Click += (_, _) => AddItem("expense");
 
         expensePanel.Controls.Add(_gridExpense);
         expensePanel.Controls.Add(btnAddExpense);
         expensePanel.Controls.Add(lblExpenseHeader);
 
-        // 4-2. 요약 패널 (우측 40%)
+        // 3-2. 오늘의 통계 (중앙 30%)
+        var statsPanel = new Panel
+        {
+            Dock = DockStyle.Left, Width = 1, // Resize에서 설정
+            Padding = new Padding(15, 10, 15, 10),
+            BackColor = ColorPalette.Surface
+        };
+
+        // 좌측 구분선
+        var statsLeftBorder = new Panel
+        {
+            Dock = DockStyle.Left, Width = 1,
+            BackColor = ColorPalette.Border
+        };
+
+        var lblStatsHeader = new Label
+        {
+            Text = "오늘의 통계", Dock = DockStyle.Top, Height = 25,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextSecondary
+        };
+
+        var statsContent = new Panel { Dock = DockStyle.Fill };
+        var ssf = new Font("맑은 고딕", 10.5f);
+        var sy = 4;
+        _lblStatTotal = MakeStatLabel(statsContent, "오늘 예약", ColorPalette.Text, ssf, ref sy);
+        _lblStatRemoved = MakeStatLabel(statsContent, "취소", ColorPalette.Danger, ssf, ref sy);
+        _lblStatNoshow = MakeStatLabel(statsContent, "노쇼", ColorPalette.AccentOrange.Main, ssf, ref sy);
+        _lblStatConfirmed = MakeStatLabel(statsContent, "확정", ColorPalette.AccentGreen.Main, ssf, ref sy);
+        sy += 3;
+        statsContent.Controls.Add(new Label { Location = new Point(5, sy), Size = new Size(180, 1), BackColor = ColorPalette.Border });
+        sy += 6;
+        _lblStatHeadcount = MakeStatLabel(statsContent, "총 인원", ColorPalette.Text, ssf, ref sy);
+        _lblStatAvgPrice = MakeStatLabel(statsContent, "객단가", ColorPalette.Primary, ssf, ref sy);
+        _lblStatYesterdayCash = MakeStatLabel(statsContent, "어제 잔돈", ColorPalette.AccentOrange.Main, ssf, ref sy);
+
+        statsPanel.Controls.Add(statsContent);
+        statsPanel.Controls.Add(lblStatsHeader);
+        statsPanel.Controls.Add(statsLeftBorder);
+
+        // 3-3. 결제 요약 패널 (우측 30%)
         var summaryRight = new Panel
         {
             Dock = DockStyle.Fill,
@@ -203,30 +238,51 @@ public class ReservationSalesTab : UserControl
             BackColor = ColorPalette.Surface
         };
 
-        var sf = new Font("맑은 고딕", 11f);
-        var bf = new Font("맑은 고딕", 12f, FontStyle.Bold);
-        var y = 8;
-        _lblSumCard = MakeSummaryLabel(summaryRight, "카드", ColorPalette.PaymentCard.Item2, sf, ref y);
-        _lblSumCash = MakeSummaryLabel(summaryRight, "현금", ColorPalette.PaymentCash.Item2, sf, ref y);
-        _lblSumTransfer = MakeSummaryLabel(summaryRight, "계좌", ColorPalette.PaymentTransfer.Item2, sf, ref y);
-        y += 5;
-        summaryRight.Controls.Add(new Label { Location = new Point(10, y), Size = new Size(220, 1), BackColor = ColorPalette.Border });
-        y += 8;
-        _lblSumTotal = MakeSummaryLabel(summaryRight, "총매출", ColorPalette.Text, bf, ref y);
-        _lblSumExpense = MakeSummaryLabel(summaryRight, "총지출", ColorPalette.Danger, sf, ref y);
-        y += 5;
-        summaryRight.Controls.Add(new Label { Location = new Point(10, y), Size = new Size(220, 1), BackColor = ColorPalette.Border });
-        y += 8;
-        _lblSumCashBalance = MakeSummaryLabel(summaryRight, "현금잔액", ColorPalette.Primary, bf, ref y);
+        // 좌측 구분선
+        var summaryLeftBorder = new Panel
+        {
+            Dock = DockStyle.Left, Width = 1,
+            BackColor = ColorPalette.Border
+        };
+
+        var lblSummaryHeader = new Label
+        {
+            Text = "결제 요약", Dock = DockStyle.Top, Height = 25,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextSecondary
+        };
+
+        var summaryContent = new Panel { Dock = DockStyle.Fill };
+        var sf = new Font("맑은 고딕", 10.5f);
+        var bf = new Font("맑은 고딕", 11f, FontStyle.Bold);
+        var ry = 4;
+        _lblSumCard = MakeStatLabel(summaryContent, "카드", ColorPalette.PaymentCard.Item2, sf, ref ry);
+        _lblSumCash = MakeStatLabel(summaryContent, "현금", ColorPalette.PaymentCash.Item2, sf, ref ry);
+        _lblSumTransfer = MakeStatLabel(summaryContent, "계좌", ColorPalette.PaymentTransfer.Item2, sf, ref ry);
+        ry += 3;
+        summaryContent.Controls.Add(new Label { Location = new Point(5, ry), Size = new Size(180, 1), BackColor = ColorPalette.Border });
+        ry += 6;
+        _lblSumTotal = MakeStatLabel(summaryContent, "총매출", ColorPalette.Text, bf, ref ry);
+        _lblSumExpense = MakeStatLabel(summaryContent, "총지출", ColorPalette.Danger, sf, ref ry);
+        ry += 3;
+        summaryContent.Controls.Add(new Label { Location = new Point(5, ry), Size = new Size(180, 1), BackColor = ColorPalette.Border });
+        ry += 6;
+        _lblSumCashBalance = MakeStatLabel(summaryContent, "현금잔액", ColorPalette.Primary, bf, ref ry);
         _lblSumBalanceDetail = new Label
         {
-            Location = new Point(15, y), Size = new Size(220, 20),
+            Location = new Point(10, ry), Size = new Size(200, 18),
             Font = new Font("맑은 고딕", 8.5f), ForeColor = ColorPalette.TextTertiary
         };
-        summaryRight.Controls.Add(_lblSumBalanceDetail);
+        summaryContent.Controls.Add(_lblSumBalanceDetail);
 
-        bottomPanel.Controls.Add(summaryRight);
-        bottomPanel.Controls.Add(expensePanel);
+        summaryRight.Controls.Add(summaryContent);
+        summaryRight.Controls.Add(lblSummaryHeader);
+        summaryRight.Controls.Add(summaryLeftBorder);
+
+        // 하단 패널에 역순 추가 (Dock 순서)
+        bottomPanel.Controls.Add(summaryRight);    // Fill (마지막 = 나머지)
+        bottomPanel.Controls.Add(statsPanel);      // Left (중앙)
+        bottomPanel.Controls.Add(expensePanel);    // Left (좌측)
 
         // 구분선
         var divider = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = ColorPalette.Border };
@@ -236,13 +292,13 @@ public class ReservationSalesTab : UserControl
         Controls.Add(lblMainHeader);
         Controls.Add(divider);
         Controls.Add(bottomPanel);
-        Controls.Add(_summaryCards);
         Controls.Add(topPanel);
 
-        // 하단 패널 크기 조정
+        // 하단 패널 크기 조정 (3분할)
         bottomPanel.Resize += (_, _) =>
         {
-            expensePanel.Width = (int)(bottomPanel.Width * 0.6);
+            expensePanel.Width = (int)(bottomPanel.Width * 0.40);
+            statsPanel.Width = (int)(bottomPanel.Width * 0.30);
         };
 
         // ========== 자동 갱신 타이머 ==========
@@ -376,12 +432,18 @@ public class ReservationSalesTab : UserControl
 
             // 상태 표시
             var isRemoved = r.Status == "removed";
+            var isNoshow = r.Status == "noshow";
             var isWalkin = r.Status == "walkin";
-            row.Cells["Status"].Value = isRemoved ? "취소" : isWalkin ? "워크인" : "확정";
+            row.Cells["Status"].Value = isRemoved ? "취소" : isNoshow ? "노쇼" : isWalkin ? "워크인" : "확정";
             if (isRemoved)
             {
                 row.Cells["Status"].Style.BackColor = ColorPalette.PaymentExpense.Item1;
                 row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentExpense.Item2;
+            }
+            else if (isNoshow)
+            {
+                row.Cells["Status"].Style.BackColor = ColorPalette.AccentOrange.Light;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.AccentOrange.Main;
             }
             else if (isWalkin)
             {
@@ -394,8 +456,8 @@ public class ReservationSalesTab : UserControl
                 row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentCash.Item2;
             }
 
-            // 취소된 행 스타일
-            if (isRemoved)
+            // 취소/노쇼 행 스타일
+            if (isRemoved || isNoshow)
             {
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
@@ -412,7 +474,6 @@ public class ReservationSalesTab : UserControl
             LoadExistingPayments(row, r);
         }
 
-        UpdateSummaryCards();
     }
 
     // ===== 결제 금액 셀 편집 완료 =====
@@ -489,11 +550,15 @@ public class ReservationSalesTab : UserControl
 
         var menu = new ContextMenuStrip();
 
-        if (currentStatus == "확정")
+        if (currentStatus is "확정" or "워크인")
         {
             menu.Items.Add("취소(삭제)", null, (_, _) =>
             {
                 SetReservationStatus(e.RowIndex, "removed");
+            });
+            menu.Items.Add("노쇼", null, (_, _) =>
+            {
+                SetReservationStatus(e.RowIndex, "noshow");
             });
         }
         else
@@ -569,7 +634,7 @@ public class ReservationSalesTab : UserControl
         }
     }
 
-    // ===== 요약 데이터 로드 =====
+    // ===== 요약 + 통계 데이터 로드 =====
     private async Task LoadSummaryAsync()
     {
         try
@@ -587,7 +652,7 @@ public class ReservationSalesTab : UserControl
                 .Where(i => i.Category == "expense").ToList();
             var totalExpense = expenseItems.Sum(i => i.Amount);
 
-            // 우측 요약
+            // ── 우측 결제 요약 ──
             _lblSumCard.Text = $"카드      ₩ {card:N0}";
             _lblSumCash.Text = $"현금      ₩ {cash:N0}";
             _lblSumTransfer.Text = $"계좌      ₩ {transfer:N0}";
@@ -600,18 +665,33 @@ public class ReservationSalesTab : UserControl
                 ? $"(전일 {balance.OpeningBalance:N0} + {balance.CashIn:N0} - {balance.CashOut:N0})"
                 : "";
 
-            // Summary Cards 갱신
-            UpdateSummaryCards();
+            // ── 중앙 오늘의 통계 ──
+            var totalCount = _reservations.Count;
+            var removedCount = _reservations.Count(r => r.Status == "removed");
+            var noshowCount = _reservations.Count(r => r.Status == "noshow");
+            var confirmedCount = _reservations.Count(r => r.Status == "confirmed");
+            var activeReservations = _reservations
+                .Where(r => r.Status is "confirmed" or "walkin").ToList();
+            var headcount = activeReservations.Sum(r => r.Headcount);
+            var avgPrice = activeReservations.Count > 0 ? total / activeReservations.Count : 0;
+
+            _lblStatTotal.Text = $"오늘 예약       {totalCount}팀";
+            _lblStatRemoved.Text = $"취소              {removedCount}팀";
+            _lblStatNoshow.Text = $"노쇼              {noshowCount}팀";
+            _lblStatConfirmed.Text = $"확정              {confirmedCount}팀";
+            _lblStatHeadcount.Text = $"총 인원         {headcount}명";
+            _lblStatAvgPrice.Text = $"객단가          ₩ {avgPrice:N0}";
+
+            // 어제 잔돈: 전일 CashBalance
+            var yesterday = DateTime.Parse(_currentDate).AddDays(-1).ToString("yyyy-MM-dd");
+            var yesterdayBalance = await _salesService.GetCashBalanceAsync(yesterday);
+            var yesterdayCash = yesterdayBalance?.ClosingBalance ?? 0;
+            _lblStatYesterdayCash.Text = $"어제 잔돈     ₩ {yesterdayCash:N0}";
         }
         catch (Exception ex)
         {
             ToastNotification.Show(ex.Message, ToastType.Error);
         }
-    }
-
-    private void UpdateSummaryCards()
-    {
-        _summaryCards.UpdateCard(0, $"{_reservations.Count(r => r.Status == "confirmed")}건");
     }
 
     // ===== 지출 추가 =====
@@ -744,15 +824,15 @@ public class ReservationSalesTab : UserControl
         Margin = new Padding(5, 0, 0, 0)
     };
 
-    private static Label MakeSummaryLabel(Panel parent, string prefix, Color color, Font font, ref int y)
+    private static Label MakeStatLabel(Panel parent, string prefix, Color color, Font font, ref int y)
     {
         var lbl = new Label
         {
-            Location = new Point(15, y), Size = new Size(230, 22),
-            Font = font, ForeColor = color, Text = $"{prefix}      ₩ 0"
+            Location = new Point(10, y), Size = new Size(220, 20),
+            Font = font, ForeColor = color, Text = $"{prefix}      —"
         };
         parent.Controls.Add(lbl);
-        y += 24;
+        y += 22;
         return lbl;
     }
 }
