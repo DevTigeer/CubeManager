@@ -306,7 +306,24 @@ public class ReservationSalesTab : UserControl
         foreach (var r in scraped)
             await _reservationRepo.UpsertAsync(r);
 
-        // 3. DB에서 읽기 (사용자가 변경한 상태 + 웹 데이터 통합)
+        // 3. 웹에서 사라진 예약 감지 → 자동으로 "삭제" 상태 전환
+        var dbReservations = (await _reservationRepo.GetByDateAsync(_currentDate)).ToList();
+        foreach (var dbRes in dbReservations)
+        {
+            // 이미 사용자가 수동으로 변경한 상태(removed, walkin)는 건드리지 않음
+            if (dbRes.Status != "confirmed") continue;
+
+            // 웹 조회 결과에 없으면 → 웹에서 삭제된 것
+            var stillExists = scraped.Any(s =>
+                s.TimeSlot == dbRes.TimeSlot &&
+                s.ThemeName == dbRes.ThemeName &&
+                s.CustomerName == dbRes.CustomerName);
+
+            if (!stillExists)
+                await _reservationRepo.UpdateStatusAsync(dbRes.Id, "removed");
+        }
+
+        // 4. DB에서 읽기 (최종 상태 반영)
         await LoadReservationsFromDb();
 
         _lblLastFetch.Text = $"마지막 조회: {DateTime.Now:HH:mm:ss}";
