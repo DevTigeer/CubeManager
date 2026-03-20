@@ -37,7 +37,7 @@ public class SalaryTab : UserControl
             TextAlign = ContentAlignment.MiddleLeft
         });
 
-        var btnPrev = new Button { Text = "◀", Size = new Size(40, 32), FlatStyle = FlatStyle.Flat };
+        var btnPrev = ButtonFactory.CreateNavArrow("◀");
         btnPrev.Click += (_, _) => Navigate(-1);
 
         _lblMonth = new Label
@@ -47,41 +47,20 @@ public class SalaryTab : UserControl
             TextAlign = ContentAlignment.MiddleCenter
         };
 
-        var btnNext = new Button { Text = "▶", Size = new Size(40, 32), FlatStyle = FlatStyle.Flat };
+        var btnNext = ButtonFactory.CreateNavArrow("▶");
         btnNext.Click += (_, _) => Navigate(1);
 
-        var btnCalc = new Button
-        {
-            Text = "재계산", Size = new Size(80, 32),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(20, 0, 0, 0)
-        };
-        btnCalc.FlatAppearance.BorderSize = 0;
+        var btnCalc = ButtonFactory.CreatePrimary("재계산");
+        btnCalc.Margin = new Padding(20, 0, 0, 0);
         btnCalc.Click += BtnCalc_Click;
 
         topBar.Controls.AddRange([btnPrev, _lblMonth, btnNext, btnCalc]);
 
         // Grid
-        _grid = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            AllowUserToAddRows = false, ReadOnly = true,
-            RowHeadersVisible = false, BackgroundColor = Color.White,
-            BorderStyle = BorderStyle.FixedSingle, GridColor = ColorPalette.Border,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            EnableHeadersVisualStyles = false,
-            DefaultCellStyle = new DataGridViewCellStyle
-            {
-                Font = new Font("맑은 고딕", 9f),
-                Alignment = DataGridViewContentAlignment.MiddleRight
-            },
-            ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-            {
-                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
-                BackColor = ColorPalette.Background,
-                Alignment = DataGridViewContentAlignment.MiddleCenter
-            }
-        };
+        _grid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true };
+        GridTheme.ApplyTheme(_grid);
+        _grid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+        _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
         _grid.Columns.AddRange(
             new DataGridViewTextBoxColumn { HeaderText = "이름", FillWeight = 12, DefaultCellStyle = new() { Alignment = DataGridViewContentAlignment.MiddleLeft } },
@@ -96,10 +75,8 @@ public class SalaryTab : UserControl
             new DataGridViewTextBoxColumn { HeaderText = "총급여", FillWeight = 10 },
             new DataGridViewTextBoxColumn { HeaderText = "3.3%\n(수령액)", FillWeight = 10 },
             new DataGridViewTextBoxColumn { HeaderText = "", FillWeight = 2, ReadOnly = true }, // 구분선
-            new DataGridViewTextBoxColumn { HeaderText = "식비", FillWeight = 8, DefaultCellStyle = new() { ForeColor = Color.FromArgb(120, 120, 120), Alignment = DataGridViewContentAlignment.MiddleRight } },
-            new DataGridViewTextBoxColumn { HeaderText = "택시", FillWeight = 8, DefaultCellStyle = new() { ForeColor = Color.FromArgb(120, 120, 120), Alignment = DataGridViewContentAlignment.MiddleRight } });
-
-        GridTheme.ApplyTheme(_grid);
+            new DataGridViewTextBoxColumn { HeaderText = "식비", FillWeight = 8, DefaultCellStyle = new() { ForeColor = ColorPalette.TextTertiary, Alignment = DataGridViewContentAlignment.MiddleRight } },
+            new DataGridViewTextBoxColumn { HeaderText = "택시", FillWeight = 8, DefaultCellStyle = new() { ForeColor = ColorPalette.TextTertiary, Alignment = DataGridViewContentAlignment.MiddleRight } });
 
         // Summary Cards
         var cards = new SummaryCardRow();

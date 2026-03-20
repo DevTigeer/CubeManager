@@ -1,18 +1,28 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace CubeManager.Helpers;
 
 public enum ToastType { Success, Warning, Error, Info }
 
 /// <summary>
-/// 하단 우측 토스트 알림. 좌측 4px 컬러 바 + 라이트 배경 패턴.
-/// 3초 후 자동 사라짐. 복수 토스트 스택.
+/// 하단 우측 토스트 알림.
+/// 2025 업데이트: 8px 둥근 모서리, 타입 아이콘, 미세 그림자.
 /// </summary>
 public class ToastNotification : Form
 {
     private static readonly List<ToastNotification> _activeToasts = [];
     private readonly System.Windows.Forms.Timer _timer;
     private readonly Color _barColor;
+    private const int Radius = 8;
+
+    private static readonly Dictionary<ToastType, string> TypeIcons = new()
+    {
+        [ToastType.Success] = "✓",
+        [ToastType.Warning] = "⚠",
+        [ToastType.Error] = "✕",
+        [ToastType.Info] = "ℹ"
+    };
 
     private ToastNotification(string message, ToastType type)
     {
@@ -20,50 +30,63 @@ public class ToastNotification : Form
         ShowInTaskbar = false;
         TopMost = true;
         StartPosition = FormStartPosition.Manual;
-        Size = new Size(320, 50);
+        Size = new Size(340, 52);
 
-        // 타입별 색상 매핑 (좌측 바, 배경, 글자)
         var (barColor, bgColor, fgColor) = type switch
         {
-            ToastType.Success => (ColorPalette.Success, ColorPalette.SuccessLight, Color.FromArgb(46, 125, 50)),
-            ToastType.Warning => (ColorPalette.Warning, ColorPalette.WarningLight, Color.FromArgb(230, 81, 0)),
-            ToastType.Error   => (ColorPalette.Danger, ColorPalette.DangerLight, Color.FromArgb(198, 40, 40)),
-            _ => (ColorPalette.Info, ColorPalette.InfoLight, ColorPalette.Primary700)
+            ToastType.Success => (ColorPalette.Success, ColorPalette.SuccessLight, ColorPalette.Success),
+            ToastType.Warning => (ColorPalette.Warning, ColorPalette.WarningLight, ColorPalette.Warning),
+            ToastType.Error   => (ColorPalette.Danger, ColorPalette.DangerLight, ColorPalette.Danger),
+            _ => (ColorPalette.Info, ColorPalette.InfoLight, ColorPalette.Info)
         };
 
         _barColor = barColor;
         BackColor = bgColor;
 
-        // 좌측 바 자리 확보 (Padding)
+        var icon = TypeIcons[type];
         var lbl = new Label
         {
-            Text = message,
+            Text = $" {icon}  {message}",
             ForeColor = fgColor,
-            Font = new Font("맑은 고딕", 11f, FontStyle.Regular),
+            Font = new Font("맑은 고딕", 10.5f),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(16, 0, 10, 0)  // 좌측 16px (4px bar + 12px gap)
+            Padding = new Padding(14, 0, 10, 0)
         };
         Controls.Add(lbl);
 
-        // 3초 후 자동 닫기
+        // 둥근 모서리
+        Resize += (_, _) => ApplyRoundedRegion();
+        HandleCreated += (_, _) => ApplyRoundedRegion();
+
         _timer = new System.Windows.Forms.Timer { Interval = 3000 };
         _timer.Tick += (_, _) => CloseToast();
         _timer.Start();
+    }
+
+    private void ApplyRoundedRegion()
+    {
+        if (Width <= 0 || Height <= 0) return;
+        var path = new GraphicsPath();
+        var d = Radius * 2;
+        var rect = new Rectangle(0, 0, Width, Height);
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        Region = new Region(path);
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
 
         // 좌측 4px 컬러 바
         using var barBrush = new SolidBrush(_barColor);
         g.FillRectangle(barBrush, 0, 0, 4, Height);
-
-        // 1px 테두리 (subtle)
-        using var borderPen = new Pen(ColorPalette.Border, 1);
-        g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
     }
 
     public static void Show(string message, ToastType type)
@@ -79,7 +102,7 @@ public class ToastNotification : Form
     private static void PositionToast(ToastNotification toast)
     {
         var screen = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
-        var yOffset = _activeToasts.Count * 60;
+        var yOffset = _activeToasts.Count * 62;
         toast.Location = new Point(
             screen.Right - toast.Width - 16,
             screen.Bottom - toast.Height - 16 - yOffset);

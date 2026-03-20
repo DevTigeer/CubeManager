@@ -866,13 +866,14 @@ public class ReservationSalesTab : UserControl
     }
 
     // ===== 헬퍼 메서드 =====
-    private static Button CreateBtn(string text, Color color) => new()
+    private static Button CreateBtn(string text, Color color)
     {
-        Text = text, Size = new Size(85, 32),
-        BackColor = color, ForeColor = Color.White,
-        FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 9.5f),
-        Margin = new Padding(5, 0, 0, 0)
-    };
+        var btn = ButtonFactory.CreatePrimary(text, 90);
+        btn.BackColor = color;
+        btn.Font = new Font("맑은 고딕", 9.5f);
+        btn.Margin = new Padding(5, 0, 0, 0);
+        return btn;
+    }
 
     private static Label MakeStatLabel(Panel parent, string prefix, Color color, Font font, ref int y)
     {

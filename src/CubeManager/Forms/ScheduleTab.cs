@@ -47,14 +47,8 @@ public class ScheduleTab : UserControl
         var btnNext = CreateNavButton("다음주 ▶");
         btnNext.Click += (_, _) => Navigate(1);
 
-        var btnAdd = new Button
-        {
-            Text = "+ 스케줄 추가", Size = new Size(120, 32),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 10f),
-            Margin = new Padding(20, 0, 0, 0)
-        };
-        btnAdd.FlatAppearance.BorderSize = 0;
+        var btnAdd = ButtonFactory.CreatePrimary("+ 스케줄 추가", 130);
+        btnAdd.Margin = new Padding(20, 0, 0, 0);
         btnAdd.Click += BtnAddSchedule_Click;
 
         topBar.Controls.AddRange([btnPrev, _lblWeekInfo, btnNext, btnAdd]);
@@ -86,11 +80,8 @@ public class ScheduleTab : UserControl
         _ = LoadWeekAsync();
     }
 
-    private static Button CreateNavButton(string text) => new()
-    {
-        Text = text, Size = new Size(90, 32),
-        FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 10f)
-    };
+    private static Button CreateNavButton(string text) =>
+        ButtonFactory.CreateGhost(text, 100);
 
     private void Navigate(int direction)
     {
