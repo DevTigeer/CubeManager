@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
-using AngleSharp.Io;
 using CubeManager.Core.Helpers;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
@@ -14,7 +13,8 @@ namespace CubeManager.Core.Services;
 public class ReservationScraperService : IReservationScraperService
 {
     private readonly IConfigRepository _configRepo;
-    private IBrowsingContext? _context;
+    private HttpClient? _httpClient;
+    private System.Net.CookieContainer? _cookieContainer;
 
     public ReservationScraperService(IConfigRepository configRepo)
     {
@@ -41,7 +41,12 @@ public class ReservationScraperService : IReservationScraperService
 
             Log.Information("예약 조회: {Url}", url);
 
-            var page = await _context!.OpenAsync(url);
+            // HttpClient로 HTML 가져온 후 AngleSharp로 파싱
+            var html = await _httpClient!.GetStringAsync(url);
+            var config = Configuration.Default;
+            var context = BrowsingContext.New(config);
+            var page = await context.OpenAsync(req => req.Content(html));
+
             return ParseReservations(page, date);
         }
         catch (Exception ex)
@@ -55,32 +60,30 @@ public class ReservationScraperService : IReservationScraperService
     {
         try
         {
-            var config = Configuration.Default
-                .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = false })
-                .WithCookies();
-            var ctx = BrowsingContext.New(config);
-
             var baseUrl = await _configRepo.GetAsync("web_base_url")
                           ?? "http://www.cubeescape.co.kr";
 
-            var loginPage = await ctx.OpenAsync($"{baseUrl}/bbs/login.php");
-            var form = loginPage.QuerySelector<IHtmlFormElement>("form[name='flogin']")
-                       ?? loginPage.QuerySelector<IHtmlFormElement>("form");
+            // HttpClient + CookieContainer로 직접 POST 로그인
+            var cookieContainer = new System.Net.CookieContainer();
+            using var handler = new HttpClientHandler { CookieContainer = cookieContainer };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
 
-            if (form == null)
-            {
-                Log.Warning("로그인 폼을 찾을 수 없음");
-                return false;
-            }
+            var loginData = new FormUrlEncodedContent([
+                new KeyValuePair<string, string>("mb_id", id),
+                new KeyValuePair<string, string>("mb_password", password),
+                new KeyValuePair<string, string>("url", $"{baseUrl}/adm")
+            ]);
 
-            var result = await form.SubmitAsync(new { mb_id = id, mb_password = password });
+            var loginResult = await client.PostAsync($"{baseUrl}/bbs/login_check.php", loginData);
+            Log.Information("로그인 POST 응답: {StatusCode}", loginResult.StatusCode);
 
             // 로그인 성공 판별: 관리자 페이지 접근 가능 여부
-            var testPage = await ctx.OpenAsync($"{baseUrl}/adm/");
-            var bodyText = testPage.Body?.TextContent ?? "";
+            var testResponse = await client.GetStringAsync($"{baseUrl}/adm/");
 
-            var success = !bodyText.Contains("로그인") || bodyText.Contains("예약");
-            Log.Information("연결 테스트 결과: {Result}", success ? "성공" : "실패");
+            // 관리자 페이지에 "예약" 또는 "관리"가 있으면 성공
+            var success = testResponse.Contains("예약") || testResponse.Contains("관리");
+            Log.Information("연결 테스트 결과: {Result}, 본문길이: {Len}",
+                success ? "성공" : "실패", testResponse.Length);
 
             return success;
         }
@@ -101,24 +104,22 @@ public class ReservationScraperService : IReservationScraperService
 
     private async Task EnsureLoggedInAsync(string id, string pw)
     {
-        if (_context != null) return;
-
-        var config = Configuration.Default
-            .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = false })
-            .WithCookies();
-        _context = BrowsingContext.New(config);
+        if (_httpClient != null) return;
 
         var baseUrl = await _configRepo.GetAsync("web_base_url")
                       ?? "http://www.cubeescape.co.kr";
 
-        var loginPage = await _context.OpenAsync($"{baseUrl}/bbs/login.php");
-        var form = loginPage.QuerySelector<IHtmlFormElement>("form[name='flogin']")
-                   ?? loginPage.QuerySelector<IHtmlFormElement>("form");
+        _cookieContainer = new System.Net.CookieContainer();
+        var handler = new HttpClientHandler { CookieContainer = _cookieContainer };
+        _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
 
-        if (form == null)
-            throw new InvalidOperationException("로그인 폼을 찾을 수 없습니다.");
+        var loginData = new FormUrlEncodedContent([
+            new KeyValuePair<string, string>("mb_id", id),
+            new KeyValuePair<string, string>("mb_password", pw),
+            new KeyValuePair<string, string>("url", $"{baseUrl}/adm")
+        ]);
 
-        await form.SubmitAsync(new { mb_id = id, mb_password = pw });
+        await _httpClient.PostAsync($"{baseUrl}/bbs/login_check.php", loginData);
         Log.Information("웹 로그인 완료");
     }
 
