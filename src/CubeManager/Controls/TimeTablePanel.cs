@@ -99,8 +99,10 @@ public class TimeTablePanel : Panel
             }
         }
 
-        // 스케줄 블록 렌더링
+        // 스케줄 블록 렌더링 (겹침 시 N등분)
         var grouped = _schedules.GroupBy(s => new { s.EmployeeId, s.WorkDate });
+        var blockList = new List<(int dayIdx, int startSlot, int endSlot, Schedule sched)>();
+
         foreach (var group in grouped)
         {
             var sched = group.First();
@@ -113,25 +115,51 @@ public class TimeTablePanel : Panel
             if (startSlot < 0 || endSlot < 0) continue;
             if (endSlot <= startSlot) endSlot = slots.Length - 1;
 
-            var x = _timeColWidth + dayIdx * cellW + 2;
-            var y = _headerHeight + startSlot * cellH + 1;
-            var w = cellW - 4;
-            var h = (endSlot - startSlot) * cellH - 2;
+            blockList.Add((dayIdx, startSlot, endSlot, sched));
+        }
 
-            var color = GetEmployeeColor(sched.EmployeeId);
-            using var fillBrush = new SolidBrush(color);
-            using var blockPen = new Pen(Color.FromArgb(80, 0, 0, 0));
-            var rect = new Rectangle(x, y, w, Math.Max(h, cellH));
+        // 같은 날짜에서 시간이 겹치는 블록끼리 그룹핑
+        var dayGroups = blockList.GroupBy(b => b.dayIdx);
+        foreach (var dayGroup in dayGroups)
+        {
+            var dayBlocks = dayGroup.OrderBy(b => b.startSlot).ToList();
 
-            g.FillRectangle(fillBrush, rect);
-            g.DrawRectangle(blockPen, rect);
+            // 각 블록에 대해 겹침 수와 인덱스 계산
+            for (var i = 0; i < dayBlocks.Count; i++)
+            {
+                var current = dayBlocks[i];
+                var overlapping = dayBlocks
+                    .Where(other => other.startSlot < current.endSlot && other.endSlot > current.startSlot)
+                    .OrderBy(o => o.startSlot).ThenBy(o => o.sched.EmployeeId)
+                    .ToList();
 
-            // 이름 표시
-            var name = sched.EmployeeName ?? $"ID:{sched.EmployeeId}";
-            using var nameBrush = new SolidBrush(ColorPalette.Text);
-            g.DrawString(name, cellFont, nameBrush,
-                new RectangleF(rect.X + 3, rect.Y + 2, rect.Width - 6, rect.Height - 4),
-                new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+                var overlapCount = overlapping.Count;
+                var overlapIndex = overlapping.FindIndex(o =>
+                    o.sched.EmployeeId == current.sched.EmployeeId &&
+                    o.sched.WorkDate == current.sched.WorkDate);
+                if (overlapIndex < 0) overlapIndex = 0;
+
+                var totalW = cellW - 4;
+                var blockW = totalW / overlapCount;
+                var x = _timeColWidth + current.dayIdx * cellW + 2 + overlapIndex * blockW;
+                var y = _headerHeight + current.startSlot * cellH + 1;
+                var h = (current.endSlot - current.startSlot) * cellH - 2;
+
+                var color = GetEmployeeColor(current.sched.EmployeeId);
+                using var fillBrush = new SolidBrush(color);
+                using var blockPen = new Pen(Color.FromArgb(80, 0, 0, 0));
+                var rect = new Rectangle(x, y, blockW, Math.Max(h, cellH));
+
+                g.FillRectangle(fillBrush, rect);
+                g.DrawRectangle(blockPen, rect);
+
+                // 이름 표시
+                var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
+                using var nameBrush = new SolidBrush(ColorPalette.Text);
+                g.DrawString(name, cellFont, nameBrush,
+                    new RectangleF(rect.X + 2, rect.Y + 2, rect.Width - 4, rect.Height - 4),
+                    new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+            }
         }
     }
 

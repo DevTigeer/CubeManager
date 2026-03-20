@@ -34,11 +34,10 @@ public static class TimeHelper
         return ((target - firstMonday).Days / 7) + 1;
     }
 
-    /// <summary>해당 월의 N주차 날짜 범위 (월 경계 클램핑)</summary>
+    /// <summary>해당 월의 N주차 날짜 범위 (월~일 전체, 월경계 넘김 허용)</summary>
     public static (DateTime start, DateTime end) GetWeekRange(int year, int month, int weekNum)
     {
         var firstDay = new DateTime(year, month, 1);
-        var lastDay = new DateTime(year, month, DateTime.DaysInMonth(year, month));
 
         var firstMonday = firstDay;
         while (firstMonday.DayOfWeek != DayOfWeek.Monday)
@@ -47,10 +46,19 @@ public static class TimeHelper
         var weekStart = firstMonday.AddDays((weekNum - 1) * 7);
         var weekEnd = weekStart.AddDays(6);
 
-        if (weekStart < firstDay) weekStart = firstDay;
-        if (weekEnd > lastDay) weekEnd = lastDay;
-
         return (weekStart, weekEnd);
+    }
+
+    /// <summary>
+    /// 주간이 속하는 급여정산 월을 결정.
+    /// 기준: 해당 주의 수요일이 속한 월 = 정산 월.
+    /// ex) 2/23(월)~3/1(일) → 수요일=2/25 → 2월 정산
+    /// ex) 3/30(월)~4/5(일) → 수요일=4/1 → 4월 정산
+    /// </summary>
+    public static (int year, int month) GetSalaryMonth(DateTime weekStart)
+    {
+        var wednesday = weekStart.AddDays(2); // 월+2 = 수요일
+        return (wednesday.Year, wednesday.Month);
     }
 
     /// <summary>해당 월의 총 주차 수</summary>

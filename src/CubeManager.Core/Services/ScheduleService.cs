@@ -24,7 +24,7 @@ public class ScheduleService : IScheduleService
     }
 
     public async Task AddScheduleAsync(int employeeId, string startTime, string endTime,
-        DayOfWeek[] days, int year, int month)
+        DayOfWeek[] days, int year, int month, int[]? weekNums = null)
     {
         var daysInMonth = DateTime.DaysInMonth(year, month);
         var schedules = new List<Schedule>();
@@ -33,6 +33,13 @@ public class ScheduleService : IScheduleService
         {
             var date = new DateTime(year, month, d);
             if (!days.Contains(date.DayOfWeek)) continue;
+
+            // 주차 필터: weekNums가 지정되면 해당 주차만
+            if (weekNums is { Length: > 0 })
+            {
+                var weekOfMonth = TimeHelper.GetWeekOfMonth(date);
+                if (!weekNums.Contains(weekOfMonth)) continue;
+            }
 
             var dateStr = date.ToString("yyyy-MM-dd");
             var isHoliday = await _holidayRepo.IsWeekdayHolidayAsync(dateStr);

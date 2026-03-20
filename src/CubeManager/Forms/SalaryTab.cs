@@ -92,12 +92,12 @@ public class SalaryTab : UserControl
             new DataGridViewTextBoxColumn { HeaderText = "4주", FillWeight = 6 },
             new DataGridViewTextBoxColumn { HeaderText = "5주+", FillWeight = 6 },
             new DataGridViewTextBoxColumn { HeaderText = "합계", FillWeight = 7 },
-            new DataGridViewTextBoxColumn { HeaderText = "식비", FillWeight = 8 },
-            new DataGridViewTextBoxColumn { HeaderText = "택시", FillWeight = 8 },
             new DataGridViewTextBoxColumn { HeaderText = "공휴일", FillWeight = 8 },
             new DataGridViewTextBoxColumn { HeaderText = "총급여", FillWeight = 10 },
-            new DataGridViewTextBoxColumn { HeaderText = "3.3%", FillWeight = 8 },
-            new DataGridViewTextBoxColumn { HeaderText = "실수령", FillWeight = 10 });
+            new DataGridViewTextBoxColumn { HeaderText = "3.3%\n(수령액)", FillWeight = 10 },
+            new DataGridViewTextBoxColumn { HeaderText = "", FillWeight = 2, ReadOnly = true }, // 구분선
+            new DataGridViewTextBoxColumn { HeaderText = "식비", FillWeight = 8, DefaultCellStyle = new() { ForeColor = Color.FromArgb(120, 120, 120), Alignment = DataGridViewContentAlignment.MiddleRight } },
+            new DataGridViewTextBoxColumn { HeaderText = "택시", FillWeight = 8, DefaultCellStyle = new() { ForeColor = Color.FromArgb(120, 120, 120), Alignment = DataGridViewContentAlignment.MiddleRight } });
 
         GridTheme.ApplyTheme(_grid);
 
@@ -134,14 +134,16 @@ public class SalaryTab : UserControl
 
             foreach (var r in records)
             {
+                // 컬럼: 이름|시급|1주|2주|3주|4주|5주+|합계|공휴일|총급여|3.3%(수령액)|구분|식비|택시
                 var idx = _grid.Rows.Add(
                     r.EmployeeName, r.HourlyWage.ToString("N0"),
                     r.Week1Hours.ToString("F1"), r.Week2Hours.ToString("F1"),
                     r.Week3Hours.ToString("F1"), r.Week4Hours.ToString("F1"),
                     r.Week5Hours.ToString("F1"), r.TotalHours.ToString("F1"),
-                    r.MealAllowance.ToString("N0"), r.TaxiAllowance.ToString("N0"),
                     r.HolidayBonus.ToString("N0"), r.GrossSalary.ToString("N0"),
-                    r.Tax33.ToString("N0"), r.NetSalary.ToString("N0"));
+                    r.NetSalary.ToString("N0"),  // 3.3% 수령액
+                    "",                           // 구분선
+                    r.MealAllowance.ToString("N0"), r.TaxiAllowance.ToString("N0"));
 
                 if (r.IsManualEdit)
                 {

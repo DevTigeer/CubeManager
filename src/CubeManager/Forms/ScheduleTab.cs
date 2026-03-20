@@ -49,7 +49,7 @@ public class ScheduleTab : UserControl
 
         var btnAdd = new Button
         {
-            Text = "+ 직원 추가", Size = new Size(110, 32),
+            Text = "+ 스케줄 추가", Size = new Size(120, 32),
             BackColor = ColorPalette.Primary, ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 10f),
             Margin = new Padding(20, 0, 0, 0)
@@ -154,7 +154,8 @@ public class ScheduleTab : UserControl
         {
             await _scheduleService.AddScheduleAsync(
                 dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
-                dlg.SelectedDays, _year, _month);
+                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
+                dlg.SelectedWeekNums);
             ToastNotification.Show("스케줄이 등록되었습니다.", ToastType.Success);
             await LoadWeekAsync();
         }
@@ -176,7 +177,8 @@ public class ScheduleTab : UserControl
         {
             await _scheduleService.AddScheduleAsync(
                 dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
-                dlg.SelectedDays, _year, _month);
+                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
+                dlg.SelectedWeekNums);
             await LoadWeekAsync();
         }
         catch (Exception ex)

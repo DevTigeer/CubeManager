@@ -50,6 +50,41 @@ public class SalaryService : ISalaryService
 
             var schedules = (await _scheduleRepo.GetByEmployeeAndMonthAsync(emp.Id, yearMonth)).ToList();
 
+            // 월경계 주간 스케줄도 포함: 이전달 말+이번달 초, 이번달 말+다음달 초
+            // 정산 기준: 해당 주의 수요일이 이번 달이면 포함
+            var prevMonth = month == 1 ? 12 : month - 1;
+            var prevYear = month == 1 ? year - 1 : year;
+            var nextMonth = month == 12 ? 1 : month + 1;
+            var nextYear = month == 12 ? year + 1 : year;
+
+            var prevYm = $"{prevYear:D4}-{prevMonth:D2}";
+            var nextYm = $"{nextYear:D4}-{nextMonth:D2}";
+
+            var borderSchedules = new List<Schedule>();
+            borderSchedules.AddRange(await _scheduleRepo.GetByEmployeeAndMonthAsync(emp.Id, prevYm));
+            borderSchedules.AddRange(await _scheduleRepo.GetByEmployeeAndMonthAsync(emp.Id, nextYm));
+
+            // 경계 스케줄 중 정산 월이 현재 월인 것만 추가
+            foreach (var bs in borderSchedules)
+            {
+                var bDate = DateTime.Parse(bs.WorkDate);
+                var bWeekStart = bDate;
+                while (bWeekStart.DayOfWeek != DayOfWeek.Monday) bWeekStart = bWeekStart.AddDays(-1);
+                var (sYear, sMonth) = TimeHelper.GetSalaryMonth(bWeekStart);
+                if (sYear == year && sMonth == month && !schedules.Any(s => s.Id == bs.Id))
+                    schedules.Add(bs);
+            }
+
+            // 현재 월 스케줄 중 정산 월이 다른 월인 것은 제외
+            schedules = schedules.Where(s =>
+            {
+                var d = DateTime.Parse(s.WorkDate);
+                var ws = d;
+                while (ws.DayOfWeek != DayOfWeek.Monday) ws = ws.AddDays(-1);
+                var (sy, sm) = TimeHelper.GetSalaryMonth(ws);
+                return sy == year && sm == month;
+            }).ToList();
+
             // 주차별 시간
             var weekHours = new double[5];
             double totalHolidayHours = 0;
@@ -78,9 +113,10 @@ public class SalaryService : ISalaryService
             var holidayBonusAmt = (int)(totalHolidayHours * holidayBonus);
             var mealAmt = mealDays * mealUnit;
             var taxiAmt = taxiDays * taxiUnit;
-            var gross = baseSalary + holidayBonusAmt + mealAmt + taxiAmt;
+            // 총급여 = 기본급 + 공휴일수당 (식비/택시비 미포함)
+            var gross = baseSalary + holidayBonusAmt;
             var tax = (int)(gross * 0.033); // 내림
-            var net = gross - tax;
+            var net = gross - tax; // 3.3% 적용 수령액
 
             var record = new SalaryRecord
             {
