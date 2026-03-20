@@ -63,4 +63,10 @@ public class ReservationRepository : IReservationRepository
             "FROM reservations WHERE id = @id",
             new { id });
     }
+
+    public async Task DeleteAsync(int id)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync("DELETE FROM reservations WHERE id = @id", new { id });
+    }
 }

@@ -15,4 +15,7 @@ public interface IReservationRepository
 
     /// <summary>ID로 조회</summary>
     Task<Reservation?> GetByIdAsync(int id);
+
+    /// <summary>예약 완전 삭제 (DB에서 제거)</summary>
+    Task DeleteAsync(int id);
 }

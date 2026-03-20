@@ -98,6 +98,10 @@ public class ReservationSalesTab : UserControl
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
 
+        var btnDeleteRow = CreateBtn("행 삭제", ColorPalette.AccentOrange.Main);
+        btnDeleteRow.Click += (_, _) => DeleteSelectedReservation();
+        topPanel.Controls.Add(btnDeleteRow);
+
         var btnDelete = CreateBtn("매출 삭제", ColorPalette.Danger);
         btnDelete.Click += (_, _) => DeleteRevenueItem();
         topPanel.Controls.Add(btnDelete);
@@ -569,6 +573,13 @@ public class ReservationSalesTab : UserControl
             });
         }
 
+        // 모든 상태에서 완전 삭제 가능
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("🗑 완전 삭제", null, (_, _) =>
+        {
+            DeleteReservationPermanently(e.RowIndex);
+        });
+
         menu.Show(_gridMain, _gridMain.PointToClient(Cursor.Position));
     }
 
@@ -584,6 +595,45 @@ public class ReservationSalesTab : UserControl
             await _reservationRepo.UpdateStatusAsync(reservation.Id, status);
 
         PopulateMainGrid();
+    }
+
+    // ===== 예약 완전 삭제 (DB에서 제거) =====
+    private async void DeleteReservationPermanently(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _reservations.Count) return;
+
+        var reservation = _reservations[rowIndex];
+        var desc = $"{reservation.TimeSlot} {reservation.ThemeName} {reservation.CustomerName}".Trim();
+
+        if (MessageBox.Show($"'{desc}' 예약을 완전히 삭제합니까?\n(표와 DB에서 영구 삭제됩니다)",
+                "완전 삭제 확인", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        try
+        {
+            if (reservation.Id > 0)
+                await _reservationRepo.DeleteAsync(reservation.Id);
+
+            _reservations.RemoveAt(rowIndex);
+            PopulateMainGrid();
+            await LoadSummaryAsync();
+            ToastNotification.Show("예약이 완전 삭제되었습니다.", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"삭제 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    // ===== 선택된 행 삭제 (상단 버튼) =====
+    private void DeleteSelectedReservation()
+    {
+        if (_gridMain.CurrentRow == null)
+        {
+            ToastNotification.Show("삭제할 행을 선택하세요.", ToastType.Warning);
+            return;
+        }
+        DeleteReservationPermanently(_gridMain.CurrentRow.Index);
     }
 
     // ===== 전체 데이터 로드 =====
