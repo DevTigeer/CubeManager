@@ -75,7 +75,11 @@ public class ReservationSalesTab : UserControl
             Size = new Size(100, 28), Margin = new Padding(5, 4, 0, 0),
             Font = new Font("맑은 고딕", 9f)
         };
-        _chkAutoRefresh.CheckedChanged += (_, _) => _autoRefreshTimer.Enabled = _chkAutoRefresh.Checked;
+        _chkAutoRefresh.CheckedChanged += (_, _) =>
+        {
+            if (_autoRefreshTimer != null)
+                _autoRefreshTimer.Enabled = _chkAutoRefresh.Checked;
+        };
         topPanel.Controls.Add(_chkAutoRefresh);
 
         var btnSort = CreateBtn("시간순 ↑", ColorPalette.TextSecondary);
