@@ -2,7 +2,7 @@ using System.Drawing;
 
 namespace CubeManager.Helpers;
 
-public enum ToastType { Success, Warning, Error }
+public enum ToastType { Success, Warning, Error, Info }
 
 /// <summary>
 /// 하단 우측 토스트 알림. 좌측 4px 컬러 바 + 라이트 배경 패턴.
