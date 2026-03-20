@@ -6,7 +6,7 @@ namespace CubeManager.Controls;
 
 /// <summary>
 /// 좌측 사이드바 네비게이션. 상시 200px 고정.
-/// GDI+ 렌더링, 선택 시 좌측 3px Primary 바.
+/// GDI+ 렌더링. 2025 업데이트: Windows 11 NavigationView Pill 스타일.
 /// </summary>
 public class SideNavPanel : Panel
 {
@@ -18,8 +18,12 @@ public class SideNavPanel : Panel
     private const int NavWidth = 200;
     private const int ItemHeight = 48;
     private const int LogoHeight = 56;
-    private const int ActiveBarWidth = 3;
     private const int IconAreaWidth = 48;
+    private const int PillMarginX = 6;    // Pill 좌우 여백
+    private const int PillRadius = 6;     // Pill 모서리 반지름
+    private const int IndicatorWidth = 3; // 좌측 인디케이터 너비
+    private const int IndicatorHeight = 16; // 좌측 인디케이터 높이
+    private const int IndicatorRadius = 2; // 인디케이터 모서리
 
     private static readonly string[] Labels =
         ["예약/매출", "스케줄", "급여", "업무자료", "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자"];
@@ -54,6 +58,13 @@ public class SideNavPanel : Panel
             _hoverIndex = idx;
             Invalidate();
         }
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _hoverIndex = -1;
+        Invalidate();
     }
 
     protected override void OnMouseClick(MouseEventArgs e)
@@ -113,25 +124,35 @@ public class SideNavPanel : Panel
     private void DrawNavItem(Graphics g, int index)
     {
         var y = LogoHeight + index * ItemHeight;
-        var rect = new Rectangle(0, y, Width, ItemHeight);
-
         var isSelected = index == _selectedIndex;
         var isHover = index == _hoverIndex && !isSelected;
 
-        // 배경
+        // Pill 배경 영역 (양쪽 마진)
+        var pillRect = new Rectangle(
+            PillMarginX,
+            y + 4,
+            Width - PillMarginX * 2 - 1,
+            ItemHeight - 8);
+
+        // 배경: Pill 형태
         if (isSelected)
         {
+            using var pillPath = CreateRoundedPath(pillRect, PillRadius);
             using var selBrush = new SolidBrush(ColorPalette.NavActiveBg);
-            g.FillRectangle(selBrush, rect);
+            g.FillPath(selBrush, pillPath);
 
-            // 좌측 Active 바
+            // 좌측 둥근 인디케이터 (Windows 11 스타일)
+            var indicatorY = y + (ItemHeight - IndicatorHeight) / 2;
+            var indicatorRect = new Rectangle(2, indicatorY, IndicatorWidth, IndicatorHeight);
+            using var indicatorPath = CreateRoundedPath(indicatorRect, IndicatorRadius);
             using var barBrush = new SolidBrush(ColorPalette.NavActive);
-            g.FillRectangle(barBrush, 0, y, ActiveBarWidth, ItemHeight);
+            g.FillPath(barBrush, indicatorPath);
         }
         else if (isHover)
         {
+            using var pillPath = CreateRoundedPath(pillRect, PillRadius);
             using var hoverBrush = new SolidBrush(ColorPalette.NavHoverBg);
-            g.FillRectangle(hoverBrush, rect);
+            g.FillPath(hoverBrush, pillPath);
         }
 
         // 아이콘 색상
@@ -152,5 +173,17 @@ public class SideNavPanel : Panel
         using var textFont = new Font("맑은 고딕", 10.5f, isSelected ? FontStyle.Bold : FontStyle.Regular);
         using var textBrush = new SolidBrush(textColor);
         g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
+    }
+
+    private static GraphicsPath CreateRoundedPath(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

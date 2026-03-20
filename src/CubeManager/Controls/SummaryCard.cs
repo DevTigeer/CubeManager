@@ -7,6 +7,7 @@ namespace CubeManager.Controls;
 /// <summary>
 /// 통계 카드 컴포넌트. 탭 상단에 4열로 배치하여 핵심 지표를 표시.
 /// GDI+ OnPaint로 렌더링 (저사양 최적화, DoubleBuffered).
+/// 2025 업데이트: 8px 둥근 모서리 + 하단 1px 미세 그림자.
 /// </summary>
 public class SummaryCard : Panel
 {
@@ -15,6 +16,7 @@ public class SummaryCard : Panel
     private string _subText = "";
     private Color _accentColor = ColorPalette.Primary;
     private Color _accentLightColor = ColorPalette.Primary50;
+    private bool _isHovered;
 
     public string Title { get => _title; set { _title = value; Invalidate(); } }
     public string Value { get => _value; set { _value = value; Invalidate(); } }
@@ -27,15 +29,22 @@ public class SummaryCard : Panel
         Invalidate();
     }
 
+    private const int Radius = 8;
+
     public SummaryCard()
     {
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
-                 ControlStyles.OptimizedDoubleBuffer, true);
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
         Height = 100;
-        BackColor = ColorPalette.Surface;
+        BackColor = Color.Transparent;
         Margin = new Padding(8);
+
+        // 호버 효과
+        MouseEnter += (_, _) => { _isHovered = true; Invalidate(); };
+        MouseLeave += (_, _) => { _isHovered = false; Invalidate(); };
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -44,13 +53,24 @@ public class SummaryCard : Panel
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        var rect = ClientRectangle;
+        // 카드 영역 (하단 1px 여유)
+        var cardRect = new Rectangle(0, 0, Width - 1, Height - 2);
+        using var path = RoundedCard.CreateRoundedPath(cardRect, Radius);
 
-        // 배경 + 테두리
-        using var bgBrush = new SolidBrush(ColorPalette.Surface);
-        g.FillRectangle(bgBrush, rect);
+        // 하단 미세 그림자
+        using var shadowPen = new Pen(ColorPalette.ShadowLight);
+        g.DrawLine(shadowPen,
+            Radius, cardRect.Bottom + 1,
+            cardRect.Right - Radius, cardRect.Bottom + 1);
+
+        // 카드 배경 (호버 시 약간 어두운 배경)
+        var bgColor = _isHovered ? ColorPalette.CardHover : ColorPalette.Surface;
+        using var bgBrush = new SolidBrush(bgColor);
+        g.FillPath(bgBrush, path);
+
+        // 테두리
         using var borderPen = new Pen(ColorPalette.Border, 1);
-        g.DrawRectangle(borderPen, 0, 0, rect.Width - 1, rect.Height - 1);
+        g.DrawPath(borderPen, path);
 
         var pad = 16;
 

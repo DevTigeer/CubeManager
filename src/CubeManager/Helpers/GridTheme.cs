@@ -4,6 +4,7 @@ namespace CubeManager.Helpers;
 
 /// <summary>
 /// DataGridView 공통 테마. 모든 탭에서 ApplyTheme()으로 일관된 스타일 적용.
+/// 2025 업데이트: 선택 행 좌측 2px Primary 바 (Fluent Design).
 /// </summary>
 public static class GridTheme
 {
@@ -53,6 +54,17 @@ public static class GridTheme
         grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
         {
             BackColor = ColorPalette.RowAlt
+        };
+
+        // 2025: 선택 행 좌측 2px Primary 바 (Fluent Design 느낌)
+        grid.RowPostPaint += (_, e) =>
+        {
+            if (e.RowIndex >= 0 && grid.Rows[e.RowIndex].Selected)
+            {
+                using var brush = new SolidBrush(ColorPalette.Primary);
+                e.Graphics.FillRectangle(brush,
+                    e.RowBounds.X, e.RowBounds.Y, 2, e.RowBounds.Height);
+            }
         };
     }
 
