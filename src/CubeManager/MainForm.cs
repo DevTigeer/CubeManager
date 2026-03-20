@@ -19,7 +19,7 @@ public class MainForm : Form
     private static readonly string[] TabNames =
     [
         "예약/매출", "스케줄", "급여", "업무자료",
-        "인수인계", "물품", "출퇴근", "테마힌트", "설정"
+        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자"
     ];
 
     public MainForm(IServiceProvider serviceProvider)
@@ -128,6 +128,11 @@ public class MainForm : Form
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IReservationScraperService>(),
                 _sp.GetRequiredService<IConfigRepository>()),
+        9 => new AdminTab(
+                _sp.GetRequiredService<IConfigRepository>(),
+                _sp.GetRequiredService<ISalesService>(),
+                _sp.GetRequiredService<IAttendanceService>(),
+                _sp.GetRequiredService<IEmployeeService>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

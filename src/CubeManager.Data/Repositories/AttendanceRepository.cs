@@ -38,6 +38,21 @@ public class AttendanceRepository : IAttendanceRepository
             new { date });
     }
 
+    public async Task<IEnumerable<Attendance>> GetByDateRangeAsync(string startDate, string endDate)
+    {
+        using var conn = _db.CreateConnection();
+        return await conn.QueryAsync<Attendance>(
+            "SELECT a.id, a.employee_id, a.work_date, a.clock_in, a.clock_out, " +
+            "a.clock_in_status, a.clock_out_status, e.name AS employee_name, " +
+            "s.start_time AS scheduled_start, s.end_time AS scheduled_end " +
+            "FROM attendance a " +
+            "JOIN employees e ON a.employee_id = e.id " +
+            "LEFT JOIN schedules s ON a.employee_id = s.employee_id AND a.work_date = s.work_date " +
+            "WHERE a.work_date >= @startDate AND a.work_date <= @endDate " +
+            "ORDER BY a.work_date, a.clock_in",
+            new { startDate, endDate });
+    }
+
     public async Task<IEnumerable<Attendance>> GetByEmployeeMonthAsync(int employeeId, string yearMonth)
     {
         using var conn = _db.CreateConnection();

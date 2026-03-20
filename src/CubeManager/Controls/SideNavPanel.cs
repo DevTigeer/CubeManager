@@ -22,10 +22,10 @@ public class SideNavPanel : Panel
     private const int IconAreaWidth = 48;
 
     private static readonly string[] Labels =
-        ["예약/매출", "스케줄", "급여", "업무자료", "인수인계", "물품", "출퇴근", "테마힌트", "설정"];
+        ["예약/매출", "스케줄", "급여", "업무자료", "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자"];
 
     private static readonly string[] Icons =
-        ["📅", "📋", "💰", "📄", "📝", "📦", "⏰", "🔑", "⚙️"];
+        ["📅", "📋", "💰", "📄", "📝", "📦", "⏰", "🔑", "⚙️", "🛡️"];
 
     public int SelectedIndex
     {

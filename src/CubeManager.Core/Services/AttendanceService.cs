@@ -99,6 +99,9 @@ public class AttendanceService : IAttendanceService
         return await _attendanceRepo.GetByDateAsync(today);
     }
 
+    public Task<IEnumerable<Attendance>> GetByDateRangeAsync(string startDate, string endDate) =>
+        _attendanceRepo.GetByDateRangeAsync(startDate, endDate);
+
     public Task<IEnumerable<Attendance>> GetMonthlyHistoryAsync(int employeeId, string yearMonth) =>
         _attendanceRepo.GetByEmployeeMonthAsync(employeeId, yearMonth);
 }

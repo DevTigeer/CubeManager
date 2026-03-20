@@ -6,6 +6,7 @@ public interface IAttendanceRepository
 {
     Task<Attendance?> GetByEmployeeDateAsync(int employeeId, string date);
     Task<IEnumerable<Attendance>> GetByDateAsync(string date);
+    Task<IEnumerable<Attendance>> GetByDateRangeAsync(string startDate, string endDate);
     Task<IEnumerable<Attendance>> GetByEmployeeMonthAsync(int employeeId, string yearMonth);
     Task<int> InsertAsync(Attendance record);
     Task<bool> UpdateClockInAsync(int id, string clockIn, string status);
