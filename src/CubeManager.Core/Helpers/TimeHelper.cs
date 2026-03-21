@@ -19,19 +19,30 @@ public static class TimeHelper
         return diff > 0 ? diff / 60.0 : 0;
     }
 
-    /// <summary>주어진 날짜가 해당 월의 몇 주차인지 (1-based, 월요일 시작)</summary>
+    /// <summary>주어진 날짜가 해당 월의 몇 주차인지 (1-based, 월요일 시작, 수요일 기준 월 판정)</summary>
     public static int GetWeekOfMonth(DateTime date)
     {
-        var first = new DateTime(date.Year, date.Month, 1);
-        var firstMonday = first;
+        // 해당 날짜의 주 월요일 찾기
+        var monday = date;
+        while (monday.DayOfWeek != DayOfWeek.Monday)
+            monday = monday.AddDays(-1);
+
+        // 이 주의 수요일이 속한 월 기준
+        var wednesday = monday.AddDays(2);
+        var targetMonth = wednesday.Month;
+        var targetYear = wednesday.Year;
+
+        // 해당 월의 1주차 월요일 찾기 (첫 번째 주: 수요일이 해당 월에 속하는 첫 주)
+        var firstOfMonth = new DateTime(targetYear, targetMonth, 1);
+        var firstMonday = firstOfMonth;
         while (firstMonday.DayOfWeek != DayOfWeek.Monday)
             firstMonday = firstMonday.AddDays(-1);
 
-        var target = date;
-        while (target.DayOfWeek != DayOfWeek.Monday)
-            target = target.AddDays(-1);
+        // 첫 주의 수요일이 이전 달이면 다음 주가 1주차
+        if (firstMonday.AddDays(2).Month != targetMonth)
+            firstMonday = firstMonday.AddDays(7);
 
-        return ((target - firstMonday).Days / 7) + 1;
+        return ((monday - firstMonday).Days / 7) + 1;
     }
 
     /// <summary>해당 월의 N주차 날짜 범위 (월~일 전체, 월경계 넘김 허용)</summary>
@@ -61,11 +72,22 @@ public static class TimeHelper
         return (wednesday.Year, wednesday.Month);
     }
 
-    /// <summary>해당 월의 총 주차 수</summary>
+    /// <summary>해당 월의 총 주차 수 (수요일 기준)</summary>
     public static int GetTotalWeeks(int year, int month)
     {
         var lastDay = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-        return GetWeekOfMonth(lastDay);
+
+        // 마지막 날의 주 월요일 찾기
+        var lastMonday = lastDay;
+        while (lastMonday.DayOfWeek != DayOfWeek.Monday)
+            lastMonday = lastMonday.AddDays(-1);
+
+        // 마지막 주의 수요일이 이번 달이면 포함, 다음 달이면 제외
+        var lastWednesday = lastMonday.AddDays(2);
+        if (lastWednesday.Month != month)
+            lastMonday = lastMonday.AddDays(-7); // 한 주 전이 실제 마지막 주
+
+        return GetWeekOfMonth(lastMonday);
     }
 
     /// <summary>30분 간격 타임 슬롯 목록 (10:00 ~ 01:00)</summary>

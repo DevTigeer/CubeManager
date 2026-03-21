@@ -11,7 +11,6 @@ public class AttendanceTab : UserControl
     private readonly IEmployeeService _employeeService;
     private readonly IScheduleService _scheduleService;
     private readonly DataGridView _gridToday;
-    private readonly DataGridView _gridHistory;
     private readonly ComboBox _cmbEmployee;
     private readonly Label _lblClock;
     private readonly Button _btnClockIn;
@@ -36,15 +35,7 @@ public class AttendanceTab : UserControl
             Dock = DockStyle.Top, Height = 40
         };
 
-        // Split: Left=오늘현황+버튼, Right=이력
-        var splitPanel = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            Orientation = Orientation.Vertical,
-            SplitterDistance = 500
-        };
-
-        // === Left Panel ===
+        // === 오늘 근무 현황 ===
         var leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 10, 10, 0) };
 
         var lblToday = new Label
@@ -98,26 +89,7 @@ public class AttendanceTab : UserControl
         leftPanel.Controls.Add(_gridToday);
         leftPanel.Controls.Add(lblToday);
 
-        // === Right Panel: 이력 ===
-        var rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10, 10, 0, 0) };
-        var lblHistory = new Label
-        {
-            Text = "이번달 출퇴근 이력",
-            Font = new Font("맑은 고딕", 12f, FontStyle.Bold),
-            Dock = DockStyle.Top, Height = 30
-        };
-        _gridHistory = CreateGrid();
-        _gridHistory.Columns.AddRange(
-            Col("날짜", 85), Col("이름", 65), Col("출근", 80), Col("퇴근", 80), Col("상태", 80));
-        _gridHistory.Dock = DockStyle.Fill;
-
-        rightPanel.Controls.Add(_gridHistory);
-        rightPanel.Controls.Add(lblHistory);
-
-        splitPanel.Panel1.Controls.Add(leftPanel);
-        splitPanel.Panel2.Controls.Add(rightPanel);
-
-        Controls.Add(splitPanel);
+        Controls.Add(leftPanel);
         Controls.Add(header);
 
         // 시계 타이머
@@ -176,49 +148,10 @@ public class AttendanceTab : UserControl
                 else row.Cells[4].Value = "-";
             }
 
-            // 이력
-            if (_cmbEmployee.SelectedItem is Employee emp)
-                await LoadHistoryAsync(emp.Id);
         }
         catch (Exception ex)
         {
             ToastNotification.Show(ex.Message, ToastType.Error);
-        }
-    }
-
-    private async Task LoadHistoryAsync(int employeeId)
-    {
-        var ym = DateTime.Today.ToString("yyyy-MM");
-        var history = await _attendanceService.GetMonthlyHistoryAsync(employeeId, ym);
-        _gridHistory.Rows.Clear();
-        foreach (var h in history)
-        {
-            var idx = _gridHistory.Rows.Add();
-            var row = _gridHistory.Rows[idx];
-            row.Cells[0].Value = h.WorkDate;
-            row.Cells[1].Value = h.EmployeeName;
-
-            if (h.ClockIn != null)
-            {
-                row.Cells[2].Value = DateTime.Parse(h.ClockIn).ToString("HH:mm");
-                row.Cells[2].Style.ForeColor = h.ClockInStatus == "on_time"
-                    ? ColorPalette.OnTime : ColorPalette.Late;
-            }
-            if (h.ClockOut != null)
-            {
-                row.Cells[3].Value = DateTime.Parse(h.ClockOut).ToString("HH:mm");
-                row.Cells[3].Style.ForeColor = h.ClockOutStatus == "on_time"
-                    ? ColorPalette.OnTime : ColorPalette.Late;
-            }
-
-            var status = (h.ClockInStatus, h.ClockOutStatus) switch
-            {
-                ("late", _) => "지각",
-                (_, "early") => "조퇴",
-                ("on_time", "on_time") => "정상",
-                _ => "-"
-            };
-            row.Cells[4].Value = status;
         }
     }
 

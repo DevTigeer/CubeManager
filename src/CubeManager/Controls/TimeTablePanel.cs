@@ -100,6 +100,8 @@ public class TimeTablePanel : Panel
         }
 
         // 스케줄 블록 렌더링 (겹침 시 N등분)
+        using var nameFont = new Font("맑은 고딕", 10f, FontStyle.Bold);
+        using var timeFont = new Font("맑은 고딕", 8.5f, FontStyle.Regular);
         var grouped = _schedules.GroupBy(s => new { s.EmployeeId, s.WorkDate });
         var blockList = new List<(int dayIdx, int startSlot, int endSlot, Schedule sched)>();
 
@@ -146,21 +148,80 @@ public class TimeTablePanel : Panel
                 var h = (current.endSlot - current.startSlot) * cellH - 2;
 
                 var color = GetEmployeeColor(current.sched.EmployeeId);
-                using var fillBrush = new SolidBrush(color);
-                using var blockPen = new Pen(Color.FromArgb(80, 0, 0, 0));
                 var rect = new Rectangle(x, y, blockW, Math.Max(h, cellH));
 
-                g.FillRectangle(fillBrush, rect);
-                g.DrawRectangle(blockPen, rect);
+                // 블록 배경 (4px 라운드)
+                using var blockPath = RoundedCard.CreateRoundedPath(rect, 4);
+                using var fillBrush = new SolidBrush(color);
+                g.FillPath(fillBrush, blockPath);
 
-                // 이름 표시
+                // 좌측 악센트 바 (3px, 좌상+좌하만 라운드)
+                var accentRect = new Rectangle(rect.X, rect.Y, 3, rect.Height);
+                var accentColor = Color.FromArgb(
+                    Math.Max(color.R - 60, 0),
+                    Math.Max(color.G - 60, 0),
+                    Math.Max(color.B - 60, 0));
+                using var accentPath = CreateLeftRoundedPath(accentRect, 4);
+                using var accentBrush = new SolidBrush(accentColor);
+                g.FillPath(accentBrush, accentPath);
+
+                // 이름 표시 (Bold, 좌측 8px 오프셋)
                 var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
                 using var nameBrush = new SolidBrush(ColorPalette.Text);
-                g.DrawString(name, cellFont, nameBrush,
-                    new RectangleF(rect.X + 2, rect.Y + 2, rect.Width - 4, rect.Height - 4),
+                var textX = rect.X + 8;
+                var textY = rect.Y + 2;
+                var textW = rect.Width - 10;
+                g.DrawString(name, nameFont, nameBrush,
+                    new RectangleF(textX, textY, textW, nameFont.Height + 2),
                     new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+
+                // 시간 표시 (블록 높이 > 40px일 때)
+                if (rect.Height > 40)
+                {
+                    var timeText = $"{current.sched.StartTime}~{current.sched.EndTime}";
+                    using var timeBrush = new SolidBrush(accentColor);
+                    g.DrawString(timeText, timeFont, timeBrush,
+                        new RectangleF(textX, textY + nameFont.Height + 1, textW, timeFont.Height + 2),
+                        new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+                }
             }
         }
+
+        // 현재 시간 빨간 점선 표시
+        var today = DateTime.Today;
+        if (today >= _weekStart && today <= _weekEnd)
+        {
+            var now = DateTime.Now;
+            var nowMinutes = now.Hour * 60 + now.Minute;
+            // 자정 보정 (00:00~09:59 = +24h)
+            if (nowMinutes < 600) nowMinutes += 1440;
+
+            var startMinutes = 10 * 60; // 10:00
+            var nowY = _headerHeight + (nowMinutes - startMinutes) / 30.0f * cellH;
+
+            if (nowY > _headerHeight && nowY < Height)
+            {
+                using var timePen = new Pen(ColorPalette.Danger, 1.5f) { DashStyle = DashStyle.Dash };
+                g.DrawLine(timePen, _timeColWidth, nowY, Width, nowY);
+
+                // 좌측 빨간 점
+                g.FillEllipse(Brushes.Red, _timeColWidth - 4, nowY - 3, 6, 6);
+            }
+        }
+    }
+
+    /// <summary>좌측만 라운드된 경로 생성 (악센트 바용)</summary>
+    private static GraphicsPath CreateLeftRoundedPath(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);                       // 좌상
+        path.AddLine(rect.Right, rect.Y, rect.Right, rect.Bottom);         // 우상→우하 (직선)
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);               // 좌하
+        path.CloseFigure();
+
+        return path;
     }
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)

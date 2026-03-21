@@ -100,10 +100,6 @@ public class ReservationSalesTab : UserControl
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
 
-        var btnDeleteRow = CreateBtn("행 삭제", ColorPalette.AccentOrange.Main);
-        btnDeleteRow.Click += (_, _) => DeleteSelectedReservation();
-        topPanel.Controls.Add(btnDeleteRow);
-
         var btnDelete = CreateBtn("매출 삭제", ColorPalette.Danger);
         btnDelete.Click += (_, _) => DeleteRevenueItem();
         topPanel.Controls.Add(btnDelete);
@@ -117,6 +113,10 @@ public class ReservationSalesTab : UserControl
             Margin = new Padding(10, 4, 0, 0)
         };
         topPanel.Controls.Add(_lblLastFetch);
+
+        var btnDeleteRow = CreateBtn("강제삭제", ColorPalette.Danger);
+        btnDeleteRow.Click += (_, _) => DeleteSelectedReservation();
+        topPanel.Controls.Add(btnDeleteRow);
 
         // ========== 2. 통합 그리드 (예약+결제) ==========
         _gridMain = new DataGridView { Dock = DockStyle.Fill };
@@ -142,13 +142,6 @@ public class ReservationSalesTab : UserControl
         );
         _gridMain.CellEndEdit += GridMain_CellEndEdit;
         _gridMain.CellMouseClick += GridMain_CellMouseClick;
-
-        var lblMainHeader = new Label
-        {
-            Text = "예약 & 결제 현황", Dock = DockStyle.Top, Height = 25,
-            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary, Padding = new Padding(0, 5, 0, 0)
-        };
 
         // ========== 3. 하단 패널 (지출 + 통계 + 결제 요약) ==========
         var bottomPanel = new Panel
@@ -295,7 +288,6 @@ public class ReservationSalesTab : UserControl
 
         // ========== 레이아웃 조립 (역순) ==========
         Controls.Add(_gridMain);
-        Controls.Add(lblMainHeader);
         Controls.Add(divider);
         Controls.Add(bottomPanel);
         Controls.Add(topPanel);

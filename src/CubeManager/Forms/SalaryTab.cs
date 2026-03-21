@@ -114,9 +114,9 @@ public class SalaryTab : UserControl
                 // 컬럼: 이름|시급|1주|2주|3주|4주|5주+|합계|공휴일|총급여|3.3%(수령액)|구분|식비|택시
                 var idx = _grid.Rows.Add(
                     r.EmployeeName, r.HourlyWage.ToString("N0"),
-                    r.Week1Hours.ToString("F1"), r.Week2Hours.ToString("F1"),
-                    r.Week3Hours.ToString("F1"), r.Week4Hours.ToString("F1"),
-                    r.Week5Hours.ToString("F1"), r.TotalHours.ToString("F1"),
+                    Hrs(r.Week1Hours), Hrs(r.Week2Hours),
+                    Hrs(r.Week3Hours), Hrs(r.Week4Hours),
+                    Hrs(r.Week5Hours), Hrs(r.TotalHours),
                     r.HolidayBonus.ToString("N0"), r.GrossSalary.ToString("N0"),
                     r.NetSalary.ToString("N0"),  // 3.3% 수령액
                     "",                           // 구분선
@@ -152,4 +152,6 @@ public class SalaryTab : UserControl
             ToastNotification.Show(ex.Message, ToastType.Error);
         }
     }
+
+    private static string Hrs(double h) => h % 1 == 0 ? $"{(int)h}" : h.ToString("F1");
 }
