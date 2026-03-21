@@ -143,7 +143,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IReservationRepository>()),
         1 => new ScheduleTab(
                 _sp.GetRequiredService<IScheduleService>(),
-                _sp.GetRequiredService<IEmployeeService>()),
+                _sp.GetRequiredService<IEmployeeService>(),
+                _sp.GetRequiredService<IHolidayRepository>()),
         2 => new SalaryTab(_sp.GetRequiredService<ISalaryService>()),
         3 => new DocumentTab(),
         4 => new HandoverTab(_sp.GetRequiredService<IHandoverRepository>()),
@@ -156,7 +157,6 @@ public class MainForm : Form
                 _sp.GetRequiredService<IThemeRepository>(),
                 _sp.GetRequiredService<IThemeExportService>()),
         8 => new SettingsTab(
-                _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IReservationScraperService>(),
                 _sp.GetRequiredService<IConfigRepository>()),
         9 => new AdminTab(

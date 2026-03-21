@@ -115,19 +115,21 @@ public class AttendanceTab : UserControl
         try
         {
             var today = DateTime.Today.ToString("yyyy-MM-dd");
+            var employees = (await _employeeService.GetActiveAsync()).ToList();
             var schedules = (await _scheduleService.GetByDateAsync(today)).ToList();
             var records = (await _attendanceService.GetTodayStatusAsync()).ToList();
 
             _gridToday.Rows.Clear();
-            foreach (var s in schedules)
+            foreach (var emp in employees)
             {
-                var att = records.FirstOrDefault(r => r.EmployeeId == s.EmployeeId);
+                var s = schedules.FirstOrDefault(x => x.EmployeeId == emp.Id);
+                var att = records.FirstOrDefault(r => r.EmployeeId == emp.Id);
                 var idx = _gridToday.Rows.Add();
                 var row = _gridToday.Rows[idx];
 
-                row.Cells[0].Value = s.EmployeeName;
-                row.Cells[1].Value = s.StartTime;
-                row.Cells[2].Value = s.EndTime;
+                row.Cells[0].Value = emp.Name;
+                row.Cells[1].Value = s?.StartTime ?? "-";
+                row.Cells[2].Value = s?.EndTime ?? "-";
 
                 if (att?.ClockIn != null)
                 {

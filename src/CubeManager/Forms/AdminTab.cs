@@ -38,6 +38,9 @@ public class AdminTab : UserControl
     // Summary Cards
     private readonly SummaryCardRow _summaryCards;
 
+    // 직원 관리
+    private readonly DataGridView _gridEmployees;
+
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
         Data.Database database)
@@ -57,6 +60,7 @@ public class AdminTab : UserControl
         _dtpStatMonth = new DateTimePicker { Format = DateTimePickerFormat.Custom, CustomFormat = "yyyy년 MM월", ShowUpDown = true, Size = new Size(150, 25), Value = DateTime.Today };
         _gridAttendStats = new DataGridView { Dock = DockStyle.Fill };
         _gridSalesStats = new DataGridView { Dock = DockStyle.Fill };
+        _gridEmployees = new DataGridView { Dock = DockStyle.Fill };
         _summaryCards = new SummaryCardRow();
 
         BuildAuthPanel();
@@ -286,8 +290,55 @@ public class AdminTab : UserControl
         bottomSplit.Panel1.Controls.Add(attendPanel);
         bottomSplit.Panel2.Controls.Add(salesPanel);
 
+        // === 직원 관리 패널 (하단) ===
+        var employeePanel = new GroupBox
+        {
+            Text = "직원 관리",
+            Dock = DockStyle.Bottom, Height = 200,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10, 5, 10, 5)
+        };
+
+        var empToolbar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 35,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 2, 0, 2)
+        };
+
+        var btnAddEmp = ButtonFactory.CreatePrimary("+ 직원 추가", 110);
+        btnAddEmp.Height = 28;
+        btnAddEmp.Font = nf;
+        btnAddEmp.Click += BtnAddEmployee_Click;
+        empToolbar.Controls.Add(btnAddEmp);
+
+        var btnDeactivateEmp = ButtonFactory.CreateDanger("비활성화", 90);
+        btnDeactivateEmp.Height = 28;
+        btnDeactivateEmp.Font = nf;
+        btnDeactivateEmp.Margin = new Padding(10, 0, 0, 0);
+        btnDeactivateEmp.Click += BtnDeactivateEmployee_Click;
+        empToolbar.Controls.Add(btnDeactivateEmp);
+
+        GridTheme.ApplyTheme(_gridEmployees);
+        _gridEmployees.AllowUserToAddRows = false;
+        _gridEmployees.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "EmpId", Visible = false },
+            new DataGridViewTextBoxColumn { Name = "EmpName", HeaderText = "이름", FillWeight = 25 },
+            new DataGridViewTextBoxColumn { Name = "EmpWage", HeaderText = "시급", FillWeight = 20,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } },
+            new DataGridViewTextBoxColumn { Name = "EmpPhone", HeaderText = "전화번호", FillWeight = 30 },
+            new DataGridViewTextBoxColumn { Name = "EmpStatus", HeaderText = "상태", FillWeight = 15,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } }
+        );
+        _gridEmployees.ReadOnly = true;
+        _gridEmployees.CellDoubleClick += GridEmployees_CellDoubleClick;
+
+        employeePanel.Controls.Add(_gridEmployees);
+        employeePanel.Controls.Add(empToolbar);
+
         // 레이아웃 조립 (역순)
         _mainPanel.Controls.Add(bottomSplit);
+        _mainPanel.Controls.Add(employeePanel);
         _mainPanel.Controls.Add(cashPanel);
         _mainPanel.Controls.Add(utilPanel);
         _mainPanel.Controls.Add(_summaryCards);
@@ -353,12 +404,101 @@ public class AdminTab : UserControl
         }
     }
 
+    // ========== 직원 관리 ==========
+    private async Task LoadEmployeesAsync()
+    {
+        try
+        {
+            var employees = (await _employeeService.GetAllAsync()).ToList();
+            _gridEmployees.Rows.Clear();
+
+            foreach (var emp in employees)
+            {
+                var idx = _gridEmployees.Rows.Add();
+                var row = _gridEmployees.Rows[idx];
+                row.Cells["EmpId"].Value = emp.Id;
+                row.Cells["EmpName"].Value = emp.Name;
+                row.Cells["EmpWage"].Value = emp.HourlyWage.ToString("N0");
+                row.Cells["EmpPhone"].Value = emp.Phone ?? "";
+                row.Cells["EmpStatus"].Value = emp.IsActive ? "활성" : "비활성";
+                row.Cells["EmpStatus"].Style.ForeColor =
+                    emp.IsActive ? ColorPalette.Success : ColorPalette.MissingRecord;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"직원 목록 로드 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    private async void BtnAddEmployee_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new EmployeeEditDialog();
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            await _employeeService.AddEmployeeAsync(dlg.EmpName, dlg.Wage, dlg.Phone);
+            ToastNotification.Show("직원이 추가되었습니다.", ToastType.Success);
+            await LoadEmployeesAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Warning);
+        }
+    }
+
+    private async void BtnDeactivateEmployee_Click(object? sender, EventArgs e)
+    {
+        if (_gridEmployees.CurrentRow == null) return;
+        var id = (int)_gridEmployees.CurrentRow.Cells["EmpId"].Value;
+        var name = _gridEmployees.CurrentRow.Cells["EmpName"].Value?.ToString();
+
+        if (MessageBox.Show($"'{name}' 직원을 비활성화하시겠습니까?", "확인",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        try
+        {
+            await _employeeService.DeactivateAsync(id);
+            ToastNotification.Show($"'{name}' 비활성화 완료.", ToastType.Success);
+            await LoadEmployeesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    private async void GridEmployees_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0) return;
+        var id = (int)_gridEmployees.Rows[e.RowIndex].Cells["EmpId"].Value;
+        var emp = await _employeeService.GetByIdAsync(id);
+        if (emp == null) return;
+
+        using var dlg = new EmployeeEditDialog(emp);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            await _employeeService.UpdateEmployeeAsync(id, dlg.EmpName, dlg.Wage, dlg.Phone);
+            ToastNotification.Show("직원 정보가 수정되었습니다.", ToastType.Success);
+            await LoadEmployeesAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Warning);
+        }
+    }
+
     // ========== 데이터 로드 ==========
     private async Task LoadAllStatsAsync()
     {
         await LoadAttendanceStatsAsync();
         await LoadSalesStatsAsync();
         await LoadSummaryCardsAsync();
+        await LoadEmployeesAsync();
     }
 
     private async Task LoadAttendanceStatsAsync()

@@ -9,15 +9,11 @@ namespace CubeManager.Forms;
 
 public class SettingsTab : UserControl
 {
-    private readonly IEmployeeService _employeeService;
     private readonly IReservationScraperService _scraperService;
     private readonly IConfigRepository _configRepo;
-    private readonly DataGridView _grid;
 
-    public SettingsTab(IEmployeeService employeeService,
-        IReservationScraperService scraperService, IConfigRepository configRepo)
+    public SettingsTab(IReservationScraperService scraperService, IConfigRepository configRepo)
     {
-        _employeeService = employeeService;
         _scraperService = scraperService;
         _configRepo = configRepo;
         Dock = DockStyle.Fill;
@@ -27,45 +23,18 @@ public class SettingsTab : UserControl
         // Header
         var header = new Label
         {
-            Text = "직원 관리",
+            Text = "설정",
             Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
             Dock = DockStyle.Top,
             Height = 40
         };
 
-        // Toolbar
-        var toolbar = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            Height = 45,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 5, 0, 5)
-        };
-
-        var btnAdd = CreateButton("+ 직원 추가", ColorPalette.Primary);
-        btnAdd.Click += BtnAdd_Click;
-
-        var btnDeactivate = CreateButton("비활성화", ColorPalette.Danger);
-        btnDeactivate.Margin = new Padding(10, 0, 0, 0);
-        btnDeactivate.Click += BtnDeactivate_Click;
-
-        toolbar.Controls.AddRange([btnAdd, btnDeactivate]);
-
-        // DataGridView
-        _grid = new DataGridView { Dock = DockStyle.Fill };
-        GridTheme.ApplyTheme(_grid);
-
-        SetupColumns();
-        _grid.CellDoubleClick += Grid_CellDoubleClick;
-        _grid.CellContentClick += Grid_CellContentClick;
-
-        // === 웹 연동 설정 패널 (하단) ===
+        // === 웹 연동 설정 패널 ===
         var webPanel = new GroupBox
         {
             Text = "웹 연동 설정 (cubeescape.co.kr)",
-            Dock = DockStyle.Bottom,
-            Height = 130,
+            Dock = DockStyle.Fill,
             Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
             Padding = new Padding(10)
         };
@@ -113,12 +82,9 @@ public class SettingsTab : UserControl
 
         webPanel.Controls.AddRange([lblUrl, txtUrl, lblId, txtId, lblPw, txtPw, btnTest, btnSaveWeb]);
 
-        Controls.Add(_grid);
         Controls.Add(webPanel);
-        Controls.Add(toolbar);
         Controls.Add(header);
 
-        _ = LoadDataAsync();
         _ = LoadWebSettingsAsync(txtUrl, txtId);
     }
 
@@ -129,141 +95,6 @@ public class SettingsTab : UserControl
         txtUrl.Text = url ?? "http://www.cubeescape.co.kr";
         txtId.Text = string.IsNullOrEmpty(encId) ? "" : CredentialHelper.Decrypt(encId);
         // PW는 표시하지 않음 (보안)
-    }
-
-    private static Button CreateButton(string text, Color color)
-    {
-        var btn = ButtonFactory.CreatePrimary(text, 110);
-        btn.BackColor = color;
-        return btn;
-    }
-
-    private void SetupColumns()
-    {
-        _grid.Columns.Clear();
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Id", Visible = false });
-        _grid.Columns.Add(new DataGridViewCheckBoxColumn
-            { Name = "IsActive", HeaderText = "활성", Width = 55, ReadOnly = false });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Name", HeaderText = "이름", FillWeight = 25, ReadOnly = true });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "HourlyWage", HeaderText = "시급", FillWeight = 20, ReadOnly = true,
-              DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Phone", HeaderText = "연락처", FillWeight = 30, ReadOnly = true });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Status", HeaderText = "상태", Width = 70, ReadOnly = true,
-              DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } });
-    }
-
-    private async Task LoadDataAsync()
-    {
-        try
-        {
-            var employees = (await _employeeService.GetAllAsync()).ToList();
-            _grid.Rows.Clear();
-
-            foreach (var emp in employees)
-            {
-                var idx = _grid.Rows.Add();
-                var row = _grid.Rows[idx];
-                row.Cells["Id"].Value = emp.Id;
-                row.Cells["IsActive"].Value = emp.IsActive;
-                row.Cells["Name"].Value = emp.Name;
-                row.Cells["HourlyWage"].Value = emp.HourlyWage.ToString("N0");
-                row.Cells["Phone"].Value = emp.Phone ?? "";
-                row.Cells["Status"].Value = emp.IsActive ? "활성" : "비활성";
-                row.Cells["Status"].Style.ForeColor =
-                    emp.IsActive ? ColorPalette.Success : ColorPalette.MissingRecord;
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastNotification.Show($"목록 로드 실패: {ex.Message}", ToastType.Error);
-        }
-    }
-
-    private async void BtnAdd_Click(object? sender, EventArgs e)
-    {
-        using var dlg = new EmployeeEditDialog();
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
-
-        try
-        {
-            await _employeeService.AddEmployeeAsync(dlg.EmpName, dlg.Wage, dlg.Phone);
-            ToastNotification.Show("직원이 추가되었습니다.", ToastType.Success);
-            await LoadDataAsync();
-        }
-        catch (ArgumentException ex)
-        {
-            ToastNotification.Show(ex.Message, ToastType.Warning);
-        }
-    }
-
-    private async void BtnDeactivate_Click(object? sender, EventArgs e)
-    {
-        if (_grid.CurrentRow == null) return;
-        var id = (int)_grid.CurrentRow.Cells["Id"].Value;
-        var name = _grid.CurrentRow.Cells["Name"].Value?.ToString();
-
-        if (MessageBox.Show($"'{name}' 직원을 비활성화하시겠습니까?", "확인",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-            return;
-
-        try
-        {
-            await _employeeService.DeactivateAsync(id);
-            ToastNotification.Show($"'{name}' 비활성화 완료.", ToastType.Success);
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            ToastNotification.Show(ex.Message, ToastType.Error);
-        }
-    }
-
-    private async void Grid_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
-    {
-        if (e.RowIndex < 0) return;
-        var id = (int)_grid.Rows[e.RowIndex].Cells["Id"].Value;
-        var emp = await _employeeService.GetByIdAsync(id);
-        if (emp == null) return;
-
-        using var dlg = new EmployeeEditDialog(emp);
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
-
-        try
-        {
-            await _employeeService.UpdateEmployeeAsync(id, dlg.EmpName, dlg.Wage, dlg.Phone);
-            ToastNotification.Show("직원 정보가 수정되었습니다.", ToastType.Success);
-            await LoadDataAsync();
-        }
-        catch (ArgumentException ex)
-        {
-            ToastNotification.Show(ex.Message, ToastType.Warning);
-        }
-    }
-
-    private async void Grid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
-    {
-        if (e.RowIndex < 0 || _grid.Columns[e.ColumnIndex].Name != "IsActive") return;
-
-        _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
-        var id = (int)_grid.Rows[e.RowIndex].Cells["Id"].Value;
-        var isActive = (bool)_grid.Rows[e.RowIndex].Cells["IsActive"].Value;
-
-        try
-        {
-            await _employeeService.ToggleActiveAsync(id, isActive);
-            _grid.Rows[e.RowIndex].Cells["Status"].Value = isActive ? "활성" : "비활성";
-            _grid.Rows[e.RowIndex].Cells["Status"].Style.ForeColor =
-                isActive ? ColorPalette.Success : ColorPalette.MissingRecord;
-        }
-        catch (Exception ex)
-        {
-            ToastNotification.Show(ex.Message, ToastType.Error);
-        }
     }
 }
 

@@ -12,6 +12,7 @@ public class TimeTablePanel : Panel
     private List<Schedule> _schedules = [];
     private DateTime _weekStart;
     private DateTime _weekEnd;
+    private HashSet<string> _holidayDates = new();
     private int _headerHeight = 36;
     private int _timeColWidth = 60;
     private readonly Dictionary<int, int> _employeeColorIndex = new();
@@ -31,11 +32,12 @@ public class TimeTablePanel : Panel
         BackColor = Color.White;
     }
 
-    public void SetData(IEnumerable<Schedule> schedules, DateTime weekStart, DateTime weekEnd)
+    public void SetData(IEnumerable<Schedule> schedules, DateTime weekStart, DateTime weekEnd, HashSet<string>? holidayDates = null)
     {
         _schedules = schedules.ToList();
         _weekStart = weekStart;
         _weekEnd = weekEnd;
+        _holidayDates = holidayDates ?? new();
         Invalidate();
     }
 
@@ -79,7 +81,9 @@ public class TimeTablePanel : Panel
             var x = _timeColWidth + d * cellW;
             var txt = $"{date:M/d} ({dayNames[(int)date.DayOfWeek]})";
             var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-            using var dayBrush = new SolidBrush(isWeekend ? ColorPalette.Danger : ColorPalette.Text);
+            var isHoliday = _holidayDates.Contains(date.ToString("yyyy-MM-dd"));
+            var isRedDay = isWeekend || isHoliday;
+            using var dayBrush = new SolidBrush(isRedDay ? ColorPalette.Danger : ColorPalette.Text);
             g.DrawString(txt, headerFont, dayBrush,
                 new RectangleF(x, 0, cellW, _headerHeight),
                 new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });

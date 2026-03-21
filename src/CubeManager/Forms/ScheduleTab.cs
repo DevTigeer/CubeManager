@@ -1,5 +1,6 @@
 using System.Drawing;
 using CubeManager.Core.Helpers;
+using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Controls;
 using CubeManager.Dialogs;
@@ -11,15 +12,18 @@ public class ScheduleTab : UserControl
 {
     private readonly IScheduleService _scheduleService;
     private readonly IEmployeeService _employeeService;
+    private readonly IHolidayRepository _holidayRepo;
     private readonly TimeTablePanel _timeTable;
     private readonly Label _lblWeekInfo;
     private readonly Label _lblSummary;
     private int _year, _month, _weekNum;
 
-    public ScheduleTab(IScheduleService scheduleService, IEmployeeService employeeService)
+    public ScheduleTab(IScheduleService scheduleService, IEmployeeService employeeService,
+        IHolidayRepository holidayRepo)
     {
         _scheduleService = scheduleService;
         _employeeService = employeeService;
+        _holidayRepo = holidayRepo;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
         Padding = new Padding(10);
@@ -112,7 +116,13 @@ public class ScheduleTab : UserControl
             _lblWeekInfo.Text = $"{_year}년 {_month}월  {_weekNum}주차 ({start:M/d} ~ {end:M/d})";
 
             var schedules = await _scheduleService.GetWeekScheduleAsync(_year, _month, _weekNum);
-            _timeTable.SetData(schedules, start, end);
+
+            var holidays = await _holidayRepo.GetByYearAsync(start.Year);
+            var holidayDates = new HashSet<string>(holidays
+                .Where(h => !h.IsWeekend)  // 평일 공휴일만
+                .Select(h => h.HolidayDate));
+
+            _timeTable.SetData(schedules, start, end, holidayDates);
 
             // 근무시간 요약
             var empHours = schedules

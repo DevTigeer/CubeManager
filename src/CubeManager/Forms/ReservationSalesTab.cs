@@ -91,7 +91,7 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(_chkAutoRefresh);
 
-        var btnSort = CreateBtn("시간순 ↑", ColorPalette.TextSecondary);
+        var btnSort = CreateBtn("임박순", ColorPalette.TextSecondary);
         btnSort.Size = new Size(90, 32);
         btnSort.Click += (_, _) => ToggleSort(btnSort);
         topPanel.Controls.Add(btnSort);
@@ -398,9 +398,9 @@ public class ReservationSalesTab : UserControl
         _sortState = (_sortState + 1) % 3;
         btn.Text = _sortState switch
         {
-            0 => "시간순 ↑",
-            1 => "시간순 ↓",
-            _ => "원래순서"
+            0 => "시간순 ↓",
+            1 => "원래순서",
+            _ => "임박순"
         };
         PopulateMainGrid();
     }
@@ -412,9 +412,13 @@ public class ReservationSalesTab : UserControl
 
         var sorted = _sortState switch
         {
-            1 => _reservations.OrderBy(r => r.TimeSlot).ToList(),
-            2 => _reservations.OrderByDescending(r => r.TimeSlot).ToList(),
+            1 => _reservations.OrderByDescending(r => r.TimeSlot).ToList(),
+            2 => _reservations.ToList(),  // 원래순서
             _ => _reservations
+                .OrderBy(r => r.Status is "removed" or "noshow" ? 1 : 0)
+                .ThenBy(r => string.Compare(r.TimeSlot, DateTime.Now.ToString("HH:mm"), StringComparison.Ordinal) >= 0 ? 0 : 1)
+                .ThenBy(r => r.TimeSlot)
+                .ToList()
         };
 
         foreach (var r in sorted)

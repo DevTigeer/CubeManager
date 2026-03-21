@@ -64,7 +64,7 @@ public class SalaryTab : UserControl
 
         _grid.Columns.AddRange(
             new DataGridViewTextBoxColumn { HeaderText = "이름", FillWeight = 12, DefaultCellStyle = new() { Alignment = DataGridViewContentAlignment.MiddleLeft } },
-            new DataGridViewTextBoxColumn { HeaderText = "시급", FillWeight = 8 },
+            new DataGridViewTextBoxColumn { HeaderText = "시급", FillWeight = 8, Visible = false },
             new DataGridViewTextBoxColumn { HeaderText = "1주", FillWeight = 6 },
             new DataGridViewTextBoxColumn { HeaderText = "2주", FillWeight = 6 },
             new DataGridViewTextBoxColumn { HeaderText = "3주", FillWeight = 6 },
