@@ -2,6 +2,7 @@ using System.Drawing;
 using CubeManager.Core.Helpers;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
+using CubeManager.Core.Models;
 using CubeManager.Controls;
 using CubeManager.Dialogs;
 using CubeManager.Helpers;
@@ -14,8 +15,9 @@ public class ScheduleTab : UserControl
     private readonly IEmployeeService _employeeService;
     private readonly IHolidayRepository _holidayRepo;
     private readonly TimeTablePanel _timeTable;
-    private readonly Label _lblWeekInfo;
-    private readonly Label _lblSummary;
+    private readonly Label _lblDateRange;
+    private readonly Label _lblWeekSub;
+    private readonly Panel _summaryPanel;
     private int _year, _month, _weekNum;
 
     public ScheduleTab(IScheduleService scheduleService, IEmployeeService employeeService,
@@ -26,54 +28,62 @@ public class ScheduleTab : UserControl
         _holidayRepo = holidayRepo;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
-        Padding = new Padding(10);
+        Padding = new Padding(12);
 
-        // Top bar
-        var topBar = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top, Height = 45,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 5, 0, 5)
-        };
+        // ── 상단 헤더 ──
+        var topBar = new Panel { Dock = DockStyle.Top, Height = 50 };
 
-        var btnPrev = CreateNavButton("◀ 이전주");
+        // 좌: 네비게이션
+        var btnPrev = ButtonFactory.CreateGhost("◀", 36);
+        btnPrev.Location = new Point(0, 10);
         btnPrev.Click += (_, _) => Navigate(-1);
 
-        _lblWeekInfo = new Label
-        {
-            Size = new Size(280, 32),
-            Font = new Font("맑은 고딕", 12f, FontStyle.Bold),
-            ForeColor = ColorPalette.Text,
-            TextAlign = ContentAlignment.MiddleCenter,
-            Margin = new Padding(5, 0, 5, 0)
-        };
-
-        var btnNext = CreateNavButton("다음주 ▶");
+        var btnNext = ButtonFactory.CreateGhost("▶", 36);
+        btnNext.Location = new Point(40, 10);
         btnNext.Click += (_, _) => Navigate(1);
 
-        var btnAdd = ButtonFactory.CreatePrimary("+ 스케줄 추가", 130);
-        btnAdd.Margin = new Padding(20, 0, 0, 0);
+        // 중앙: 날짜 범위 (주 정보)
+        _lblDateRange = new Label
+        {
+            AutoSize = false, Size = new Size(220, 24),
+            Location = new Point(90, 4),
+            Font = new Font("맑은 고딕", 13f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        _lblWeekSub = new Label
+        {
+            AutoSize = false, Size = new Size(160, 18),
+            Location = new Point(90, 28),
+            Font = new Font("맑은 고딕", 8.5f),
+            ForeColor = ColorPalette.TextTertiary,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+
+        // 우: 스케줄 추가
+        var btnAdd = ButtonFactory.CreatePrimary("+ 스케줄 추가", 120);
+        btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        btnAdd.Location = new Point(topBar.Width - 132, 10);
         btnAdd.Click += BtnAddSchedule_Click;
 
-        topBar.Controls.AddRange([btnPrev, _lblWeekInfo, btnNext, btnAdd]);
+        topBar.Controls.AddRange([btnPrev, btnNext, _lblDateRange, _lblWeekSub, btnAdd]);
+        topBar.Resize += (_, _) => btnAdd.Location = new Point(topBar.Width - 132, 10);
 
-        // TimeTable
+        // ── 하단: 직원별 주간 요약 ──
+        _summaryPanel = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 50,
+            Padding = new Padding(0, 6, 0, 0)
+        };
+
+        // ── 중앙: TimeTable ──
         _timeTable = new TimeTablePanel { Dock = DockStyle.Fill };
         _timeTable.EmptyCellDoubleClicked += TimeTable_EmptyCellDoubleClicked;
         _timeTable.BlockClicked += TimeTable_BlockClicked;
 
-        // Bottom summary
-        _lblSummary = new Label
-        {
-            Dock = DockStyle.Bottom, Height = 30,
-            Font = new Font("맑은 고딕", 9f),
-            ForeColor = ColorPalette.TextSecondary,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(5, 0, 0, 0)
-        };
-
         Controls.Add(_timeTable);
-        Controls.Add(_lblSummary);
+        Controls.Add(_summaryPanel);
         Controls.Add(topBar);
 
         // 현재 주차 초기화
@@ -83,9 +93,6 @@ public class ScheduleTab : UserControl
         _weekNum = TimeHelper.GetWeekOfMonth(now);
         _ = LoadWeekAsync();
     }
-
-    private static Button CreateNavButton(string text) =>
-        ButtonFactory.CreateGhost(text, 100);
 
     private void Navigate(int direction)
     {
@@ -113,25 +120,22 @@ public class ScheduleTab : UserControl
         try
         {
             var (start, end) = TimeHelper.GetWeekRange(_year, _month, _weekNum);
-            _lblWeekInfo.Text = $"{_year}년 {_month}월  {_weekNum}주차 ({start:M/d} ~ {end:M/d})";
+
+            // 헤더 업데이트: 날짜 범위 우선, 주차 보조
+            _lblDateRange.Text = $"{start:yyyy.MM.dd} - {end:MM.dd}";
+            _lblWeekSub.Text = $"{_month}월 {_weekNum}주차";
 
             var schedules = await _scheduleService.GetWeekScheduleAsync(_year, _month, _weekNum);
 
             var holidays = await _holidayRepo.GetByYearAsync(start.Year);
             var holidayDates = new HashSet<string>(holidays
-                .Where(h => !h.IsWeekend)  // 평일 공휴일만
+                .Where(h => !h.IsWeekend)
                 .Select(h => h.HolidayDate));
 
             _timeTable.SetData(schedules, start, end, holidayDates);
 
-            // 근무시간 요약
-            var empHours = schedules
-                .GroupBy(s => s.EmployeeName ?? $"ID:{s.EmployeeId}")
-                .Select(g => $"{g.Key}: {g.Sum(s => TimeHelper.CalcHours(s.StartTime, s.EndTime)):F1}h")
-                .ToList();
-            _lblSummary.Text = empHours.Count > 0
-                ? string.Join("  │  ", empHours)
-                : "등록된 스케줄이 없습니다.";
+            // 직원별 주간 요약 렌더링
+            RenderWeeklySummary(schedules.ToList(), start, end);
         }
         catch (Exception ex)
         {
@@ -139,12 +143,102 @@ public class ScheduleTab : UserControl
         }
     }
 
+    /// <summary>하단 직원별 주간 요약 (색상 점 + 이름 + 총시간 + 근무일)</summary>
+    private void RenderWeeklySummary(List<Schedule> schedules, DateTime start, DateTime end)
+    {
+        _summaryPanel.Controls.Clear();
+
+        if (schedules.Count == 0)
+        {
+            _summaryPanel.Controls.Add(new Label
+            {
+                Text = "등록된 스케줄이 없습니다.",
+                Font = new Font("맑은 고딕", 9f),
+                ForeColor = ColorPalette.TextTertiary,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(4, 0, 0, 0)
+            });
+            return;
+        }
+
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = true,
+            Padding = new Padding(0)
+        };
+
+        var empGroups = schedules
+            .GroupBy(s => new { s.EmployeeId, s.EmployeeName })
+            .OrderBy(g => g.Key.EmployeeName);
+
+        var dayNames = new[] { "일", "월", "화", "수", "목", "금", "토" };
+
+        foreach (var grp in empGroups)
+        {
+            var name = grp.Key.EmployeeName ?? $"ID:{grp.Key.EmployeeId}";
+            var totalHours = grp.Sum(s => TimeHelper.CalcHours(s.StartTime, s.EndTime));
+            var workDays = grp.Select(s => s.WorkDate).Distinct().Count();
+
+            // 근무 요일 표시
+            var workDaySet = grp
+                .Select(s => DateTime.Parse(s.WorkDate).DayOfWeek)
+                .Distinct()
+                .OrderBy(d => d == DayOfWeek.Sunday ? 7 : (int)d)
+                .Select(d => dayNames[(int)d]);
+            var dayStr = string.Join("·", workDaySet);
+
+            // 시간 포맷
+            var hoursStr = totalHours % 1 == 0 ? $"{(int)totalHours}h" : $"{totalHours:F1}h";
+
+            var chip = new Panel
+            {
+                Size = new Size(180, 36),
+                Margin = new Padding(0, 0, 8, 0)
+            };
+
+            // 색상 점
+            var dot = new Panel
+            {
+                Size = new Size(10, 10),
+                Location = new Point(4, 13),
+                BackColor = ColorPalette.GetEmployeeColor(
+                    grp.Key.EmployeeId % ColorPalette.EmployeeColors.Length)
+            };
+            // 둥근 점
+            dot.Paint += (_, pe) =>
+            {
+                pe.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using var b = new SolidBrush(dot.BackColor);
+                pe.Graphics.FillEllipse(b, 0, 0, 9, 9);
+            };
+
+            var lblName = new Label
+            {
+                Text = $"{name}  {hoursStr}  {dayStr}",
+                Location = new Point(18, 0),
+                Size = new Size(158, 36),
+                Font = new Font("맑은 고딕", 8.5f),
+                ForeColor = ColorPalette.Text,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            chip.Controls.AddRange([dot, lblName]);
+            flow.Controls.Add(chip);
+        }
+
+        _summaryPanel.Controls.Add(flow);
+    }
+
     private async void BtnAddSchedule_Click(object? sender, EventArgs e)
     {
         var employees = (await _employeeService.GetActiveAsync()).ToList();
         if (employees.Count == 0)
         {
-            ToastNotification.Show("활성 직원이 없습니다. 설정 탭에서 추가하세요.", ToastType.Warning);
+            ToastNotification.Show("활성 직원이 없습니다. 관리자 탭에서 추가하세요.", ToastType.Warning);
             return;
         }
 
@@ -200,4 +294,7 @@ public class ScheduleTab : UserControl
         ToastNotification.Show("스케줄이 삭제되었습니다.", ToastType.Success);
         await LoadWeekAsync();
     }
+
+    /// <summary>외부에서 호출하여 데이터 새로고침</summary>
+    public async Task RefreshAsync() => await LoadWeekAsync();
 }
