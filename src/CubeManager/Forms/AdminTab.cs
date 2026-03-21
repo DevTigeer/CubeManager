@@ -18,6 +18,8 @@ public class AdminTab : UserControl
     private readonly ISalesService _salesService;
     private readonly IAttendanceService _attendanceService;
     private readonly IEmployeeService _employeeService;
+    private readonly IMicePopupRepository _miceRepo;
+    private readonly IChecklistRepository _checklistRepo;
     private readonly Data.Database? _database;
 
     private Panel _authPanel = null!;
@@ -41,14 +43,23 @@ public class AdminTab : UserControl
     // 직원 관리
     private readonly DataGridView _gridEmployees;
 
+    // 미끼관리
+    private readonly DataGridView _gridMice;
+
+    // 체크리스트 관리
+    private readonly DataGridView _gridChecklist;
+
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
+        IMicePopupRepository miceRepo, IChecklistRepository checklistRepo,
         Data.Database database)
     {
         _configRepo = configRepo;
         _salesService = salesService;
         _attendanceService = attendanceService;
         _employeeService = employeeService;
+        _miceRepo = miceRepo;
+        _checklistRepo = checklistRepo;
         _database = database;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
@@ -61,6 +72,8 @@ public class AdminTab : UserControl
         _gridAttendStats = new DataGridView { Dock = DockStyle.Fill };
         _gridSalesStats = new DataGridView { Dock = DockStyle.Fill };
         _gridEmployees = new DataGridView { Dock = DockStyle.Fill };
+        _gridMice = new DataGridView { Dock = DockStyle.Fill };
+        _gridChecklist = new DataGridView { Dock = DockStyle.Fill };
         _summaryCards = new SummaryCardRow();
 
         BuildAuthPanel();
@@ -336,8 +349,154 @@ public class AdminTab : UserControl
         employeePanel.Controls.Add(_gridEmployees);
         employeePanel.Controls.Add(empToolbar);
 
+        // === 미끼관리 패널 ===
+        var micePanel = new GroupBox
+        {
+            Text = "미끼관리 (팝업)",
+            Dock = DockStyle.Bottom, Height = 180,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10, 5, 10, 5)
+        };
+
+        var miceToolbar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 35,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 2, 0, 2)
+        };
+
+        var btnAddMice = ButtonFactory.CreatePrimary("+ 등록", 80);
+        btnAddMice.Height = 28;
+        btnAddMice.Font = nf;
+        btnAddMice.Click += BtnAddMice_Click;
+        miceToolbar.Controls.Add(btnAddMice);
+
+        GridTheme.ApplyTheme(_gridMice);
+        _gridMice.AllowUserToAddRows = false;
+        _gridMice.ReadOnly = true;
+        _gridMice.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "MiceId", Visible = false },
+            new DataGridViewTextBoxColumn { Name = "MiceTitle", HeaderText = "제목", FillWeight = 25 },
+            new DataGridViewTextBoxColumn { Name = "MiceContent", HeaderText = "내용", FillWeight = 30 },
+            new DataGridViewTextBoxColumn { Name = "MiceInterval", HeaderText = "간격(분)", FillWeight = 10,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewCheckBoxColumn { Name = "MiceActive", HeaderText = "활성", FillWeight = 10 },
+            new DataGridViewTextBoxColumn { Name = "MiceLastShown", HeaderText = "마지막표시", FillWeight = 25 }
+        );
+        _gridMice.ReadOnly = false;
+        _gridMice.Columns["MiceTitle"]!.ReadOnly = true;
+        _gridMice.Columns["MiceContent"]!.ReadOnly = true;
+        _gridMice.Columns["MiceInterval"]!.ReadOnly = true;
+        _gridMice.Columns["MiceLastShown"]!.ReadOnly = true;
+        _gridMice.CellContentClick += async (_, e) =>
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            if (_gridMice.Columns[e.ColumnIndex].Name != "MiceActive") return;
+
+            var id = (int)_gridMice.Rows[e.RowIndex].Cells["MiceId"].Value;
+            var currentActive = (bool)_gridMice.Rows[e.RowIndex].Cells["MiceActive"].Value;
+            try
+            {
+                var all = (await _miceRepo.GetAllAsync()).ToList();
+                var popup = all.FirstOrDefault(m => m.Id == id);
+                if (popup != null)
+                {
+                    popup.IsActive = !currentActive;
+                    await _miceRepo.UpdateAsync(popup);
+                    await LoadMiceAsync();
+                }
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+        _gridMice.KeyDown += async (_, e) =>
+        {
+            if (e.KeyCode != Keys.Delete || _gridMice.CurrentRow == null) return;
+            var id = (int)_gridMice.CurrentRow.Cells["MiceId"].Value;
+            var title = _gridMice.CurrentRow.Cells["MiceTitle"].Value?.ToString();
+            if (MessageBox.Show($"'{title}' 항목을 삭제하시겠습니까?", "확인",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            try
+            {
+                await _miceRepo.DeleteAsync(id);
+                ToastNotification.Show("삭제 완료.", ToastType.Success);
+                await LoadMiceAsync();
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+
+        micePanel.Controls.Add(_gridMice);
+        micePanel.Controls.Add(miceToolbar);
+
+        // === 체크리스트 관리 패널 ===
+        var checklistPanel = new GroupBox
+        {
+            Text = "체크리스트 관리",
+            Dock = DockStyle.Bottom, Height = 200,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10, 5, 10, 5)
+        };
+
+        var checklistToolbar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 35,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 2, 0, 2)
+        };
+
+        var cmbDay = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Size = new Size(80, 28), Font = nf
+        };
+        cmbDay.Items.AddRange(new object[] { "월", "화", "수", "목", "금", "토", "일" });
+        cmbDay.SelectedIndex = 0;
+        cmbDay.Tag = "dayCombo";
+        cmbDay.SelectedIndexChanged += async (_, _) => await LoadChecklistTemplatesAsync();
+        checklistToolbar.Controls.Add(cmbDay);
+
+        var btnAddChecklist = ButtonFactory.CreatePrimary("+ 추가", 80);
+        btnAddChecklist.Height = 28;
+        btnAddChecklist.Font = nf;
+        btnAddChecklist.Margin = new Padding(10, 0, 0, 0);
+        btnAddChecklist.Click += BtnAddChecklist_Click;
+        checklistToolbar.Controls.Add(btnAddChecklist);
+
+        GridTheme.ApplyTheme(_gridChecklist);
+        _gridChecklist.AllowUserToAddRows = false;
+        _gridChecklist.ReadOnly = true;
+        _gridChecklist.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "ClId", Visible = false },
+            new DataGridViewTextBoxColumn { Name = "ClTask", HeaderText = "할일", FillWeight = 60 },
+            new DataGridViewTextBoxColumn { Name = "ClOrder", HeaderText = "순서", FillWeight = 15,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClActive", HeaderText = "활성", FillWeight = 15,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewButtonColumn { Name = "ClDelete", HeaderText = "삭제", FillWeight = 10, Text = "삭제",
+                UseColumnTextForButtonValue = true }
+        );
+        _gridChecklist.CellContentClick += async (_, e) =>
+        {
+            if (e.RowIndex < 0 || _gridChecklist.Columns[e.ColumnIndex].Name != "ClDelete") return;
+            var id = (int)_gridChecklist.Rows[e.RowIndex].Cells["ClId"].Value;
+            var task = _gridChecklist.Rows[e.RowIndex].Cells["ClTask"].Value?.ToString();
+            if (MessageBox.Show($"'{task}' 항목을 삭제하시겠습니까?", "확인",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            try
+            {
+                await _checklistRepo.DeleteTemplateAsync(id);
+                ToastNotification.Show("삭제 완료.", ToastType.Success);
+                await LoadChecklistTemplatesAsync();
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+
+        checklistPanel.Controls.Add(_gridChecklist);
+        checklistPanel.Controls.Add(checklistToolbar);
+
         // 레이아웃 조립 (역순)
         _mainPanel.Controls.Add(bottomSplit);
+        _mainPanel.Controls.Add(checklistPanel);
+        _mainPanel.Controls.Add(micePanel);
         _mainPanel.Controls.Add(employeePanel);
         _mainPanel.Controls.Add(cashPanel);
         _mainPanel.Controls.Add(utilPanel);
@@ -499,6 +658,8 @@ public class AdminTab : UserControl
         await LoadSalesStatsAsync();
         await LoadSummaryCardsAsync();
         await LoadEmployeesAsync();
+        await LoadMiceAsync();
+        await LoadChecklistTemplatesAsync();
     }
 
     private async Task LoadAttendanceStatsAsync()
@@ -623,5 +784,204 @@ public class AdminTab : UserControl
             _summaryCards.UpdateCard(3, $"₩{todayBalance?.ClosingBalance ?? 0:N0}");
         }
         catch { /* 무시 */ }
+    }
+
+    // ========== 미끼관리 ==========
+    private async Task LoadMiceAsync()
+    {
+        try
+        {
+            var items = (await _miceRepo.GetAllAsync()).ToList();
+            _gridMice.Rows.Clear();
+
+            foreach (var m in items)
+            {
+                var idx = _gridMice.Rows.Add();
+                var row = _gridMice.Rows[idx];
+                row.Cells["MiceId"].Value = m.Id;
+                row.Cells["MiceTitle"].Value = m.Title;
+                row.Cells["MiceContent"].Value = m.Content;
+                row.Cells["MiceInterval"].Value = m.IntervalMinutes;
+                row.Cells["MiceActive"].Value = m.IsActive;
+                row.Cells["MiceLastShown"].Value = m.LastShownAt ?? "-";
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"미끼 목록 로드 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    private async void BtnAddMice_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new Form
+        {
+            Text = "미끼 팝업 등록",
+            Size = new Size(400, 260),
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterParent,
+            MaximizeBox = false, MinimizeBox = false,
+            Font = new Font("맑은 고딕", 10f),
+            BackColor = ColorPalette.Surface
+        };
+
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            Padding = new Padding(15)
+        };
+
+        var lblTitle = new Label { Text = "제목:", Size = new Size(340, 20) };
+        var txtTitle = new TextBox { Size = new Size(340, 28), PlaceholderText = "팝업 제목" };
+        var lblContent = new Label { Text = "내용:", Size = new Size(340, 20), Margin = new Padding(0, 5, 0, 0) };
+        var txtContent = new TextBox { Size = new Size(340, 50), Multiline = true, PlaceholderText = "팝업 내용" };
+        var lblInterval = new Label { Text = "간격(분):", Size = new Size(340, 20), Margin = new Padding(0, 5, 0, 0) };
+        var numInterval = new NumericUpDown { Minimum = 1, Maximum = 1440, Value = 60, Size = new Size(100, 28) };
+
+        var btnOk = ButtonFactory.CreatePrimary("등록", 80);
+        btnOk.Height = 32;
+        btnOk.Margin = new Padding(0, 10, 0, 0);
+        btnOk.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(txtTitle.Text))
+            {
+                ToastNotification.Show("제목을 입력하세요.", ToastType.Warning);
+                return;
+            }
+            dlg.Tag = new Core.Models.MicePopup
+            {
+                Title = txtTitle.Text.Trim(),
+                Content = txtContent.Text.Trim(),
+                IntervalMinutes = (int)numInterval.Value,
+                IsActive = true
+            };
+            dlg.DialogResult = DialogResult.OK;
+        };
+
+        flow.Controls.AddRange(new Control[] { lblTitle, txtTitle, lblContent, txtContent, lblInterval, numInterval, btnOk });
+        dlg.Controls.Add(flow);
+
+        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Tag is not Core.Models.MicePopup popup) return;
+
+        try
+        {
+            await _miceRepo.InsertAsync(popup);
+            ToastNotification.Show("미끼 팝업이 등록되었습니다.", ToastType.Success);
+            await LoadMiceAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    // ========== 체크리스트 관리 ==========
+    private async Task LoadChecklistTemplatesAsync()
+    {
+        try
+        {
+            // 요일 콤보에서 선택된 요일 가져오기
+            var cmbDay = _gridChecklist.Parent?.Controls
+                .OfType<FlowLayoutPanel>()
+                .FirstOrDefault()?.Controls
+                .OfType<ComboBox>()
+                .FirstOrDefault(c => c.Tag?.ToString() == "dayCombo");
+
+            var dayIndex = cmbDay?.SelectedIndex ?? 0;
+            // ComboBox: 0=월,1=화,...6=일 → DB: 0=일,1=월,...6=토
+            var dbDay = dayIndex < 6 ? dayIndex + 1 : 0;
+
+            var templates = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
+            _gridChecklist.Rows.Clear();
+
+            foreach (var t in templates)
+            {
+                var idx = _gridChecklist.Rows.Add();
+                var row = _gridChecklist.Rows[idx];
+                row.Cells["ClId"].Value = t.Id;
+                row.Cells["ClTask"].Value = t.TaskText;
+                row.Cells["ClOrder"].Value = t.SortOrder;
+                row.Cells["ClActive"].Value = t.IsActive ? "활성" : "비활성";
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"체크리스트 로드 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    private async void BtnAddChecklist_Click(object? sender, EventArgs e)
+    {
+        // 요일 콤보에서 선택된 요일 가져오기
+        var cmbDay = _gridChecklist.Parent?.Controls
+            .OfType<FlowLayoutPanel>()
+            .FirstOrDefault()?.Controls
+            .OfType<ComboBox>()
+            .FirstOrDefault(c => c.Tag?.ToString() == "dayCombo");
+
+        var dayIndex = cmbDay?.SelectedIndex ?? 0;
+        var dbDay = dayIndex < 6 ? dayIndex + 1 : 0;
+        var dayNames = new[] { "월", "화", "수", "목", "금", "토", "일" };
+        var dayName = dayIndex < dayNames.Length ? dayNames[dayIndex] : "월";
+
+        using var dlg = new Form
+        {
+            Text = $"체크리스트 추가 ({dayName}요일)",
+            Size = new Size(400, 180),
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterParent,
+            MaximizeBox = false, MinimizeBox = false,
+            Font = new Font("맑은 고딕", 10f),
+            BackColor = ColorPalette.Surface
+        };
+
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            Padding = new Padding(15)
+        };
+
+        var lblTask = new Label { Text = "할일 텍스트:", Size = new Size(340, 20) };
+        var txtTask = new TextBox { Size = new Size(340, 28), PlaceholderText = "체크리스트 항목 입력" };
+
+        var btnOk = ButtonFactory.CreatePrimary("추가", 80);
+        btnOk.Height = 32;
+        btnOk.Margin = new Padding(0, 10, 0, 0);
+        btnOk.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(txtTask.Text))
+            {
+                ToastNotification.Show("할일을 입력하세요.", ToastType.Warning);
+                return;
+            }
+            dlg.Tag = txtTask.Text.Trim();
+            dlg.DialogResult = DialogResult.OK;
+        };
+
+        flow.Controls.AddRange(new Control[] { lblTask, txtTask, btnOk });
+        dlg.Controls.Add(flow);
+
+        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Tag is not string taskText) return;
+
+        try
+        {
+            var existing = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
+            var template = new Core.Models.ChecklistTemplate
+            {
+                DayOfWeek = dbDay,
+                TaskText = taskText,
+                SortOrder = existing.Count + 1,
+                IsActive = true
+            };
+            await _checklistRepo.InsertTemplateAsync(template);
+            ToastNotification.Show("체크리스트 항목이 추가되었습니다.", ToastType.Success);
+            await LoadChecklistTemplatesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
     }
 }

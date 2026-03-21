@@ -16,11 +16,12 @@ public class MainForm : Form
     private readonly Panel _contentPanel;
     private readonly Dictionary<int, UserControl?> _tabCache = new();
     private readonly System.Windows.Forms.Timer _backupTimer;
+    private readonly System.Windows.Forms.Timer _miceTimer;
 
     private static readonly string[] TabNames =
     [
         "예약/매출", "스케줄", "급여", "업무자료",
-        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자", "무료이용권"
+        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자", "무료이용권", "체크리스트"
     ];
 
     public MainForm(IServiceProvider serviceProvider)
@@ -79,6 +80,11 @@ public class MainForm : Form
         _backupTimer.Tick += BackupTimer_Tick;
         _backupTimer.Enabled = true;
 
+        // 미끼관리 타이머 (1분마다 체크)
+        _miceTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+        _miceTimer.Tick += MiceTimer_Tick;
+        _miceTimer.Enabled = true;
+
         // 첫 번째 탭 로드
         LoadTab(0);
     }
@@ -105,6 +111,36 @@ public class MainForm : Form
             {
                 Log.Error(ex, "자동 백업 실패");
             }
+        }
+    }
+
+    private async void MiceTimer_Tick(object? sender, EventArgs e)
+    {
+        try
+        {
+            var repo = _sp.GetRequiredService<IMicePopupRepository>();
+            var popups = await repo.GetActiveAsync();
+            var now = DateTime.Now;
+
+            foreach (var popup in popups)
+            {
+                var lastShown = string.IsNullOrEmpty(popup.LastShownAt)
+                    ? DateTime.MinValue
+                    : DateTime.Parse(popup.LastShownAt);
+
+                if ((now - lastShown).TotalMinutes >= popup.IntervalMinutes)
+                {
+                    _miceTimer.Enabled = false; // 팝업 중 타이머 일시 중단
+                    using var dlg = new Dialogs.MicePopupDialog(popup.Title, popup.Content);
+                    dlg.ShowDialog(this);
+                    await repo.UpdateLastShownAsync(popup.Id, now.ToString("yyyy-MM-dd HH:mm:ss"));
+                    _miceTimer.Enabled = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "미끼 팝업 처리 실패");
         }
     }
 
@@ -164,9 +200,15 @@ public class MainForm : Form
                 _sp.GetRequiredService<ISalesService>(),
                 _sp.GetRequiredService<IAttendanceService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
+                _sp.GetRequiredService<IMicePopupRepository>(),
+                _sp.GetRequiredService<IChecklistRepository>(),
                 _sp.GetRequiredService<Data.Database>()),
         10 => new FreePassTab(
                 _sp.GetRequiredService<IFreePassRepository>()),
+        11 => new ChecklistTab(
+                _sp.GetRequiredService<IChecklistRepository>(),
+                _sp.GetRequiredService<IScheduleService>(),
+                _sp.GetRequiredService<IEmployeeService>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

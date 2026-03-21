@@ -106,6 +106,8 @@ static class Program
         services.AddSingleton<IThemeRepository, ThemeRepository>();
         services.AddSingleton<IReservationRepository, ReservationRepository>();
         services.AddSingleton<IFreePassRepository, FreePassRepository>();
+        services.AddSingleton<IMicePopupRepository, MicePopupRepository>();
+        services.AddSingleton<IChecklistRepository, ChecklistRepository>();
 
         // Services
         services.AddSingleton<IEmployeeService, EmployeeService>();
