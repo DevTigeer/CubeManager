@@ -23,37 +23,51 @@ public class ReservationScraperService : IReservationScraperService
 
     public async Task<IEnumerable<Reservation>> FetchReservationsAsync(DateTime date)
     {
+        var (id, pw) = await GetCredentialsAsync();
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(pw))
+            throw new InvalidOperationException("웹 자격증명이 설정되지 않았습니다. 설정 탭에서 입력하세요.");
+
+        await EnsureLoggedInAsync(id, pw);
+
+        var baseUrl = await _configRepo.GetAsync("web_base_url")
+                      ?? "http://www.cubeescape.co.kr";
+        var dateStr = date.ToString("yy-MM-dd");
+        var url = $"{baseUrl}/adm/room_list.php?sfl=r_date&stx={dateStr}";
+
+        Log.Information("예약 조회: {Url}", url);
+
+        string html;
         try
         {
-            var (id, pw) = await GetCredentialsAsync();
-            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(pw))
-            {
-                Log.Warning("웹 자격증명 미설정 - 스크래핑 건너뜀");
-                return [];
-            }
-
-            await EnsureLoggedInAsync(id, pw);
-
-            var baseUrl = await _configRepo.GetAsync("web_base_url")
-                          ?? "http://www.cubeescape.co.kr";
-            var dateStr = date.ToString("yy-MM-dd");
-            var url = $"{baseUrl}/adm/room_list.php?sfl=r_date&stx={dateStr}";
-
-            Log.Information("예약 조회: {Url}", url);
-
-            // HttpClient로 HTML 가져온 후 AngleSharp로 파싱
-            var html = await _httpClient!.GetStringAsync(url);
-            var config = Configuration.Default;
-            var context = BrowsingContext.New(config);
-            var page = await context.OpenAsync(req => req.Content(html));
-
-            return ParseReservations(page, date);
+            html = await _httpClient!.GetStringAsync(url);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Log.Error(ex, "예약 스크래핑 실패: {Date}", date.ToString("yyyy-MM-dd"));
-            return [];
+            // 세션 만료 가능성 → 재로그인 1회 시도
+            Log.Warning(ex, "HTTP 요청 실패 — 재로그인 시도");
+            _httpClient?.Dispose();
+            _httpClient = null;
+            await EnsureLoggedInAsync(id, pw);
+            html = await _httpClient!.GetStringAsync(url);
         }
+
+        // 로그인 페이지로 리다이렉트 감지 (세션 만료)
+        if (html.Contains("login_check") || html.Contains("mb_password"))
+        {
+            Log.Warning("세션 만료 감지 — 재로그인");
+            _httpClient?.Dispose();
+            _httpClient = null;
+            await EnsureLoggedInAsync(id, pw);
+            html = await _httpClient!.GetStringAsync(url);
+        }
+
+        var config = Configuration.Default;
+        var context = BrowsingContext.New(config);
+        var page = await context.OpenAsync(req => req.Content(html));
+
+        var results = ParseReservations(page, date);
+        Log.Information("예약 조회 완료: {Count}건", results.Count);
+        return results;
     }
 
     public async Task<bool> TestConnectionAsync(string id, string password)
