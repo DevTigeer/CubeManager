@@ -10,6 +10,9 @@ public class HeaderPanel : Panel
 {
     private readonly Label _lblTime;
 
+    /// <summary>새로고침 버튼 클릭 시 발생. MainForm에서 탭 캐시 클리어에 사용.</summary>
+    public event Action? RefreshRequested;
+
     public HeaderPanel()
     {
         Dock = DockStyle.Top;
@@ -44,6 +47,25 @@ public class HeaderPanel : Panel
         };
         UpdateTime();
 
+        // 우측: 새로고침 버튼
+        var btnRefresh = new Button
+        {
+            Text = "🔄",
+            Font = new Font("Segoe UI Emoji", 12f),
+            Size = new Size(40, 34),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorPalette.Surface,
+            ForeColor = ColorPalette.TextSecondary,
+            Cursor = Cursors.Hand,
+            Dock = DockStyle.Right,
+            Margin = new Padding(0, 8, 4, 8)
+        };
+        btnRefresh.FlatAppearance.BorderSize = 0;
+        btnRefresh.FlatAppearance.MouseOverBackColor = ColorPalette.NavHoverBg;
+        var tip = new ToolTip();
+        tip.SetToolTip(btnRefresh, "데이터 새로고침 (모든 탭 최신화)");
+        btnRefresh.Click += (_, _) => RefreshRequested?.Invoke();
+
         // 우측: 지점명
         var lblBranch = new Label
         {
@@ -56,7 +78,9 @@ public class HeaderPanel : Panel
             Padding = new Padding(0, 16, 12, 0)
         };
 
+        // Dock.Right는 역순 추가: 가장 오른쪽부터
         Controls.Add(_lblTime);
+        Controls.Add(btnRefresh);
         Controls.Add(lblBranch);
         Controls.Add(lblApp);
 

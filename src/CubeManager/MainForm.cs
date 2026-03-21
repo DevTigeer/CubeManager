@@ -56,6 +56,7 @@ public class MainForm : Form
 
         // HeaderPanel (상단)
         var header = new HeaderPanel();
+        header.RefreshRequested += OnRefreshRequested;
 
         // SideNavPanel (좌측)
         _sideNav = new SideNavPanel();
@@ -142,6 +143,20 @@ public class MainForm : Form
         {
             Log.Warning(ex, "미끼 팝업 처리 실패");
         }
+    }
+
+    private void OnRefreshRequested()
+    {
+        // 캐시된 탭 모두 Dispose 후 클리어
+        foreach (var tab in _tabCache.Values)
+            tab?.Dispose();
+        _tabCache.Clear();
+
+        // 현재 탭 재생성
+        LoadTab(_sideNav.SelectedIndex);
+        Log.Information("전체 탭 새로고침 완료");
+
+        Helpers.ToastNotification.Show(this, "데이터를 최신 상태로 새로고침했습니다.", Helpers.ToastType.Success);
     }
 
     private void OnTabSelected(int index)
