@@ -156,7 +156,7 @@ public class MainForm : Form
         LoadTab(_sideNav.SelectedIndex);
         Log.Information("전체 탭 새로고침 완료");
 
-        Helpers.ToastNotification.Show(this, "데이터를 최신 상태로 새로고침했습니다.", Helpers.ToastType.Success);
+        Helpers.ToastNotification.Show("데이터를 최신 상태로 새로고침했습니다.", Helpers.ToastType.Success);
     }
 
     private void OnTabSelected(int index)
