@@ -15,7 +15,7 @@ public class DocumentTab : UserControl
     public DocumentTab()
     {
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(10);
 
         _docsRoot = Path.Combine(
@@ -28,41 +28,23 @@ public class DocumentTab : UserControl
         topBar.Controls.Add(new Label
         {
             Text = "업무자료", Size = new Size(100, 32),
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
         });
 
-        var btnNew = new Button
-        {
-            Text = "+ 새 문서", Size = new Size(90, 32),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
-        };
-        btnNew.FlatAppearance.BorderSize = 0;
+        var btnNew = ButtonFactory.CreatePrimary("+ 새 문서", 90);
+        btnNew.Margin = new Padding(10, 0, 0, 0);
         btnNew.Click += BtnNew_Click;
 
-        var btnEdit = new Button
-        {
-            Text = "편집", Size = new Size(60, 32),
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
-        };
+        var btnEdit = ButtonFactory.CreateSecondary("편집", 60);
+        btnEdit.Margin = new Padding(10, 0, 0, 0);
         btnEdit.Click += BtnEdit_Click;
 
-        var btnSave = new Button
-        {
-            Text = "저장", Size = new Size(60, 32),
-            BackColor = ColorPalette.Success, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(5, 0, 0, 0)
-        };
-        btnSave.FlatAppearance.BorderSize = 0;
+        var btnSave = ButtonFactory.CreateSuccess("저장", 60);
+        btnSave.Margin = new Padding(5, 0, 0, 0);
         btnSave.Click += BtnSave_Click;
 
-        var btnDelete = new Button
-        {
-            Text = "삭제", Size = new Size(60, 32),
-            BackColor = ColorPalette.Danger, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(5, 0, 0, 0)
-        };
-        btnDelete.FlatAppearance.BorderSize = 0;
+        var btnDelete = ButtonFactory.CreateDanger("삭제", 60);
+        btnDelete.Margin = new Padding(5, 0, 0, 0);
         btnDelete.Click += BtnDelete_Click;
 
         topBar.Controls.AddRange([btnNew, btnEdit, btnSave, btnDelete]);
@@ -88,7 +70,7 @@ public class DocumentTab : UserControl
             Dock = DockStyle.Fill,
             ReadOnly = true,
             Font = new Font("맑은 고딕", 11f),
-            BackColor = Color.White,
+            BackColor = ColorPalette.Surface,
             BorderStyle = BorderStyle.None
         };
 

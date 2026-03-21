@@ -17,23 +17,18 @@ public class HandoverTab : UserControl
     {
         _repo = repo;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
 
         var topBar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 50, Padding = new Padding(0, 8, 0, 5) };
         topBar.Controls.Add(new Label
         {
             Text = "인수인계", Size = new Size(100, 32),
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
         });
 
-        var btnNew = new Button
-        {
-            Text = "새 글 작성", Size = new Size(100, 32),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
-        };
-        btnNew.FlatAppearance.BorderSize = 0;
+        var btnNew = ButtonFactory.CreatePrimary("새 글 작성", 100);
+        btnNew.Margin = new Padding(10, 0, 0, 0);
         btnNew.Click += BtnNew_Click;
 
         _txtSearch = new TextBox
@@ -52,9 +47,9 @@ public class HandoverTab : UserControl
         };
 
         var navBar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 35, Padding = new Padding(0, 5, 0, 0) };
-        var btnPrev = new Button { Text = "◀ 이전", Size = new Size(70, 28), FlatStyle = FlatStyle.Flat };
+        var btnPrev = ButtonFactory.CreateGhost("◀ 이전", 70);
         btnPrev.Click += (_, _) => { if (_page > 1) { _page--; _ = LoadAsync(); } };
-        var btnNextPage = new Button { Text = "다음 ▶", Size = new Size(70, 28), FlatStyle = FlatStyle.Flat };
+        var btnNextPage = ButtonFactory.CreateGhost("다음 ▶", 70);
         btnNextPage.Click += (_, _) => { _page++; _ = LoadAsync(); };
         navBar.Controls.AddRange([btnPrev, btnNextPage]);
 
@@ -86,7 +81,7 @@ public class HandoverTab : UserControl
     {
         var card = new Panel
         {
-            Size = new Size(600, 100), BackColor = Color.White,
+            Size = new Size(600, 100), BackColor = ColorPalette.Surface,
             BorderStyle = BorderStyle.FixedSingle, Padding = new Padding(10)
         };
 

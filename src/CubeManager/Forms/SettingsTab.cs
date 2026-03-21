@@ -21,7 +21,7 @@ public class SettingsTab : UserControl
         _scraperService = scraperService;
         _configRepo = configRepo;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
 
         // Header
@@ -99,7 +99,7 @@ public class SettingsTab : UserControl
         var btnSaveWeb = new Button
         {
             Text = "저장", Location = new Point(310, 84), Size = new Size(100, 30),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 9f, FontStyle.Regular)
         };
         btnSaveWeb.FlatAppearance.BorderSize = 0;
@@ -131,15 +131,12 @@ public class SettingsTab : UserControl
         // PW는 표시하지 않음 (보안)
     }
 
-    private static Button CreateButton(string text, Color color) => new()
+    private static Button CreateButton(string text, Color color)
     {
-        Text = text,
-        Size = new Size(110, 32),
-        BackColor = color,
-        ForeColor = Color.White,
-        FlatStyle = FlatStyle.Flat,
-        Font = new Font("맑은 고딕", 10f)
-    };
+        var btn = ButtonFactory.CreatePrimary(text, 110);
+        btn.BackColor = color;
+        return btn;
+    }
 
     private void SetupColumns()
     {
@@ -305,7 +302,7 @@ internal class EmployeeEditDialog : Form
         {
             Text = existing == null ? "추가" : "수정",
             Location = new Point(150, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK
         };
         btnOk.FlatAppearance.BorderSize = 0;

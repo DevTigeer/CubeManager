@@ -16,7 +16,7 @@ public class SalaryTab : UserControl
     {
         _salaryService = salaryService;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(10);
 
         _year = DateTime.Today.Year;
@@ -33,7 +33,7 @@ public class SalaryTab : UserControl
         topBar.Controls.Add(new Label
         {
             Text = "급여 관리", Size = new Size(100, 32),
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft
         });
 

@@ -24,7 +24,7 @@ public class AttendanceTab : UserControl
         _employeeService = employeeService;
         _scheduleService = scheduleService;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
 
         // Header
@@ -80,22 +80,16 @@ public class AttendanceTab : UserControl
             Text = DateTime.Now.ToString("현재: HH:mm:ss")
         };
 
-        _btnClockIn = new Button
-        {
-            Text = "출  근", Location = new Point(10, 48), Size = new Size(110, 38),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 13f, FontStyle.Bold)
-        };
-        _btnClockIn.FlatAppearance.BorderSize = 0;
+        _btnClockIn = ButtonFactory.CreatePrimary("출  근");
+        _btnClockIn.Location = new Point(10, 48);
+        _btnClockIn.Size = new Size(110, 38);
+        _btnClockIn.Font = new Font("맑은 고딕", 13f, FontStyle.Bold);
         _btnClockIn.Click += BtnClockIn_Click;
 
-        _btnClockOut = new Button
-        {
-            Text = "퇴  근", Location = new Point(130, 48), Size = new Size(110, 38),
-            BackColor = ColorPalette.Danger, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 13f, FontStyle.Bold)
-        };
-        _btnClockOut.FlatAppearance.BorderSize = 0;
+        _btnClockOut = ButtonFactory.CreateDanger("퇴  근");
+        _btnClockOut.Location = new Point(130, 48);
+        _btnClockOut.Size = new Size(110, 38);
+        _btnClockOut.Font = new Font("맑은 고딕", 13f, FontStyle.Bold);
         _btnClockOut.Click += BtnClockOut_Click;
 
         btnPanel.Controls.AddRange([lblEmp, _cmbEmployee, _btnClockIn, _btnClockOut, _lblClock]);

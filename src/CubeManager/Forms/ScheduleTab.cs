@@ -21,7 +21,7 @@ public class ScheduleTab : UserControl
         _scheduleService = scheduleService;
         _employeeService = employeeService;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(10);
 
         // Top bar

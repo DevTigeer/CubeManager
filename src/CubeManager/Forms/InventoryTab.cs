@@ -14,23 +14,18 @@ public class InventoryTab : UserControl
     {
         _repo = repo;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
 
         var topBar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 50, Padding = new Padding(0, 8, 0, 5) };
         topBar.Controls.Add(new Label
         {
             Text = "물품 관리", Size = new Size(120, 32),
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft
         });
 
-        var btnAdd = new Button
-        {
-            Text = "+ 물품 추가", Size = new Size(110, 32),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0)
-        };
-        btnAdd.FlatAppearance.BorderSize = 0;
+        var btnAdd = ButtonFactory.CreatePrimary("+ 물품 추가", 110);
+        btnAdd.Margin = new Padding(10, 0, 0, 0);
         btnAdd.Click += BtnAdd_Click;
         topBar.Controls.Add(btnAdd);
 
@@ -143,7 +138,7 @@ internal class InventoryEditDialog : Form
         AddField("비고:", _txtNote = new TextBox(), ref y);
 
         var btnOk = new Button { Text = "추가", Location = new Point(150, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White, FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK };
+            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite, FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK };
         btnOk.FlatAppearance.BorderSize = 0;
         Controls.Add(btnOk);
         Controls.Add(new Button { Text = "취소", Location = new Point(240, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });

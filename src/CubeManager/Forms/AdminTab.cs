@@ -48,7 +48,7 @@ public class AdminTab : UserControl
         _employeeService = employeeService;
         _database = database;
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
 
         // 컨트롤 초기화
         _dtpCashDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Size = new Size(130, 25) };
@@ -77,7 +77,7 @@ public class AdminTab : UserControl
         var centerPanel = new Panel
         {
             Size = new Size(350, 200),
-            BackColor = Color.White,
+            BackColor = ColorPalette.Surface,
             Anchor = AnchorStyles.None
         };
 
@@ -99,17 +99,10 @@ public class AdminTab : UserControl
             Dock = DockStyle.Top, Height = 30
         };
 
-        var btnAuth = new Button
-        {
-            Text = "비밀번호 입력",
-            Size = new Size(150, 40),
-            BackColor = ColorPalette.Primary,
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("맑은 고딕", 11f),
-            Anchor = AnchorStyles.None
-        };
-        btnAuth.FlatAppearance.BorderSize = 0;
+        var btnAuth = ButtonFactory.CreatePrimary("비밀번호 입력", 150);
+        btnAuth.Height = 40;
+        btnAuth.Font = new Font("맑은 고딕", 11f);
+        btnAuth.Anchor = AnchorStyles.None;
         btnAuth.Click += (_, _) =>
         {
             if (AdminAuthDialog.Authenticate(_configRepo, this))
@@ -165,13 +158,7 @@ public class AdminTab : UserControl
             Padding = new Padding(0, 5, 0, 0)
         };
 
-        var btnBackup = new Button
-        {
-            Text = "💾 DB 백업", Size = new Size(120, 32),
-            BackColor = ColorPalette.AccentGreen.Main, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 10f)
-        };
-        btnBackup.FlatAppearance.BorderSize = 0;
+        var btnBackup = ButtonFactory.CreateSuccess("💾 DB 백업", 120);
         btnBackup.Click += BtnBackup_Click;
         utilPanel.Controls.Add(btnBackup);
 
@@ -213,14 +200,10 @@ public class AdminTab : UserControl
         _txtCashNote.Margin = new Padding(10, 0, 0, 0);
         cashFlow.Controls.Add(_txtCashNote);
 
-        var btnApplyCash = new Button
-        {
-            Text = "보정 적용", Size = new Size(90, 28),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, Font = nf,
-            Margin = new Padding(10, 0, 0, 0)
-        };
-        btnApplyCash.FlatAppearance.BorderSize = 0;
+        var btnApplyCash = ButtonFactory.CreatePrimary("보정 적용", 90);
+        btnApplyCash.Height = 28;
+        btnApplyCash.Font = nf;
+        btnApplyCash.Margin = new Padding(10, 0, 0, 0);
         btnApplyCash.Click += BtnApplyCash_Click;
         cashFlow.Controls.Add(btnApplyCash);
 

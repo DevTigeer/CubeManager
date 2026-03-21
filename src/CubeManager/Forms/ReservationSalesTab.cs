@@ -8,6 +8,8 @@ namespace CubeManager.Forms;
 
 public class ReservationSalesTab : UserControl
 {
+    private static readonly Font StrikeoutFont = new("맑은 고딕", 10f, FontStyle.Strikeout);
+
     private readonly ISalesService _salesService;
     private readonly IReservationScraperService _scraperService;
     private readonly IReservationRepository _reservationRepo;
@@ -39,7 +41,7 @@ public class ReservationSalesTab : UserControl
         _reservationRepo = reservationRepo;
         _currentDate = DateTime.Today.ToString("yyyy-MM-dd");
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
 
         // ========== 1. 상단 툴바 ==========
@@ -53,7 +55,7 @@ public class ReservationSalesTab : UserControl
         topPanel.Controls.Add(new Label
         {
             Text = "예약/매출 관리",
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
             Size = new Size(150, 32),
             TextAlign = ContentAlignment.MiddleLeft
@@ -144,7 +146,7 @@ public class ReservationSalesTab : UserControl
         var lblMainHeader = new Label
         {
             Text = "예약 & 결제 현황", Dock = DockStyle.Top, Height = 25,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary, Padding = new Padding(0, 5, 0, 0)
         };
 
@@ -166,7 +168,7 @@ public class ReservationSalesTab : UserControl
         var lblExpenseHeader = new Label
         {
             Text = "지출 내역", Dock = DockStyle.Top, Height = 25,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary
         };
 
@@ -212,7 +214,7 @@ public class ReservationSalesTab : UserControl
         var lblStatsHeader = new Label
         {
             Text = "오늘의 통계", Dock = DockStyle.Top, Height = 25,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary
         };
 
@@ -252,7 +254,7 @@ public class ReservationSalesTab : UserControl
         var lblSummaryHeader = new Label
         {
             Text = "결제 요약", Dock = DockStyle.Top, Height = 25,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary
         };
 
@@ -466,7 +468,7 @@ public class ReservationSalesTab : UserControl
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
                     row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
-                    row.Cells[c].Style.Font = new Font("맑은 고딕", 10f, FontStyle.Strikeout);
+                    row.Cells[c].Style.Font = StrikeoutFont;
                 }
                 // 결제 셀 비활성
                 row.Cells["CardAmt"].ReadOnly = true;
@@ -508,7 +510,7 @@ public class ReservationSalesTab : UserControl
         if (amount == 0)
         {
             row.Cells[e.ColumnIndex].Value = null;
-            row.Cells[e.ColumnIndex].Style.BackColor = Color.White;
+            row.Cells[e.ColumnIndex].Style.BackColor = ColorPalette.Surface;
             return;
         }
 
@@ -518,7 +520,7 @@ public class ReservationSalesTab : UserControl
             "card" => ColorPalette.PaymentCard,
             "cash" => ColorPalette.PaymentCash,
             "transfer" => ColorPalette.PaymentTransfer,
-            _ => (Color.White, ColorPalette.Text)
+            _ => (ColorPalette.Surface, ColorPalette.Text)
         };
         row.Cells[e.ColumnIndex].Style.BackColor = tagColor.Item1;
         row.Cells[e.ColumnIndex].Style.ForeColor = tagColor.Item2;
@@ -858,7 +860,7 @@ public class ReservationSalesTab : UserControl
                 "card" => ColorPalette.PaymentCard,
                 "cash" => ColorPalette.PaymentCash,
                 "transfer" => ColorPalette.PaymentTransfer,
-                _ => (Color.White, ColorPalette.Text)
+                _ => (ColorPalette.Surface, ColorPalette.Text)
             };
             row.Cells[colName].Style.BackColor = tagColor.Item1;
             row.Cells[colName].Style.ForeColor = tagColor.Item2;
@@ -948,7 +950,7 @@ internal class WalkinDialog : Form
         var btnOk = new Button
         {
             Text = "추가", Location = new Point(170, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.None
         };
         btnOk.FlatAppearance.BorderSize = 0;
@@ -1024,7 +1026,7 @@ internal class SaleItemDialog : Form
         var btnOk = new Button
         {
             Text = "추가", Location = new Point(150, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
+            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK
         };
         btnOk.FlatAppearance.BorderSize = 0;
@@ -1061,7 +1063,7 @@ internal class DeleteSaleItemDialog : Form
             AllowUserToAddRows = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             MultiSelect = false, RowHeadersVisible = false,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = Color.White
+            BackgroundColor = ColorPalette.Surface
         };
 
         _grid.Columns.AddRange(
@@ -1095,7 +1097,7 @@ internal class DeleteSaleItemDialog : Form
         var btnDelete = new Button
         {
             Text = "삭제", Size = new Size(80, 32),
-            BackColor = ColorPalette.Danger, ForeColor = Color.White,
+            BackColor = ColorPalette.Danger, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat
         };
         btnDelete.FlatAppearance.BorderSize = 0;

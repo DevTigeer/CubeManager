@@ -40,5 +40,6 @@ appsettings.local.json
 # Logs
 logs/
 
-# Claude plans (로컬 전용)
-.claude/
+# Claude (plans는 로컬 전용, skills는 공유)
+.claude/*
+!.claude/skills/
