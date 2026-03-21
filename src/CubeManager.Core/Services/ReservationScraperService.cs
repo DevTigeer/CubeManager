@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using AngleSharp;
 using AngleSharp.Dom;
@@ -10,6 +11,7 @@ using Serilog;
 
 namespace CubeManager.Core.Services;
 
+[SupportedOSPlatform("windows")]
 public class ReservationScraperService : IReservationScraperService
 {
     private readonly IConfigRepository _configRepo;

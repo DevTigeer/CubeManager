@@ -70,7 +70,7 @@ public class MicePopupDialog : Form
         };
         _txtConfirm.TextChanged += (_, _) =>
         {
-            _btnConfirm.Enabled = _txtConfirm.Text.Trim() == "완료하였습니다";
+            _btnConfirm!.Enabled = _txtConfirm.Text.Trim() == "완료하였습니다";
             _btnConfirm.BackColor = _btnConfirm.Enabled ? ColorPalette.Primary : ColorPalette.Border;
         };
 
