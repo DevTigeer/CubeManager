@@ -43,6 +43,11 @@ public class AdminTab : UserControl
     // ===== 체크리스트 관리 탭 =====
     private readonly DataGridView _gridChecklist;
 
+    // ===== 출퇴근 이력 탭 =====
+    private readonly DataGridView _gridAttendHistory;
+    private readonly DateTimePicker _dtpAttendStart;
+    private readonly DateTimePicker _dtpAttendEnd;
+
     // 역할 표시 이름 매핑
     private static readonly Dictionary<string, string> RoleNames = new()
     {
@@ -79,6 +84,9 @@ public class AdminTab : UserControl
         _gridEmployees = new DataGridView { Dock = DockStyle.Fill };
         _gridMice = new DataGridView { Dock = DockStyle.Fill };
         _gridChecklist = new DataGridView { Dock = DockStyle.Fill };
+        _gridAttendHistory = new DataGridView { Dock = DockStyle.Fill };
+        _dtpAttendStart = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today.AddDays(-30), Size = new Size(130, 25) };
+        _dtpAttendEnd = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Size = new Size(130, 25) };
         _summaryCards = new SummaryCardRow();
 
         BuildAuthPanel();
@@ -173,6 +181,7 @@ public class AdminTab : UserControl
 
         tabControl.TabPages.Add(BuildDashboardTab());
         tabControl.TabPages.Add(BuildSalaryTab());
+        tabControl.TabPages.Add(BuildAttendanceHistoryTab());
         tabControl.TabPages.Add(BuildEmployeeTab());
         tabControl.TabPages.Add(BuildMiceTab());
         tabControl.TabPages.Add(BuildChecklistTab());
@@ -354,7 +363,115 @@ public class AdminTab : UserControl
         return page;
     }
 
-    // ==================== 탭 3: 직원 관리 ====================
+    // ==================== 탭 3: 출퇴근 이력 ====================
+    private TabPage BuildAttendanceHistoryTab()
+    {
+        var page = new TabPage("⏰ 출퇴근 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+
+        // 상단: 기간 선택
+        var filterPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 45,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 5, 0, 5)
+        };
+
+        filterPanel.Controls.Add(new Label
+        {
+            Text = "조회 기간:",
+            Font = new Font("맑은 고딕", 10f),
+            ForeColor = ColorPalette.Text,
+            Size = new Size(75, 28),
+            TextAlign = ContentAlignment.MiddleLeft
+        });
+        filterPanel.Controls.Add(_dtpAttendStart);
+        filterPanel.Controls.Add(new Label
+        {
+            Text = "~",
+            Font = new Font("맑은 고딕", 10f),
+            Size = new Size(20, 28),
+            TextAlign = ContentAlignment.MiddleCenter
+        });
+        filterPanel.Controls.Add(_dtpAttendEnd);
+
+        var btnSearch = ButtonFactory.CreatePrimary("조회", 80);
+        btnSearch.Click += async (_, _) => await LoadAttendanceHistoryAsync();
+        filterPanel.Controls.Add(btnSearch);
+
+        // 빠른 기간 버튼
+        var btnWeek = ButtonFactory.CreateGhost("1주", 55);
+        btnWeek.Click += (_, _) => { _dtpAttendStart.Value = DateTime.Today.AddDays(-7); _dtpAttendEnd.Value = DateTime.Today; _ = LoadAttendanceHistoryAsync(); };
+        filterPanel.Controls.Add(btnWeek);
+
+        var btnMonth = ButtonFactory.CreateGhost("1개월", 65);
+        btnMonth.Click += (_, _) => { _dtpAttendStart.Value = DateTime.Today.AddMonths(-1); _dtpAttendEnd.Value = DateTime.Today; _ = LoadAttendanceHistoryAsync(); };
+        filterPanel.Controls.Add(btnMonth);
+
+        var btn3Month = ButtonFactory.CreateGhost("3개월", 65);
+        btn3Month.Click += (_, _) => { _dtpAttendStart.Value = DateTime.Today.AddMonths(-3); _dtpAttendEnd.Value = DateTime.Today; _ = LoadAttendanceHistoryAsync(); };
+        filterPanel.Controls.Add(btn3Month);
+
+        // 그리드 설정
+        GridTheme.ApplyTheme(_gridAttendHistory);
+        _gridAttendHistory.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "Date", HeaderText = "날짜", Width = 110 },
+            new DataGridViewTextBoxColumn { Name = "Name", HeaderText = "직원", Width = 90 },
+            new DataGridViewTextBoxColumn { Name = "ScheduledStart", HeaderText = "예정출근", Width = 85 },
+            new DataGridViewTextBoxColumn { Name = "ScheduledEnd", HeaderText = "예정퇴근", Width = 85 },
+            new DataGridViewTextBoxColumn { Name = "ClockIn", HeaderText = "실제출근", Width = 90 },
+            new DataGridViewTextBoxColumn { Name = "ClockOut", HeaderText = "실제퇴근", Width = 90 },
+            new DataGridViewTextBoxColumn { Name = "InStatus", HeaderText = "출근상태", Width = 80 },
+            new DataGridViewTextBoxColumn { Name = "OutStatus", HeaderText = "퇴근상태", Width = 80 }
+        );
+
+        page.Controls.Add(_gridAttendHistory);
+        page.Controls.Add(filterPanel);
+
+        return page;
+    }
+
+    private async Task LoadAttendanceHistoryAsync()
+    {
+        try
+        {
+            var start = _dtpAttendStart.Value.ToString("yyyy-MM-dd");
+            var end = _dtpAttendEnd.Value.ToString("yyyy-MM-dd");
+            var records = await _attendanceService.GetByDateRangeAsync(start, end);
+
+            _gridAttendHistory.Rows.Clear();
+            foreach (var r in records.OrderByDescending(x => x.WorkDate).ThenBy(x => x.EmployeeName))
+            {
+                var inTime = string.IsNullOrEmpty(r.ClockIn) ? "-" : r.ClockIn[11..16]; // HH:mm
+                var outTime = string.IsNullOrEmpty(r.ClockOut) ? "-" : r.ClockOut[11..16];
+                var inStatus = r.ClockInStatus switch { "late" => "🔴 지각", "on_time" => "✅ 정상", _ => "-" };
+                var outStatus = r.ClockOutStatus switch { "early" => "🟡 조퇴", "on_time" => "✅ 정상", _ => "-" };
+
+                _gridAttendHistory.Rows.Add(
+                    r.WorkDate,
+                    r.EmployeeName ?? $"ID:{r.EmployeeId}",
+                    r.ScheduledStart ?? "-",
+                    r.ScheduledEnd ?? "-",
+                    inTime,
+                    outTime,
+                    inStatus,
+                    outStatus
+                );
+
+                // 지각/조퇴 행 강조
+                if (r.ClockInStatus == "late" || r.ClockOutStatus == "early")
+                {
+                    var row = _gridAttendHistory.Rows[_gridAttendHistory.Rows.Count - 1];
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 253, 231); // 연한 노랑
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "출퇴근 이력 조회 실패");
+        }
+    }
+
+    // ==================== 탭 4: 직원 관리 ====================
     private TabPage BuildEmployeeTab()
     {
         var page = new TabPage("👤 직원 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
