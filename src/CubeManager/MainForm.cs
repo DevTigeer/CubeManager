@@ -20,7 +20,7 @@ public class MainForm : Form
     private static readonly string[] TabNames =
     [
         "예약/매출", "스케줄", "급여", "업무자료",
-        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자"
+        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자", "무료이용권"
     ];
 
     public MainForm(IServiceProvider serviceProvider)
@@ -165,6 +165,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IAttendanceService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<Data.Database>()),
+        10 => new FreePassTab(
+                _sp.GetRequiredService<IFreePassRepository>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 
