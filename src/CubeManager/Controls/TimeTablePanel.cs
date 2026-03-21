@@ -90,11 +90,22 @@ public class TimeTablePanel : Panel
             g.DrawLine(borderPen, x, 0, x, Height);
         }
 
-        // 시간 라벨 + 격자
+        // 오늘 열 강조
+        var todayDate = DateTime.Today;
+        if (todayDate >= _weekStart && todayDate <= _weekEnd)
+        {
+            var todayDayIdx = (int)(todayDate - _weekStart).TotalDays;
+            var todayX = _timeColWidth + todayDayIdx * cellW;
+            using var todayBg = new SolidBrush(Color.FromArgb(20, ColorPalette.Primary));
+            g.FillRectangle(todayBg, todayX, _headerHeight, cellW, Height - _headerHeight);
+        }
+
+        // 시간 라벨 + 격자 (정시=실선, 30분=점선)
+        using var halfHourPen = new Pen(Color.FromArgb(100, ColorPalette.Border)) { DashStyle = DashStyle.Dot };
         for (var r = 0; r < slots.Length; r++)
         {
             var y = _headerHeight + r * cellH;
-            g.DrawLine(borderPen, 0, y, Width, y);
+            g.DrawLine(r % 2 == 0 ? borderPen : halfHourPen, 0, y, Width, y);
             if (r % 2 == 0) // 정시만 표시
             {
                 g.DrawString(slots[r], cellFont, subTextBrush,
@@ -169,24 +180,56 @@ public class TimeTablePanel : Panel
                 using var accentBrush = new SolidBrush(accentColor);
                 g.FillPath(accentBrush, accentPath);
 
-                // 이름 표시 (Bold, 좌측 8px 오프셋)
+                // 이름 + 시간 표시
                 var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
                 using var nameBrush = new SolidBrush(ColorPalette.Text);
                 var textX = rect.X + 8;
                 var textY = rect.Y + 2;
                 var textW = rect.Width - 10;
-                g.DrawString(name, nameFont, nameBrush,
-                    new RectangleF(textX, textY, textW, nameFont.Height + 2),
-                    new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
 
-                // 시간 표시 (블록 높이 > 40px일 때)
-                if (rect.Height > 40)
+                // 블록 폭이 좁으면 (< 70px) 세로 텍스트로 전환
+                if (blockW < 70)
                 {
-                    var timeText = $"{current.sched.StartTime}~{current.sched.EndTime}";
-                    using var timeBrush = new SolidBrush(accentColor);
-                    g.DrawString(timeText, timeFont, timeBrush,
-                        new RectangleF(textX, textY + nameFont.Height + 1, textW, timeFont.Height + 2),
+                    // 세로 텍스트: 이름 + 시간을 90° 회전하여 표시
+                    var vertText = $"{name}  {current.sched.StartTime}~{current.sched.EndTime}";
+                    using var vertFont = new Font("맑은 고딕", 9f, FontStyle.Bold);
+                    var state = g.Save();
+                    // 블록 중앙에서 회전
+                    var cx = rect.X + rect.Width / 2f;
+                    var cy = rect.Y + rect.Height / 2f;
+                    g.TranslateTransform(cx, cy);
+                    g.RotateTransform(-90);
+                    var vertRect = new RectangleF(
+                        -rect.Height / 2f + 4,
+                        -rect.Width / 2f + 2,
+                        rect.Height - 8,
+                        rect.Width - 4);
+                    g.DrawString(vertText, vertFont, nameBrush, vertRect,
+                        new StringFormat
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center,
+                            Trimming = StringTrimming.EllipsisCharacter,
+                            FormatFlags = StringFormatFlags.NoWrap
+                        });
+                    g.Restore(state);
+                }
+                else
+                {
+                    // 가로 텍스트 (기존 방식)
+                    g.DrawString(name, nameFont, nameBrush,
+                        new RectangleF(textX, textY, textW, nameFont.Height + 2),
                         new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+
+                    // 시간 표시 (블록 높이 > 40px일 때)
+                    if (rect.Height > 40)
+                    {
+                        var timeText = $"{current.sched.StartTime}~{current.sched.EndTime}";
+                        using var timeBrush = new SolidBrush(accentColor);
+                        g.DrawString(timeText, timeFont, timeBrush,
+                            new RectangleF(textX, textY + nameFont.Height + 1, textW, timeFont.Height + 2),
+                            new StringFormat { Trimming = StringTrimming.EllipsisCharacter });
+                    }
                 }
             }
         }
