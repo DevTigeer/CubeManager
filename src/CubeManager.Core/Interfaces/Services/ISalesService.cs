@@ -10,4 +10,6 @@ public interface ISalesService
     Task UpsertSaleItemAsync(string date, string description, int amount, string paymentType, string category);
     Task DeleteSaleItemAsync(string date, int itemId);
     Task<CashBalance?> GetCashBalanceAsync(string date);
+    /// <summary>해당 날짜의 daily_sales 합계 + cash_balance를 재계산.</summary>
+    Task RecalculateTotalsAsync(string date);
 }

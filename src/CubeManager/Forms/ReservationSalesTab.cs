@@ -637,6 +637,8 @@ public class ReservationSalesTab : UserControl
     // ===== 전체 데이터 로드 =====
     private async Task LoadAllAsync()
     {
+        // daily_sales 합계 + cash_balance 재계산 (이전 세션 데이터 정합성 보장)
+        await _salesService.RecalculateTotalsAsync(_currentDate);
         await LoadReservationsFromDb();
         await LoadExpenseGridAsync();
         await LoadSummaryAsync();
@@ -738,6 +740,21 @@ public class ReservationSalesTab : UserControl
         }
         catch (Exception ex)
         {
+            // 예외 시 기본값 표시 (— 상태 방지)
+            _lblSumCard.Text = "카드      ₩ 0";
+            _lblSumCash.Text = "현금      ₩ 0";
+            _lblSumTransfer.Text = "계좌      ₩ 0";
+            _lblSumTotal.Text = "총매출    ₩ 0";
+            _lblSumExpense.Text = "총지출    ₩ 0";
+            _lblSumCashBalance.Text = "현금잔액  ₩ 0";
+            _lblSumBalanceDetail.Text = "";
+            _lblStatTotal.Text = "오늘 예약       0팀";
+            _lblStatRemoved.Text = "취소              0팀";
+            _lblStatNoshow.Text = "노쇼              0팀";
+            _lblStatConfirmed.Text = "확정              0팀";
+            _lblStatHeadcount.Text = "총 인원         0명";
+            _lblStatAvgPrice.Text = "객단가          ₩ 0";
+            _lblStatYesterdayCash.Text = "어제 잔돈     ₩ 0";
             ToastNotification.Show(ex.Message, ToastType.Error);
         }
     }
@@ -878,7 +895,7 @@ public class ReservationSalesTab : UserControl
         var lbl = new Label
         {
             Location = new Point(10, y), Size = new Size(220, 20),
-            Font = font, ForeColor = color, Text = $"{prefix}      —"
+            Font = font, ForeColor = color, Text = $"{prefix}      0"
         };
         parent.Controls.Add(lbl);
         y += 22;

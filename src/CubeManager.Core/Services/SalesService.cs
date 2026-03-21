@@ -65,4 +65,12 @@ public class SalesService : ISalesService
 
     public Task<CashBalance?> GetCashBalanceAsync(string date) =>
         _salesRepo.GetCashBalanceAsync(date);
+
+    public async Task RecalculateTotalsAsync(string date)
+    {
+        var daily = await _salesRepo.GetDailySalesAsync(date);
+        if (daily == null) return;
+        await _salesRepo.UpdateDailySalesTotalsAsync(daily.Id);
+        await _salesRepo.UpdateCashBalanceAsync(date);
+    }
 }
