@@ -916,7 +916,15 @@ public class ReservationSalesTab : UserControl
 internal class WalkinDialog : Form
 {
     public string ThemeName => _txtTheme.Text.Trim();
-    public string TimeSlot => $"{_dtpTime.Value:HH:mm}";
+    public string TimeSlot
+    {
+        get
+        {
+            var start = _dtpTime.Value;
+            var end = start.AddHours(1);
+            return $"{start:HH:mm}-{end:HH:mm}";
+        }
+    }
     public string CustomerName => _txtName.Text.Trim();
     public string? Phone => string.IsNullOrWhiteSpace(_txtPhone.Text) ? null : _txtPhone.Text.Trim();
     public int Headcount => (int)_numCount.Value;
