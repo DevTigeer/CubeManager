@@ -20,6 +20,7 @@ public class AdminTab : UserControl
     private readonly IMicePopupRepository _miceRepo;
     private readonly IChecklistRepository _checklistRepo;
     private readonly Data.Database? _database;
+    private readonly ISalaryService? _salaryService2;
 
     private Panel _authPanel = null!;
     private Panel _mainPanel = null!;
@@ -55,7 +56,7 @@ public class AdminTab : UserControl
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
         IMicePopupRepository miceRepo, IChecklistRepository checklistRepo,
-        Data.Database database)
+        Data.Database database, ISalaryService salaryService)
     {
         _configRepo = configRepo;
         _salesService = salesService;
@@ -64,6 +65,7 @@ public class AdminTab : UserControl
         _miceRepo = miceRepo;
         _checklistRepo = checklistRepo;
         _database = database;
+        _salaryService2 = salaryService;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
 
@@ -170,6 +172,7 @@ public class AdminTab : UserControl
         };
 
         tabControl.TabPages.Add(BuildDashboardTab());
+        tabControl.TabPages.Add(BuildSalaryTab());
         tabControl.TabPages.Add(BuildEmployeeTab());
         tabControl.TabPages.Add(BuildMiceTab());
         tabControl.TabPages.Add(BuildChecklistTab());
@@ -323,7 +326,35 @@ public class AdminTab : UserControl
         return page;
     }
 
-    // ==================== 탭 2: 직원 관리 ====================
+    // ==================== 탭 2: 급여 관리 ====================
+    private TabPage BuildSalaryTab()
+    {
+        var page = new TabPage("💰 급여 관리") { BackColor = ColorPalette.Surface };
+
+        // SalaryTab을 UserControl로 내장
+        if (_salaryService2 != null)
+        {
+            var salaryControl = new SalaryTab(_salaryService2)
+            {
+                Dock = DockStyle.Fill
+            };
+            page.Controls.Add(salaryControl);
+        }
+        else
+        {
+            page.Controls.Add(new Label
+            {
+                Text = "급여 서비스를 불러올 수 없습니다.",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = ColorPalette.TextSecondary
+            });
+        }
+
+        return page;
+    }
+
+    // ==================== 탭 3: 직원 관리 ====================
     private TabPage BuildEmployeeTab()
     {
         var page = new TabPage("👤 직원 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };

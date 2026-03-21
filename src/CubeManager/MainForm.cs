@@ -20,8 +20,8 @@ public class MainForm : Form
 
     private static readonly string[] TabNames =
     [
-        "예약/매출", "스케줄", "급여", "업무자료",
-        "인수인계", "물품", "출퇴근", "테마힌트", "설정", "관리자", "무료이용권", "체크리스트"
+        "예약/매출", "스케줄", "체크리스트", "출퇴근",
+        "인수인계", "무료이용권", "물품", "업무자료", "테마힌트", "설정", "관리자"
     ];
 
     public MainForm(IServiceProvider serviceProvider)
@@ -181,34 +181,34 @@ public class MainForm : Form
                 _sp.GetRequiredService<IScheduleService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IHolidayRepository>()),
-        2 => new SalaryTab(_sp.GetRequiredService<ISalaryService>()),
-        3 => new DocumentTab(),
-        4 => new HandoverTab(_sp.GetRequiredService<IHandoverRepository>()),
-        5 => new InventoryTab(_sp.GetRequiredService<IInventoryRepository>()),
-        6 => new AttendanceTab(
+        2 => new ChecklistTab(
+                _sp.GetRequiredService<IChecklistRepository>(),
+                _sp.GetRequiredService<IScheduleService>(),
+                _sp.GetRequiredService<IEmployeeService>()),
+        3 => new AttendanceTab(
                 _sp.GetRequiredService<IAttendanceService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IScheduleService>()),
-        7 => new ThemeHintTab(
+        4 => new HandoverTab(_sp.GetRequiredService<IHandoverRepository>()),
+        5 => new FreePassTab(
+                _sp.GetRequiredService<IFreePassRepository>()),
+        6 => new InventoryTab(_sp.GetRequiredService<IInventoryRepository>()),
+        7 => new DocumentTab(),
+        8 => new ThemeHintTab(
                 _sp.GetRequiredService<IThemeRepository>(),
                 _sp.GetRequiredService<IThemeExportService>()),
-        8 => new SettingsTab(
+        9 => new SettingsTab(
                 _sp.GetRequiredService<IReservationScraperService>(),
                 _sp.GetRequiredService<IConfigRepository>()),
-        9 => new AdminTab(
+        10 => new AdminTab(
                 _sp.GetRequiredService<IConfigRepository>(),
                 _sp.GetRequiredService<ISalesService>(),
                 _sp.GetRequiredService<IAttendanceService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
                 _sp.GetRequiredService<IMicePopupRepository>(),
                 _sp.GetRequiredService<IChecklistRepository>(),
-                _sp.GetRequiredService<Data.Database>()),
-        10 => new FreePassTab(
-                _sp.GetRequiredService<IFreePassRepository>()),
-        11 => new ChecklistTab(
-                _sp.GetRequiredService<IChecklistRepository>(),
-                _sp.GetRequiredService<IScheduleService>(),
-                _sp.GetRequiredService<IEmployeeService>()),
+                _sp.GetRequiredService<Data.Database>(),
+                _sp.GetRequiredService<ISalaryService>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

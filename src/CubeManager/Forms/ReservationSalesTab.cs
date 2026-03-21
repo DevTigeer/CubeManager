@@ -91,6 +91,15 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(_chkAutoRefresh);
 
+        var btnRecalc = CreateBtn("계산 반영", ColorPalette.AccentGreen.Main);
+        btnRecalc.Click += async (_, _) =>
+        {
+            await _salesService.RecalculateTotalsAsync(_currentDate);
+            await LoadSummaryAsync();
+            ToastNotification.Show("계산 반영 완료.", ToastType.Success);
+        };
+        topPanel.Controls.Add(btnRecalc);
+
         var btnAddWalkin = CreateBtn("+ 워크인", ColorPalette.Primary);
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
