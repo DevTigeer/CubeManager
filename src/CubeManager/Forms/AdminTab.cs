@@ -9,8 +9,7 @@ using CubeManager.Helpers;
 namespace CubeManager.Forms;
 
 /// <summary>
-/// 관리자 탭 — 비밀번호 인증 후 접근.
-/// 현금잔액 수기 보정, 월별 지각/조퇴 통계, 매출 통계.
+/// 관리자 탭 — 비밀번호 인증 후 접근. 내부 TabControl로 구성.
 /// </summary>
 public class AdminTab : UserControl
 {
@@ -25,29 +24,33 @@ public class AdminTab : UserControl
     private Panel _authPanel = null!;
     private Panel _mainPanel = null!;
 
-    // 현금 보정
+    // ===== 대시보드 탭 =====
     private readonly DateTimePicker _dtpCashDate;
     private readonly NumericUpDown _numCashAmount;
     private readonly TextBox _txtCashNote;
-
-    // 지각/조퇴 통계
     private readonly DateTimePicker _dtpStatMonth;
     private readonly DataGridView _gridAttendStats;
-
-    // 매출 통계
     private readonly DataGridView _gridSalesStats;
-
-    // Summary Cards
     private readonly SummaryCardRow _summaryCards;
 
-    // 직원 관리
+    // ===== 직원 관리 탭 =====
     private readonly DataGridView _gridEmployees;
 
-    // 미끼관리
+    // ===== 미끼관리 탭 =====
     private readonly DataGridView _gridMice;
 
-    // 체크리스트 관리
+    // ===== 체크리스트 관리 탭 =====
     private readonly DataGridView _gridChecklist;
+
+    // 역할 표시 이름 매핑
+    private static readonly Dictionary<string, string> RoleNames = new()
+    {
+        ["open"] = "오픈",
+        ["close"] = "마감",
+        ["middle1"] = "1미들",
+        ["middle2"] = "2미들",
+        ["all"] = "전체"
+    };
 
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
@@ -134,7 +137,6 @@ public class AdminTab : UserControl
         centerPanel.Controls.Add(lblDesc);
         centerPanel.Controls.Add(lblTitle);
 
-        // 중앙 정렬
         _authPanel.Resize += (_, _) =>
         {
             centerPanel.Location = new Point(
@@ -147,12 +149,11 @@ public class AdminTab : UserControl
         _authPanel.Controls.Add(centerPanel);
     }
 
-    // ========== 메인 화면 ==========
+    // ========== 메인 화면 (TabControl) ==========
     private void BuildMainPanel()
     {
-        _mainPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(15) };
+        _mainPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10) };
 
-        // 상단 헤더
         var header = new Label
         {
             Text = "관리자 대시보드",
@@ -161,13 +162,33 @@ public class AdminTab : UserControl
             Dock = DockStyle.Top, Height = 40
         };
 
-        // Summary Cards
+        var tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 10f),
+            Padding = new Point(12, 4)
+        };
+
+        tabControl.TabPages.Add(BuildDashboardTab());
+        tabControl.TabPages.Add(BuildEmployeeTab());
+        tabControl.TabPages.Add(BuildMiceTab());
+        tabControl.TabPages.Add(BuildChecklistTab());
+
+        _mainPanel.Controls.Add(tabControl);
+        _mainPanel.Controls.Add(header);
+    }
+
+    // ==================== 탭 1: 대시보드 ====================
+    private TabPage BuildDashboardTab()
+    {
+        var page = new TabPage("📊 대시보드") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+
         _summaryCards.AddCard("이번 달 매출", "₩0", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
         _summaryCards.AddCard("이번 달 지출", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
         _summaryCards.AddCard("지각 건수", "0건", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
         _summaryCards.AddCard("현금 잔액", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
 
-        // === DB 백업 + 현금 보정 패널 (한 줄) ===
+        // DB 백업 + 유틸
         var utilPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Top, Height = 40,
@@ -179,7 +200,7 @@ public class AdminTab : UserControl
         btnBackup.Click += BtnBackup_Click;
         utilPanel.Controls.Add(btnBackup);
 
-        var lblBackupInfo = new Label
+        utilPanel.Controls.Add(new Label
         {
             Text = "자동 백업: 매주 월/금 오후 5시",
             Font = new Font("맑은 고딕", 9f),
@@ -187,10 +208,9 @@ public class AdminTab : UserControl
             Size = new Size(250, 32),
             TextAlign = ContentAlignment.MiddleLeft,
             Margin = new Padding(10, 0, 0, 0)
-        };
-        utilPanel.Controls.Add(lblBackupInfo);
+        });
 
-        // === 현금 보정 패널 ===
+        // 현금 보정
         var cashPanel = new GroupBox
         {
             Text = "현금 잔액 수기 보정",
@@ -199,6 +219,7 @@ public class AdminTab : UserControl
             Padding = new Padding(10, 5, 10, 5)
         };
 
+        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         var cashFlow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -206,7 +227,6 @@ public class AdminTab : UserControl
             Padding = new Padding(0, 5, 0, 0)
         };
 
-        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         cashFlow.Controls.Add(new Label { Text = "날짜:", Size = new Size(40, 25), Font = nf, TextAlign = ContentAlignment.MiddleRight });
         _dtpCashDate.Font = nf;
         cashFlow.Controls.Add(_dtpCashDate);
@@ -223,10 +243,9 @@ public class AdminTab : UserControl
         btnApplyCash.Margin = new Padding(10, 0, 0, 0);
         btnApplyCash.Click += BtnApplyCash_Click;
         cashFlow.Controls.Add(btnApplyCash);
-
         cashPanel.Controls.Add(cashFlow);
 
-        // === 하단 분할: 지각/조퇴(좌) + 매출 통계(우) ===
+        // 하단 분할: 지각/조퇴(좌) + 매출 통계(우)
         var bottomSplit = new SplitContainer
         {
             Dock = DockStyle.Fill,
@@ -259,18 +278,12 @@ public class AdminTab : UserControl
         _gridAttendStats.ReadOnly = true;
         _gridAttendStats.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "EmpName", HeaderText = "이름", FillWeight = 20 },
-            new DataGridViewTextBoxColumn { Name = "LateCount", HeaderText = "지각", FillWeight = 12,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "EarlyCount", HeaderText = "조퇴", FillWeight = 12,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "OnTimeCount", HeaderText = "정상", FillWeight = 12,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "TotalDays", HeaderText = "총 근무일", FillWeight = 14,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "LateRate", HeaderText = "지각률", FillWeight = 14,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } }
+            new DataGridViewTextBoxColumn { Name = "LateCount", HeaderText = "지각", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "EarlyCount", HeaderText = "조퇴", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "OnTimeCount", HeaderText = "정상", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "TotalDays", HeaderText = "총 근무일", FillWeight = 14, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "LateRate", HeaderText = "지각률", FillWeight = 14, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } }
         );
-
         attendPanel.Controls.Add(_gridAttendStats);
         attendPanel.Controls.Add(attendHeader);
 
@@ -292,102 +305,107 @@ public class AdminTab : UserControl
             new DataGridViewTextBoxColumn { Name = "CardAmt", HeaderText = "카드", FillWeight = 16, DefaultCellStyle = GridTheme.AmountStyle },
             new DataGridViewTextBoxColumn { Name = "CashAmt", HeaderText = "현금", FillWeight = 16, DefaultCellStyle = GridTheme.AmountStyle },
             new DataGridViewTextBoxColumn { Name = "TransferAmt", HeaderText = "계좌", FillWeight = 16, DefaultCellStyle = GridTheme.AmountStyle },
-            new DataGridViewTextBoxColumn { Name = "TotalAmt", HeaderText = "총매출", FillWeight = 18,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("맑은 고딕", 10f, FontStyle.Bold) } },
+            new DataGridViewTextBoxColumn { Name = "TotalAmt", HeaderText = "총매출", FillWeight = 18, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("맑은 고딕", 10f, FontStyle.Bold) } },
             new DataGridViewTextBoxColumn { Name = "CashBal", HeaderText = "현금잔액", FillWeight = 16, DefaultCellStyle = GridTheme.AmountStyle }
         );
-
         salesPanel.Controls.Add(_gridSalesStats);
         salesPanel.Controls.Add(salesHeader);
 
         bottomSplit.Panel1.Controls.Add(attendPanel);
         bottomSplit.Panel2.Controls.Add(salesPanel);
 
-        // === 직원 관리 패널 (하단) ===
-        var employeePanel = new GroupBox
-        {
-            Text = "직원 관리",
-            Dock = DockStyle.Bottom, Height = 200,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-            Padding = new Padding(10, 5, 10, 5)
-        };
+        // 역순 조립
+        page.Controls.Add(bottomSplit);
+        page.Controls.Add(cashPanel);
+        page.Controls.Add(utilPanel);
+        page.Controls.Add(_summaryCards);
 
-        var empToolbar = new FlowLayoutPanel
+        return page;
+    }
+
+    // ==================== 탭 2: 직원 관리 ====================
+    private TabPage BuildEmployeeTab()
+    {
+        var page = new TabPage("👤 직원 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+
+        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
+        var toolbar = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 35,
+            Dock = DockStyle.Top, Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(0, 2, 0, 2)
         };
 
         var btnAddEmp = ButtonFactory.CreatePrimary("+ 직원 추가", 110);
-        btnAddEmp.Height = 28;
+        btnAddEmp.Height = 32;
         btnAddEmp.Font = nf;
         btnAddEmp.Click += BtnAddEmployee_Click;
-        empToolbar.Controls.Add(btnAddEmp);
+        toolbar.Controls.Add(btnAddEmp);
 
         var btnDeactivateEmp = ButtonFactory.CreateDanger("비활성화", 90);
-        btnDeactivateEmp.Height = 28;
+        btnDeactivateEmp.Height = 32;
         btnDeactivateEmp.Font = nf;
         btnDeactivateEmp.Margin = new Padding(10, 0, 0, 0);
         btnDeactivateEmp.Click += BtnDeactivateEmployee_Click;
-        empToolbar.Controls.Add(btnDeactivateEmp);
+        toolbar.Controls.Add(btnDeactivateEmp);
 
         GridTheme.ApplyTheme(_gridEmployees);
         _gridEmployees.AllowUserToAddRows = false;
+        _gridEmployees.ReadOnly = true;
         _gridEmployees.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "EmpId", Visible = false },
             new DataGridViewTextBoxColumn { Name = "EmpName", HeaderText = "이름", FillWeight = 25 },
-            new DataGridViewTextBoxColumn { Name = "EmpWage", HeaderText = "시급", FillWeight = 20,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } },
+            new DataGridViewTextBoxColumn { Name = "EmpWage", HeaderText = "시급", FillWeight = 20, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } },
             new DataGridViewTextBoxColumn { Name = "EmpPhone", HeaderText = "전화번호", FillWeight = 30 },
-            new DataGridViewTextBoxColumn { Name = "EmpStatus", HeaderText = "상태", FillWeight = 15,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } }
+            new DataGridViewTextBoxColumn { Name = "EmpStatus", HeaderText = "상태", FillWeight = 15, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } }
         );
-        _gridEmployees.ReadOnly = true;
         _gridEmployees.CellDoubleClick += GridEmployees_CellDoubleClick;
 
-        employeePanel.Controls.Add(_gridEmployees);
-        employeePanel.Controls.Add(empToolbar);
+        page.Controls.Add(_gridEmployees);
+        page.Controls.Add(toolbar);
+        return page;
+    }
 
-        // === 미끼관리 패널 ===
-        var micePanel = new GroupBox
-        {
-            Text = "미끼관리 (팝업)",
-            Dock = DockStyle.Bottom, Height = 180,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-            Padding = new Padding(10, 5, 10, 5)
-        };
+    // ==================== 탭 3: 미끼관리 ====================
+    private TabPage BuildMiceTab()
+    {
+        var page = new TabPage("🎯 미끼관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
-        var miceToolbar = new FlowLayoutPanel
+        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
+        var toolbar = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 35,
+            Dock = DockStyle.Top, Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(0, 2, 0, 2)
         };
 
         var btnAddMice = ButtonFactory.CreatePrimary("+ 등록", 80);
-        btnAddMice.Height = 28;
+        btnAddMice.Height = 32;
         btnAddMice.Font = nf;
         btnAddMice.Click += BtnAddMice_Click;
-        miceToolbar.Controls.Add(btnAddMice);
+        toolbar.Controls.Add(btnAddMice);
+
+        toolbar.Controls.Add(new Label
+        {
+            Text = "Delete 키로 선택 항목 삭제  |  활성 체크박스 토글",
+            Font = new Font("맑은 고딕", 9f),
+            ForeColor = ColorPalette.TextTertiary,
+            Size = new Size(350, 32),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(15, 0, 0, 0)
+        });
 
         GridTheme.ApplyTheme(_gridMice);
         _gridMice.AllowUserToAddRows = false;
-        _gridMice.ReadOnly = true;
         _gridMice.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "MiceId", Visible = false },
-            new DataGridViewTextBoxColumn { Name = "MiceTitle", HeaderText = "제목", FillWeight = 25 },
-            new DataGridViewTextBoxColumn { Name = "MiceContent", HeaderText = "내용", FillWeight = 30 },
-            new DataGridViewTextBoxColumn { Name = "MiceInterval", HeaderText = "간격(분)", FillWeight = 10,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "MiceTitle", HeaderText = "제목", FillWeight = 25, ReadOnly = true },
+            new DataGridViewTextBoxColumn { Name = "MiceContent", HeaderText = "내용", FillWeight = 30, ReadOnly = true },
+            new DataGridViewTextBoxColumn { Name = "MiceInterval", HeaderText = "간격(분)", FillWeight = 10, ReadOnly = true, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
             new DataGridViewCheckBoxColumn { Name = "MiceActive", HeaderText = "활성", FillWeight = 10 },
-            new DataGridViewTextBoxColumn { Name = "MiceLastShown", HeaderText = "마지막표시", FillWeight = 25 }
+            new DataGridViewTextBoxColumn { Name = "MiceLastShown", HeaderText = "마지막표시", FillWeight = 25, ReadOnly = true }
         );
-        _gridMice.ReadOnly = false;
-        _gridMice.Columns["MiceTitle"]!.ReadOnly = true;
-        _gridMice.Columns["MiceContent"]!.ReadOnly = true;
-        _gridMice.Columns["MiceInterval"]!.ReadOnly = true;
-        _gridMice.Columns["MiceLastShown"]!.ReadOnly = true;
+
         _gridMice.CellContentClick += async (_, e) =>
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
@@ -408,6 +426,7 @@ public class AdminTab : UserControl
             }
             catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
         };
+
         _gridMice.KeyDown += async (_, e) =>
         {
             if (e.KeyCode != Keys.Delete || _gridMice.CurrentRow == null) return;
@@ -424,56 +443,73 @@ public class AdminTab : UserControl
             catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
         };
 
-        micePanel.Controls.Add(_gridMice);
-        micePanel.Controls.Add(miceToolbar);
+        page.Controls.Add(_gridMice);
+        page.Controls.Add(toolbar);
+        return page;
+    }
 
-        // === 체크리스트 관리 패널 ===
-        var checklistPanel = new GroupBox
-        {
-            Text = "체크리스트 관리",
-            Dock = DockStyle.Bottom, Height = 200,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-            Padding = new Padding(10, 5, 10, 5)
-        };
+    // ==================== 탭 4: 체크리스트 관리 ====================
+    private TabPage BuildChecklistTab()
+    {
+        var page = new TabPage("✅ 체크리스트") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
-        var checklistToolbar = new FlowLayoutPanel
+        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
+        var toolbar = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 35,
+            Dock = DockStyle.Top, Height = 40,
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(0, 2, 0, 2)
         };
 
-        var cmbDay = new ComboBox
+        // 요일 체크박스들
+        var dayNames = new[] { "월", "화", "수", "목", "금", "토", "일" };
+        var dayCheckBoxes = new CheckBox[7];
+        for (var i = 0; i < 7; i++)
+        {
+            dayCheckBoxes[i] = new CheckBox
+            {
+                Text = dayNames[i],
+                Font = nf,
+                Size = new Size(50, 28),
+                Checked = i == 0, // 월요일 기본 선택
+                Tag = i
+            };
+            dayCheckBoxes[i].CheckedChanged += async (_, _) => await LoadChecklistTemplatesAsync();
+            toolbar.Controls.Add(dayCheckBoxes[i]);
+        }
+
+        // 역할 선택
+        var cmbRole = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            Size = new Size(80, 28), Font = nf
+            Size = new Size(90, 28), Font = nf,
+            Margin = new Padding(15, 0, 0, 0)
         };
-        cmbDay.Items.AddRange(new object[] { "월", "화", "수", "목", "금", "토", "일" });
-        cmbDay.SelectedIndex = 0;
-        cmbDay.Tag = "dayCombo";
-        cmbDay.SelectedIndexChanged += async (_, _) => await LoadChecklistTemplatesAsync();
-        checklistToolbar.Controls.Add(cmbDay);
+        cmbRole.Items.AddRange(new object[] { "전체", "오픈", "마감", "1미들", "2미들" });
+        cmbRole.SelectedIndex = 0;
+        cmbRole.Tag = "roleCombo";
+        toolbar.Controls.Add(cmbRole);
 
-        var btnAddChecklist = ButtonFactory.CreatePrimary("+ 추가", 80);
-        btnAddChecklist.Height = 28;
-        btnAddChecklist.Font = nf;
-        btnAddChecklist.Margin = new Padding(10, 0, 0, 0);
-        btnAddChecklist.Click += BtnAddChecklist_Click;
-        checklistToolbar.Controls.Add(btnAddChecklist);
+        var btnAdd = ButtonFactory.CreatePrimary("+ 추가", 80);
+        btnAdd.Height = 32;
+        btnAdd.Font = nf;
+        btnAdd.Margin = new Padding(15, 0, 0, 0);
+        btnAdd.Click += BtnAddChecklist_Click;
+        toolbar.Controls.Add(btnAdd);
 
         GridTheme.ApplyTheme(_gridChecklist);
         _gridChecklist.AllowUserToAddRows = false;
         _gridChecklist.ReadOnly = true;
         _gridChecklist.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "ClId", Visible = false },
-            new DataGridViewTextBoxColumn { Name = "ClTask", HeaderText = "할일", FillWeight = 60 },
-            new DataGridViewTextBoxColumn { Name = "ClOrder", HeaderText = "순서", FillWeight = 15,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "ClActive", HeaderText = "활성", FillWeight = 15,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewButtonColumn { Name = "ClDelete", HeaderText = "삭제", FillWeight = 10, Text = "삭제",
-                UseColumnTextForButtonValue = true }
+            new DataGridViewTextBoxColumn { Name = "ClDay", HeaderText = "요일", FillWeight = 10, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClRole", HeaderText = "역할", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClTask", HeaderText = "할일", FillWeight = 45 },
+            new DataGridViewTextBoxColumn { Name = "ClOrder", HeaderText = "순서", FillWeight = 8, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClActive", HeaderText = "활성", FillWeight = 10, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewButtonColumn { Name = "ClDelete", HeaderText = "삭제", FillWeight = 10, Text = "삭제", UseColumnTextForButtonValue = true }
         );
+
         _gridChecklist.CellContentClick += async (_, e) =>
         {
             if (e.RowIndex < 0 || _gridChecklist.Columns[e.ColumnIndex].Name != "ClDelete") return;
@@ -490,18 +526,9 @@ public class AdminTab : UserControl
             catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
         };
 
-        checklistPanel.Controls.Add(_gridChecklist);
-        checklistPanel.Controls.Add(checklistToolbar);
-
-        // 레이아웃 조립 (역순)
-        _mainPanel.Controls.Add(bottomSplit);
-        _mainPanel.Controls.Add(checklistPanel);
-        _mainPanel.Controls.Add(micePanel);
-        _mainPanel.Controls.Add(employeePanel);
-        _mainPanel.Controls.Add(cashPanel);
-        _mainPanel.Controls.Add(utilPanel);
-        _mainPanel.Controls.Add(_summaryCards);
-        _mainPanel.Controls.Add(header);
+        page.Controls.Add(_gridChecklist);
+        page.Controls.Add(toolbar);
+        return page;
     }
 
     // ========== DB 백업 ==========
@@ -542,15 +569,9 @@ public class AdminTab : UserControl
         try
         {
             if (amount > 0)
-            {
-                // 양수: 현금 수입으로 기록
                 await _salesService.AddSaleItemAsync(date, desc, amount, "cash", "revenue");
-            }
             else
-            {
-                // 음수: 현금 지출로 기록 (양수 변환)
                 await _salesService.AddSaleItemAsync(date, desc, Math.Abs(amount), "cash", "expense");
-            }
 
             ToastNotification.Show($"현금 보정 완료: {(amount > 0 ? "+" : "")}{amount:N0}원", ToastType.Success);
             _numCashAmount.Value = 0;
@@ -696,7 +717,6 @@ public class AdminTab : UserControl
                 row.Cells["TotalDays"].Value = $"{total}일";
                 row.Cells["LateRate"].Value = lateRate;
 
-                // 지각 있으면 빨간 강조
                 if (late > 0)
                 {
                     row.Cells["LateCount"].Style.ForeColor = ColorPalette.Danger;
@@ -759,7 +779,6 @@ public class AdminTab : UserControl
 
             _summaryCards.UpdateCard(0, $"₩{totalRevenue:N0}");
 
-            // 지출 합계 계산
             var monthExpense = 0;
             for (var d = 1; d <= daysInMonth; d++)
             {
@@ -849,7 +868,7 @@ public class AdminTab : UserControl
                 ToastNotification.Show("제목을 입력하세요.", ToastType.Warning);
                 return;
             }
-            dlg.Tag = new Core.Models.MicePopup
+            dlg.Tag = new MicePopup
             {
                 Title = txtTitle.Text.Trim(),
                 Content = txtContent.Text.Trim(),
@@ -862,7 +881,7 @@ public class AdminTab : UserControl
         flow.Controls.AddRange(new Control[] { lblTitle, txtTitle, lblContent, txtContent, lblInterval, numInterval, btnOk });
         dlg.Controls.Add(flow);
 
-        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Tag is not Core.Models.MicePopup popup) return;
+        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Tag is not MicePopup popup) return;
 
         try
         {
@@ -877,32 +896,83 @@ public class AdminTab : UserControl
     }
 
     // ========== 체크리스트 관리 ==========
+    private CheckBox[] GetDayCheckBoxes()
+    {
+        // 체크리스트 탭의 toolbar에서 요일 체크박스들 찾기
+        var checklistPage = _gridChecklist.Parent;
+        var toolbar = checklistPage?.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+        return toolbar?.Controls.OfType<CheckBox>().Where(c => c.Tag is int).ToArray() ?? [];
+    }
+
+    private string GetSelectedRole()
+    {
+        var checklistPage = _gridChecklist.Parent;
+        var toolbar = checklistPage?.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+        var cmbRole = toolbar?.Controls.OfType<ComboBox>().FirstOrDefault(c => c.Tag?.ToString() == "roleCombo");
+        return (cmbRole?.SelectedIndex ?? 0) switch
+        {
+            1 => "open",
+            2 => "close",
+            3 => "middle1",
+            4 => "middle2",
+            _ => "all"
+        };
+    }
+
     private async Task LoadChecklistTemplatesAsync()
     {
         try
         {
-            // 요일 콤보에서 선택된 요일 가져오기
-            var cmbDay = _gridChecklist.Parent?.Controls
-                .OfType<FlowLayoutPanel>()
-                .FirstOrDefault()?.Controls
-                .OfType<ComboBox>()
-                .FirstOrDefault(c => c.Tag?.ToString() == "dayCombo");
+            var dayCheckBoxes = GetDayCheckBoxes();
+            var selectedDays = dayCheckBoxes
+                .Where(c => c.Checked && c.Tag is int)
+                .Select(c =>
+                {
+                    var uiIndex = (int)c.Tag!; // 0=월,1=화,...6=일
+                    return uiIndex < 6 ? uiIndex + 1 : 0; // DB: 0=일,1=월,...6=토
+                })
+                .ToHashSet();
 
-            var dayIndex = cmbDay?.SelectedIndex ?? 0;
-            // ComboBox: 0=월,1=화,...6=일 → DB: 0=일,1=월,...6=토
-            var dbDay = dayIndex < 6 ? dayIndex + 1 : 0;
+            if (selectedDays.Count == 0)
+            {
+                _gridChecklist.Rows.Clear();
+                return;
+            }
 
-            var templates = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
+            var allTemplates = (await _checklistRepo.GetAllTemplatesAsync()).ToList();
+            var filtered = allTemplates
+                .Where(t => selectedDays.Contains(t.DayOfWeek))
+                .OrderBy(t => t.DayOfWeek)
+                .ThenBy(t => t.Role)
+                .ThenBy(t => t.SortOrder)
+                .ToList();
+
+            var dayLabels = new[] { "일", "월", "화", "수", "목", "금", "토" };
+
             _gridChecklist.Rows.Clear();
 
-            foreach (var t in templates)
+            foreach (var t in filtered)
             {
                 var idx = _gridChecklist.Rows.Add();
                 var row = _gridChecklist.Rows[idx];
                 row.Cells["ClId"].Value = t.Id;
+                row.Cells["ClDay"].Value = t.DayOfWeek >= 0 && t.DayOfWeek <= 6 ? dayLabels[t.DayOfWeek] : "?";
+                row.Cells["ClRole"].Value = RoleNames.GetValueOrDefault(t.Role, t.Role);
                 row.Cells["ClTask"].Value = t.TaskText;
                 row.Cells["ClOrder"].Value = t.SortOrder;
                 row.Cells["ClActive"].Value = t.IsActive ? "활성" : "비활성";
+
+                // 역할별 색상
+                var roleColor = t.Role switch
+                {
+                    "open" => ColorPalette.AccentBlue.Light,
+                    "close" => ColorPalette.AccentOrange.Light,
+                    "middle1" => ColorPalette.AccentGreen.Light,
+                    "middle2" => ColorPalette.AccentGreen.Light,
+                    _ => Color.Transparent
+                };
+                if (roleColor != Color.Transparent)
+                    row.Cells["ClRole"].Style.BackColor = roleColor;
             }
         }
         catch (Exception ex)
@@ -913,21 +983,26 @@ public class AdminTab : UserControl
 
     private async void BtnAddChecklist_Click(object? sender, EventArgs e)
     {
-        // 요일 콤보에서 선택된 요일 가져오기
-        var cmbDay = _gridChecklist.Parent?.Controls
-            .OfType<FlowLayoutPanel>()
-            .FirstOrDefault()?.Controls
-            .OfType<ComboBox>()
-            .FirstOrDefault(c => c.Tag?.ToString() == "dayCombo");
+        var dayCheckBoxes = GetDayCheckBoxes();
+        var selectedDays = dayCheckBoxes
+            .Where(c => c.Checked && c.Tag is int)
+            .Select(c => (int)c.Tag!)
+            .ToList();
 
-        var dayIndex = cmbDay?.SelectedIndex ?? 0;
-        var dbDay = dayIndex < 6 ? dayIndex + 1 : 0;
+        if (selectedDays.Count == 0)
+        {
+            ToastNotification.Show("요일을 1개 이상 선택하세요.", ToastType.Warning);
+            return;
+        }
+
+        var selectedRole = GetSelectedRole();
         var dayNames = new[] { "월", "화", "수", "목", "금", "토", "일" };
-        var dayName = dayIndex < dayNames.Length ? dayNames[dayIndex] : "월";
+        var daysText = string.Join(",", selectedDays.Select(i => dayNames[i]));
+        var roleText = RoleNames.GetValueOrDefault(selectedRole, selectedRole);
 
         using var dlg = new Form
         {
-            Text = $"체크리스트 추가 ({dayName}요일)",
+            Text = $"체크리스트 추가 ({daysText} / {roleText})",
             Size = new Size(400, 180),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
@@ -967,15 +1042,22 @@ public class AdminTab : UserControl
 
         try
         {
-            var existing = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
-            var template = new Core.Models.ChecklistTemplate
+            // 선택된 모든 요일에 대해 템플릿 생성
+            foreach (var uiDay in selectedDays)
             {
-                DayOfWeek = dbDay,
-                TaskText = taskText,
-                SortOrder = existing.Count + 1,
-                IsActive = true
-            };
-            await _checklistRepo.InsertTemplateAsync(template);
+                var dbDay = uiDay < 6 ? uiDay + 1 : 0; // 월=1,...토=6,일=0
+                var existing = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
+                var template = new ChecklistTemplate
+                {
+                    DayOfWeek = dbDay,
+                    Role = selectedRole,
+                    TaskText = taskText,
+                    SortOrder = existing.Count + 1,
+                    IsActive = true
+                };
+                await _checklistRepo.InsertTemplateAsync(template);
+            }
+
             ToastNotification.Show("체크리스트 항목이 추가되었습니다.", ToastType.Success);
             await LoadChecklistTemplatesAsync();
         }

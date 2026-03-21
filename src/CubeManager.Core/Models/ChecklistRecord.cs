@@ -11,5 +11,6 @@ public class ChecklistRecord
     public string? CheckedAt { get; set; }
     // JOIN용
     public string? TaskText { get; set; }
+    public string Role { get; set; } = "all";
     public int SortOrder { get; set; }
 }

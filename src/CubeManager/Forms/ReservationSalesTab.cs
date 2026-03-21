@@ -31,7 +31,7 @@ public class ReservationSalesTab : UserControl
     private string _currentDate;
     private List<Reservation> _reservations = [];
     private List<SaleItem> _existingSaleItems = [];
-    private int _sortState; // 0=원래, 1=오름차순, 2=내림차순
+    // _sortState 제거 — 항상 시간순, 현재 시간으로 스크롤
 
     public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService,
         IReservationRepository reservationRepo)
@@ -90,11 +90,6 @@ public class ReservationSalesTab : UserControl
                 _autoRefreshTimer.Enabled = _chkAutoRefresh.Checked;
         };
         topPanel.Controls.Add(_chkAutoRefresh);
-
-        var btnSort = CreateBtn("임박순", ColorPalette.TextSecondary);
-        btnSort.Size = new Size(90, 32);
-        btnSort.Click += (_, _) => ToggleSort(btnSort);
-        topPanel.Controls.Add(btnSort);
 
         var btnAddWalkin = CreateBtn("+ 워크인", ColorPalette.Primary);
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
@@ -392,34 +387,13 @@ public class ReservationSalesTab : UserControl
         PopulateMainGrid();
     }
 
-    // ===== 시간순 정렬 토글 =====
-    private void ToggleSort(Button btn)
-    {
-        _sortState = (_sortState + 1) % 3;
-        btn.Text = _sortState switch
-        {
-            0 => "시간순 ↓",
-            1 => "원래순서",
-            _ => "임박순"
-        };
-        PopulateMainGrid();
-    }
-
     // ===== 통합 그리드 데이터 채우기 =====
     private void PopulateMainGrid()
     {
         _gridMain.Rows.Clear();
 
-        var sorted = _sortState switch
-        {
-            1 => _reservations.OrderByDescending(r => r.TimeSlot).ToList(),
-            2 => _reservations.ToList(),  // 원래순서
-            _ => _reservations
-                .OrderBy(r => r.Status is "removed" or "noshow" ? 1 : 0)
-                .ThenBy(r => string.Compare(r.TimeSlot, DateTime.Now.ToString("HH:mm"), StringComparison.Ordinal) >= 0 ? 0 : 1)
-                .ThenBy(r => r.TimeSlot)
-                .ToList()
-        };
+        // 항상 시간 오름차순 정렬
+        var sorted = _reservations.OrderBy(r => r.TimeSlot).ToList();
 
         foreach (var r in sorted)
         {
@@ -476,6 +450,32 @@ public class ReservationSalesTab : UserControl
             LoadExistingPayments(row, r);
         }
 
+        // 현재 시간에 가장 가까운 예약 행으로 스크롤
+        ScrollToCurrentTime();
+    }
+
+    private void ScrollToCurrentTime()
+    {
+        if (_gridMain.Rows.Count == 0) return;
+
+        var now = DateTime.Now.ToString("HH:mm");
+        var targetRow = -1;
+
+        for (var i = 0; i < _gridMain.Rows.Count; i++)
+        {
+            var timeSlot = _gridMain.Rows[i].Cells["Time"].Value?.ToString() ?? "";
+            if (string.Compare(timeSlot, now, StringComparison.Ordinal) >= 0)
+            {
+                targetRow = i;
+                break;
+            }
+        }
+
+        // 모든 예약이 이미 지났으면 마지막 행으로
+        if (targetRow < 0)
+            targetRow = _gridMain.Rows.Count - 1;
+
+        _gridMain.FirstDisplayedScrollingRowIndex = targetRow;
     }
 
     // ===== 결제 금액 셀 편집 완료 =====

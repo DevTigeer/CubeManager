@@ -8,7 +8,7 @@ using CubeManager.Helpers;
 namespace CubeManager.Forms;
 
 /// <summary>
-/// 체크리스트 탭. 요일별 할일 + 근무자 매칭 + 진행률 표시.
+/// 체크리스트 탭. 요일+역할별 할일 + 근무자 매칭 + 진행률 표시.
 /// </summary>
 public class ChecklistTab : UserControl
 {
@@ -27,6 +27,25 @@ public class ChecklistTab : UserControl
     private static readonly Font TaskBoldFont = new("맑은 고딕", 11f, FontStyle.Bold);
     private static readonly Font SmallFont = new("맑은 고딕", 9f);
     private static readonly Font StrikeFont = new("맑은 고딕", 11f, FontStyle.Strikeout);
+    private static readonly Font RoleHeaderFont = new("맑은 고딕", 10f, FontStyle.Bold);
+
+    private static readonly Dictionary<string, string> RoleNames = new()
+    {
+        ["open"] = "🌅 오픈",
+        ["close"] = "🌙 마감",
+        ["middle1"] = "☀️ 1미들",
+        ["middle2"] = "☀️ 2미들",
+        ["all"] = "📋 전체"
+    };
+
+    private static readonly Dictionary<string, Color> RoleColors = new()
+    {
+        ["open"] = Color.FromArgb(227, 242, 253),    // 파랑 라이트
+        ["close"] = Color.FromArgb(255, 243, 224),    // 주황 라이트
+        ["middle1"] = Color.FromArgb(232, 245, 233),  // 초록 라이트
+        ["middle2"] = Color.FromArgb(232, 245, 233),
+        ["all"] = Color.FromArgb(245, 245, 245)
+    };
 
     public ChecklistTab(IChecklistRepository checklistRepo,
         IScheduleService scheduleService, IEmployeeService employeeService)
@@ -155,15 +174,57 @@ public class ChecklistTab : UserControl
             return;
         }
 
+        // 역할별 그룹핑
+        var grouped = _records.GroupBy(r => r.Role).OrderBy(g => RoleOrder(g.Key));
+
         var y = 5;
-        foreach (var record in _records)
+        foreach (var group in grouped)
         {
-            var row = CreateCheckRow(record, y);
-            _checkPanel.Controls.Add(row);
-            y += 48;
+            var roleName = RoleNames.GetValueOrDefault(group.Key, group.Key);
+            var roleColor = RoleColors.GetValueOrDefault(group.Key, ColorPalette.Surface);
+
+            // 역할 헤더
+            var headerPanel = new Panel
+            {
+                Location = new Point(0, y),
+                Size = new Size(_checkPanel.Width - 20, 30),
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+                BackColor = roleColor,
+                Padding = new Padding(10, 0, 0, 0)
+            };
+            headerPanel.Controls.Add(new Label
+            {
+                Text = roleName,
+                Font = RoleHeaderFont,
+                ForeColor = ColorPalette.Text,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+            _checkPanel.Controls.Add(headerPanel);
+            y += 32;
+
+            foreach (var record in group.OrderBy(r => r.SortOrder))
+            {
+                var row = CreateCheckRow(record, y);
+                _checkPanel.Controls.Add(row);
+                y += 48;
+            }
+
+            y += 8; // 그룹 간 여백
         }
+
         _checkPanel.ResumeLayout();
     }
+
+    private static int RoleOrder(string role) => role switch
+    {
+        "all" => 0,
+        "open" => 1,
+        "middle1" => 2,
+        "middle2" => 3,
+        "close" => 4,
+        _ => 5
+    };
 
     private Panel CreateCheckRow(ChecklistRecord record, int y)
     {
@@ -176,7 +237,6 @@ public class ChecklistTab : UserControl
             Padding = new Padding(10, 0, 10, 0)
         };
 
-        // 체크박스
         var chk = new CheckBox
         {
             Checked = record.IsChecked,
@@ -202,7 +262,6 @@ public class ChecklistTab : UserControl
         };
         panel.Controls.Add(chk);
 
-        // 할일 텍스트
         var lblTask = new Label
         {
             Text = record.TaskText ?? "",
@@ -214,7 +273,6 @@ public class ChecklistTab : UserControl
         };
         panel.Controls.Add(lblTask);
 
-        // 완료 정보
         if (record.IsChecked && record.CheckedBy != null)
         {
             var lblInfo = new Label
@@ -230,7 +288,6 @@ public class ChecklistTab : UserControl
             panel.Controls.Add(lblInfo);
         }
 
-        // 하단 구분선
         var divider = new Panel
         {
             Dock = DockStyle.Bottom, Height = 1,
@@ -253,12 +310,10 @@ public class ChecklistTab : UserControl
 
         var barRect = new Rectangle(0, 8, _progressPanel.Width - 1, 16);
 
-        // 배경 바
         using var bgBrush = new SolidBrush(ColorPalette.Border);
         using var bgPath = CubeManager.Controls.RoundedCard.CreateRoundedPath(barRect, 8);
         g.FillPath(bgBrush, bgPath);
 
-        // 진행 바
         if (pct > 0)
         {
             var fillW = Math.Max(16, (int)(barRect.Width * pct));
@@ -268,7 +323,6 @@ public class ChecklistTab : UserControl
             g.FillPath(fillBrush, fillPath);
         }
 
-        // 텍스트
         var text = $"{done}/{total} ({(int)(pct * 100)}%)";
         using var textBrush = new SolidBrush(ColorPalette.TextSecondary);
         using var font = new Font("맑은 고딕", 9f);

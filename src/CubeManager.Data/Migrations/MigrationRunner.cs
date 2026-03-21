@@ -20,7 +20,10 @@ public class MigrationRunner
             new V005_Salary(),
             new V006_HandoverInventory(),
             new V007_ThemeHints(),
-            new V008_ReservationThemeName()
+            new V008_ReservationThemeName(),
+            new V009_FreePass(),
+            new V010_MiceChecklist(),
+            new V011_ChecklistRole()
         ];
     }
 

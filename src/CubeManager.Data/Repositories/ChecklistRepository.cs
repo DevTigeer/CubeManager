@@ -13,16 +13,16 @@ public class ChecklistRepository : IChecklistRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.QueryAsync<ChecklistTemplate>(
-            "SELECT id, day_of_week, task_text, sort_order, is_active " +
-            "FROM checklist_templates ORDER BY day_of_week, sort_order");
+            "SELECT id, day_of_week, role, task_text, sort_order, is_active " +
+            "FROM checklist_templates ORDER BY day_of_week, role, sort_order");
     }
 
     public async Task<IEnumerable<ChecklistTemplate>> GetTemplatesByDayAsync(int dayOfWeek)
     {
         using var conn = _db.CreateConnection();
         return await conn.QueryAsync<ChecklistTemplate>(
-            "SELECT id, day_of_week, task_text, sort_order, is_active " +
-            "FROM checklist_templates WHERE day_of_week=@dayOfWeek AND is_active=1 ORDER BY sort_order",
+            "SELECT id, day_of_week, role, task_text, sort_order, is_active " +
+            "FROM checklist_templates WHERE day_of_week=@dayOfWeek AND is_active=1 ORDER BY role, sort_order",
             new { dayOfWeek });
     }
 
@@ -30,15 +30,15 @@ public class ChecklistRepository : IChecklistRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO checklist_templates (day_of_week, task_text, sort_order, is_active) " +
-            "VALUES (@DayOfWeek, @TaskText, @SortOrder, @IsActive); SELECT last_insert_rowid()", template);
+            "INSERT INTO checklist_templates (day_of_week, role, task_text, sort_order, is_active) " +
+            "VALUES (@DayOfWeek, @Role, @TaskText, @SortOrder, @IsActive); SELECT last_insert_rowid()", template);
     }
 
     public async Task UpdateTemplateAsync(ChecklistTemplate template)
     {
         using var conn = _db.CreateConnection();
         await conn.ExecuteAsync(
-            "UPDATE checklist_templates SET task_text=@TaskText, sort_order=@SortOrder, " +
+            "UPDATE checklist_templates SET task_text=@TaskText, role=@Role, sort_order=@SortOrder, " +
             "is_active=@IsActive WHERE id=@Id", template);
     }
 
@@ -53,13 +53,13 @@ public class ChecklistRepository : IChecklistRepository
         using var conn = _db.CreateConnection();
         var dayOfWeek = (int)DateTime.Parse(date).DayOfWeek;
         return await conn.QueryAsync<ChecklistRecord>(
-            "SELECT t.id AS template_id, t.task_text, t.sort_order, " +
+            "SELECT t.id AS template_id, t.task_text, t.role, t.sort_order, " +
             "COALESCE(r.is_checked, 0) AS is_checked, r.checked_by, r.checked_at, " +
             "r.check_date, r.id " +
             "FROM checklist_templates t " +
             "LEFT JOIN checklist_records r ON t.id = r.template_id AND r.check_date = @date " +
             "WHERE t.day_of_week = @dayOfWeek AND t.is_active = 1 " +
-            "ORDER BY t.sort_order",
+            "ORDER BY t.role, t.sort_order",
             new { date, dayOfWeek });
     }
 
