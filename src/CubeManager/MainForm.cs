@@ -28,9 +28,9 @@ public class MainForm : Form
     {
         _sp = serviceProvider;
         Text = "CubeManager v0.2.0";
-        Size = new Size(1280, 768);
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
+        WindowState = FormWindowState.Maximized;
         BackColor = ColorPalette.Background;
         Font = new Font("맑은 고딕", 10f);
 
