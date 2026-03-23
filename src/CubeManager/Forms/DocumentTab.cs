@@ -73,7 +73,23 @@ public class DocumentTab : UserControl
         btnDelete.Margin = new Padding(5, 0, 0, 0);
         btnDelete.Click += BtnDelete_Click;
 
-        topBar.Controls.AddRange([btnNew, _btnEdit, _btnSave, btnDelete]);
+        var txtSearch = new TextBox
+        {
+            PlaceholderText = "🔍 문서 검색...",
+            Size = new Size(180, 28),
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(20, 2, 0, 0)
+        };
+        txtSearch.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                SearchDocuments(txtSearch.Text.Trim());
+            }
+        };
+
+        topBar.Controls.AddRange([btnNew, _btnEdit, _btnSave, btnDelete, txtSearch]);
 
         // ═══ Split: 좌측 트리 | 우측 뷰어 ═══
         var split = new SplitContainer
@@ -299,6 +315,51 @@ public class DocumentTab : UserControl
         var fi = new FileInfo(_currentFile);
         _lblFileMeta.Text = $"수정: {fi.LastWriteTime:yyyy-MM-dd HH:mm}  ·  크기: {fi.Length:N0} bytes";
         ToastNotification.Show("저장되었습니다.", ToastType.Success);
+    }
+
+    /// <summary>파일명 또는 내용에서 키워드 검색 → 트리에서 첫 번째 매칭 노드 선택</summary>
+    private void SearchDocuments(string keyword)
+    {
+        if (string.IsNullOrEmpty(keyword)) { LoadTree(); return; }
+
+        var results = Directory.GetFiles(_docsRoot, "*.md", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(".trash"))
+            .Where(f =>
+            {
+                if (Path.GetFileNameWithoutExtension(f)
+                    .Contains(keyword, StringComparison.OrdinalIgnoreCase)) return true;
+                try { return File.ReadAllText(f).Contains(keyword, StringComparison.OrdinalIgnoreCase); }
+                catch { return false; }
+            })
+            .ToList();
+
+        if (results.Count == 0)
+        {
+            ToastNotification.Show($"'{keyword}' 검색 결과 없음", ToastType.Warning);
+            return;
+        }
+
+        // 첫 번째 결과를 트리에서 찾아 선택
+        var firstResult = results[0];
+        var node = FindNodeByPath(_treeView.Nodes, firstResult);
+        if (node != null)
+        {
+            _treeView.SelectedNode = node;
+            node.EnsureVisible();
+        }
+
+        ToastNotification.Show($"{results.Count}건 검색됨", ToastType.Info);
+    }
+
+    private static TreeNode? FindNodeByPath(TreeNodeCollection nodes, string path)
+    {
+        foreach (TreeNode node in nodes)
+        {
+            if (node.Tag is string tag && tag == path) return node;
+            var child = FindNodeByPath(node.Nodes, path);
+            if (child != null) return child;
+        }
+        return null;
     }
 
     private void BtnNew_Click(object? sender, EventArgs e)
