@@ -26,7 +26,7 @@ public class CustomerCalcDialog : Form
     private readonly NumericUpDown _numAdults;
     private readonly NumericUpDown _numChildren;
     private readonly CheckBox _chkAccount;
-    private readonly CheckBox _chkCardChild;
+    // 아동은 계좌/현금 체크 여부로 자동 결정 (별도 체크박스 불필요)
     private readonly Panel _discountPanel;
     private readonly Label _lblResult;
     private readonly Label _lblBreakdown;
@@ -82,14 +82,13 @@ public class CustomerCalcDialog : Form
 
         y += 28;
 
-        _chkCardChild = new CheckBox
+        Controls.Add(new Label
         {
-            Text = "아동 카드결제 (11,000원, 미체크 시 10,000원)",
-            Location = new Point(15, y), Size = new Size(350, 24),
-            Font = new Font("맑은 고딕", 9.5f)
-        };
-        _chkCardChild.CheckedChanged += (_, _) => Recalculate();
-        Controls.Add(_chkCardChild);
+            Text = "※ 아동(초2이하): 카드 11,000원 / 현금·계좌 10,000원",
+            Location = new Point(15, y), Size = new Size(370, 22),
+            Font = new Font("맑은 고딕", 9f),
+            ForeColor = ColorPalette.TextSecondary
+        });
 
         y += 34;
 
@@ -255,8 +254,8 @@ public class CustomerCalcDialog : Form
         if (!PriceTable.TryGetValue(adults, out var basePrice))
             basePrice = adults <= 1 ? 0 : PriceTable.OrderByDescending(kv => kv.Key).First().Value;
 
-        // 2. 아동가
-        var childUnitPrice = _chkCardChild.Checked ? ChildCardPrice : ChildCashPrice;
+        // 2. 아동가 (계좌/현금 결제 시 10,000원, 카드 시 11,000원)
+        var childUnitPrice = _chkAccount.Checked ? ChildCashPrice : ChildCardPrice;
         var childTotal = children * childUnitPrice;
 
         // 3. 계좌/현금 할인
@@ -289,7 +288,10 @@ public class CustomerCalcDialog : Form
         var lines = new List<string>();
         lines.Add($"성인 기본가: {basePrice:N0}원 ({adults}인)");
         if (children > 0)
-            lines.Add($"아동가: +{childTotal:N0}원 ({children}명 × {childUnitPrice:N0})");
+        {
+            var childPayType = _chkAccount.Checked ? "현금/계좌" : "카드";
+            lines.Add($"아동가({childPayType}): +{childTotal:N0}원 ({children}명 × {childUnitPrice:N0})");
+        }
         if (accountDsc > 0)
             lines.Add($"계좌/현금 할인: -{accountDsc:N0}원 ({adults}명 × {AccountDiscount:N0})");
         if (militaryDsc > 0)
