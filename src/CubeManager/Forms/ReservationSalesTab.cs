@@ -63,17 +63,54 @@ public class ReservationSalesTab : UserControl
             TextAlign = ContentAlignment.MiddleLeft
         });
 
+        // 날짜 입력: TextBox (6자리 단축입력 지원) + 달력 버튼
+        var txtDate = new TextBox
+        {
+            Text = DateTime.Today.ToString("yyyy-MM-dd"),
+            Size = new Size(100, 28),
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(5, 2, 0, 0),
+            TextAlign = HorizontalAlignment.Center
+        };
+        txtDate.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.SuppressKeyPress = true;
+            if (TryParseShortDate(txtDate.Text.Trim(), out var parsed))
+            {
+                _dtpDate!.Value = parsed;
+                txtDate.Text = parsed.ToString("yyyy-MM-dd");
+            }
+            else
+            {
+                ToastNotification.Show("날짜 형식 오류 (예: 260323, 2026-03-23)", ToastType.Warning);
+            }
+        };
+        txtDate.Leave += (_, _) =>
+        {
+            if (TryParseShortDate(txtDate.Text.Trim(), out var parsed))
+            {
+                _dtpDate!.Value = parsed;
+                txtDate.Text = parsed.ToString("yyyy-MM-dd");
+            }
+        };
+        topPanel.Controls.Add(txtDate);
+
         _dtpDate = new DateTimePicker
         {
-            Format = DateTimePickerFormat.Short,
-            Size = new Size(130, 28),
-            Value = DateTime.Today
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = " ",
+            Size = new Size(28, 28),
+            ShowUpDown = false,
+            Margin = new Padding(0, 2, 0, 0)
         };
         _dtpDate.ValueChanged += (_, _) =>
         {
             _currentDate = _dtpDate.Value.ToString("yyyy-MM-dd");
+            txtDate.Text = _currentDate;
             _ = LoadAllAsync();
         };
+        _dtpDate.Value = DateTime.Today;
         topPanel.Controls.Add(_dtpDate);
 
         var btnFetch = CreateBtn("웹 조회", ColorPalette.Info);
@@ -922,6 +959,58 @@ public class ReservationSalesTab : UserControl
         parent.Controls.Add(lbl);
         y += 22;
         return lbl;
+    }
+
+    /// <summary>
+    /// 단축 날짜 파싱: "260323"→2026-03-23, "0323"→올해-03-23, "23"→올해-이번달-23
+    /// 표준 형식도 지원: "2026-03-23", "2026/03/23"
+    /// </summary>
+    private static bool TryParseShortDate(string input, out DateTime result)
+    {
+        result = default;
+        if (string.IsNullOrWhiteSpace(input)) return false;
+
+        // 표준 형식 시도
+        if (DateTime.TryParse(input, out result)) return true;
+
+        // 숫자만 추출
+        var digits = new string(input.Where(char.IsDigit).ToArray());
+
+        var now = DateTime.Today;
+        int year, month, day;
+
+        switch (digits.Length)
+        {
+            case 6: // YYMMDD → 260323
+                year = 2000 + int.Parse(digits[..2]);
+                month = int.Parse(digits[2..4]);
+                day = int.Parse(digits[4..6]);
+                break;
+            case 8: // YYYYMMDD → 20260323
+                year = int.Parse(digits[..4]);
+                month = int.Parse(digits[4..6]);
+                day = int.Parse(digits[6..8]);
+                break;
+            case 4: // MMDD → 0323
+                year = now.Year;
+                month = int.Parse(digits[..2]);
+                day = int.Parse(digits[2..4]);
+                break;
+            case 2: // DD → 23
+                year = now.Year;
+                month = now.Month;
+                day = int.Parse(digits);
+                break;
+            default:
+                return false;
+        }
+
+        try
+        {
+            result = new DateTime(year, month, day);
+            return true;
+        }
+        catch { return false; }
     }
 }
 
