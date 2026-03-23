@@ -175,21 +175,10 @@ public class ScheduleTab : UserControl
             .GroupBy(s => new { s.EmployeeId, s.EmployeeName })
             .OrderBy(g => g.Key.EmployeeName);
 
-        var dayNames = new[] { "일", "월", "화", "수", "목", "금", "토" };
-
         foreach (var grp in empGroups)
         {
             var name = grp.Key.EmployeeName ?? $"ID:{grp.Key.EmployeeId}";
             var totalHours = grp.Sum(s => TimeHelper.CalcHours(s.StartTime, s.EndTime));
-            var workDays = grp.Select(s => s.WorkDate).Distinct().Count();
-
-            // 근무 요일 표시
-            var workDaySet = grp
-                .Select(s => DateTime.Parse(s.WorkDate).DayOfWeek)
-                .Distinct()
-                .OrderBy(d => d == DayOfWeek.Sunday ? 7 : (int)d)
-                .Select(d => dayNames[(int)d]);
-            var dayStr = string.Join("·", workDaySet);
 
             // 시간 포맷
             var hoursStr = totalHours % 1 == 0 ? $"{(int)totalHours}h" : $"{totalHours:F1}h";
@@ -218,7 +207,7 @@ public class ScheduleTab : UserControl
 
             var lblName = new Label
             {
-                Text = $"{name}  {hoursStr}  {dayStr}",
+                Text = $"{name}  {hoursStr}",
                 Location = new Point(18, 0),
                 Size = new Size(158, 36),
                 Font = new Font("맑은 고딕", 8.5f),

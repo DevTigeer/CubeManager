@@ -49,6 +49,8 @@ public class ReservationSalesTab : UserControl
         {
             Dock = DockStyle.Top, Height = 45,
             FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoScroll = false,
             Padding = new Padding(0, 5, 0, 5)
         };
 

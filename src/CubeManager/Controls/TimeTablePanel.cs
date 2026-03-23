@@ -220,17 +220,13 @@ public class TimeTablePanel : Panel
                 var accentColor = GetAccentColor(empColor);
                 var rect = new Rectangle(x, y, Math.Max(blockW, 20), Math.Max(h, cellH));
 
-                // ── 카드 배경: 흰색 + 미세한 테두리 ──
+                // ── 카드 배경: 연한 직원 색상 (표 격자와 구분) ──
                 using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                using var cardFill = new SolidBrush(ColorPalette.Surface);
+                using var cardFill = new SolidBrush(Color.FromArgb(35, empColor));
                 g.FillPath(cardFill, cardPath);
 
-                // 아주 연한 employee 색상 워시
-                using var colorWash = new SolidBrush(Color.FromArgb(25, empColor));
-                g.FillPath(colorWash, cardPath);
-
                 // 카드 테두리 (미세)
-                using var cardBorderPen = new Pen(Color.FromArgb(50, empColor), 0.5f);
+                using var cardBorderPen = new Pen(Color.FromArgb(60, empColor), 0.5f);
                 g.DrawPath(cardBorderPen, cardPath);
 
                 // ── 좌측 컬러바 (4px, 직원 식별용) ──
@@ -239,61 +235,26 @@ public class TimeTablePanel : Panel
                 using var barBrush = new SolidBrush(accentColor);
                 g.FillPath(barBrush, barPath);
 
-                // ── 텍스트 영역 ──
+                // ── 이름만 블록 중앙에 표시 (시간 제거, 줄넘김 허용) ──
                 var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
-                var innerX = rect.X + AccentBarWidth + 4;
-                var innerW = rect.Width - AccentBarWidth - 8;
-                var innerY = rect.Y + 4;
+                var innerX = rect.X + AccentBarWidth + 3;
+                var innerW = rect.Width - AccentBarWidth - 6;
+                var innerH = rect.Height - 4;
 
-                if (blockW >= 65)
-                {
-                    // 넓은 블록: 이름 + 시간 2줄
-                    using var nameClr = new SolidBrush(ColorPalette.Text);
-                    g.DrawString(name, cardNameFont, nameClr,
-                        new RectangleF(innerX, innerY, innerW, cardNameFont.Height + 2),
-                        new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
+                // 블록 폭에 따라 폰트 크기 조정
+                var nameFont = blockW >= 55 ? cardNameFont : cardSmallFont;
+                using var nameClr = new SolidBrush(accentColor);
 
-                    if (rect.Height > 36)
+                // 이름을 블록 영역 내 수평·수직 중앙, 넘치면 줄넘김
+                var textRect = new RectangleF(innerX, rect.Y + 2, innerW, innerH);
+                g.DrawString(name, nameFont, nameClr, textRect,
+                    new StringFormat
                     {
-                        var timeStr = $"{ShortTime(current.sched.StartTime)}-{ShortTime(current.sched.EndTime)}";
-                        using var timeClr = new SolidBrush(ColorPalette.TextSecondary);
-                        g.DrawString(timeStr, cardTimeFont, timeClr,
-                            new RectangleF(innerX, innerY + cardNameFont.Height + 1, innerW, cardTimeFont.Height + 2),
-                            new StringFormat { FormatFlags = StringFormatFlags.NoWrap });
-                    }
-                }
-                else if (blockW >= 40)
-                {
-                    // 중간 블록: 축약 이름 + 시간
-                    var shortName = name.Length > 4 ? name[..4] : name;
-                    using var nameClr = new SolidBrush(ColorPalette.Text);
-                    g.DrawString(shortName, cardSmallFont, nameClr,
-                        new RectangleF(innerX, innerY, innerW, cardSmallFont.Height + 2),
-                        new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
-
-                    if (rect.Height > 32)
-                    {
-                        var timeStr = $"{ShortTime(current.sched.StartTime)}-{ShortTime(current.sched.EndTime)}";
-                        using var timeClr = new SolidBrush(ColorPalette.TextSecondary);
-                        g.DrawString(timeStr, cardTimeFont, timeClr,
-                            new RectangleF(innerX, innerY + cardSmallFont.Height, innerW, cardTimeFont.Height + 2),
-                            new StringFormat { FormatFlags = StringFormatFlags.NoWrap });
-                    }
-                }
-                else
-                {
-                    // 좁은 블록: 이니셜 2자 (세로 중앙)
-                    var initials = name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
-                    using var nameClr = new SolidBrush(accentColor);
-                    g.DrawString(initials, cardSmallFont, nameClr,
-                        new RectangleF(innerX, rect.Y, innerW, rect.Height),
-                        new StringFormat
-                        {
-                            Alignment = StringAlignment.Center,
-                            LineAlignment = StringAlignment.Center,
-                            FormatFlags = StringFormatFlags.NoWrap
-                        });
-                }
+                        Alignment = StringAlignment.Center,
+                        LineAlignment = StringAlignment.Center,
+                        Trimming = StringTrimming.EllipsisCharacter
+                        // NoWrap 제거 → 자동 줄넘김
+                    });
             }
         }
 
