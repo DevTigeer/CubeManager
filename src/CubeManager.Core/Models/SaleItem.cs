@@ -10,6 +10,8 @@ public class SaleItem
     public string PaymentType { get; set; } = "card"; // card / cash / transfer
     public string Category { get; set; } = "revenue"; // revenue / expense
     public DateTime CreatedAt { get; set; }
+    public string? Note { get; set; }
+    public bool IsVerified { get; set; }
 }
 
 public class DailySales

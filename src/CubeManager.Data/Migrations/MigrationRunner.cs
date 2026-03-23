@@ -23,7 +23,8 @@ public class MigrationRunner
             new V008_ReservationThemeName(),
             new V009_FreePass(),
             new V010_MiceChecklist(),
-            new V011_ChecklistRole()
+            new V011_ChecklistRole(),
+            new V012_SaleNoteVerify()
         ];
     }
 

@@ -1,4 +1,5 @@
 using System.Drawing;
+using CubeManager.Dialogs;
 using CubeManager.Helpers;
 
 namespace CubeManager.Controls;
@@ -66,6 +67,28 @@ public class HeaderPanel : Panel
         tip.SetToolTip(btnRefresh, "데이터 새로고침 (모든 탭 최신화)");
         btnRefresh.Click += (_, _) => RefreshRequested?.Invoke();
 
+        // 우측: 계산기 버튼
+        var btnCalc = new Button
+        {
+            Text = "\U0001f9ee",
+            Font = new Font("Segoe UI Emoji", 12f),
+            Size = new Size(40, 34),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorPalette.Surface,
+            ForeColor = ColorPalette.TextSecondary,
+            Cursor = Cursors.Hand,
+            Dock = DockStyle.Right,
+            Margin = new Padding(0, 8, 0, 8)
+        };
+        btnCalc.FlatAppearance.BorderSize = 0;
+        btnCalc.FlatAppearance.MouseOverBackColor = ColorPalette.NavHoverBg;
+        tip.SetToolTip(btnCalc, "간이 계산기");
+        btnCalc.Click += (_, _) =>
+        {
+            using var dlg = new CalculatorDialog();
+            dlg.ShowDialog(FindForm());
+        };
+
         // 우측: 지점명
         var lblBranch = new Label
         {
@@ -80,6 +103,7 @@ public class HeaderPanel : Panel
 
         // Dock.Right는 역순 추가: 가장 오른쪽부터
         Controls.Add(_lblTime);
+        Controls.Add(btnCalc);
         Controls.Add(btnRefresh);
         Controls.Add(lblBranch);
         Controls.Add(lblApp);

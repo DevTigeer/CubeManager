@@ -102,6 +102,14 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(btnRecalc);
 
+        var btnCustomerCalc = CreateBtn("손님계산", ColorPalette.AccentBlue.Main);
+        btnCustomerCalc.Click += (_, _) =>
+        {
+            using var dlg = new Dialogs.CustomerCalcDialog();
+            dlg.ShowDialog(this);
+        };
+        topPanel.Controls.Add(btnCustomerCalc);
+
         var btnAddWalkin = CreateBtn("+ 워크인", ColorPalette.Primary);
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
@@ -144,7 +152,10 @@ public class ReservationSalesTab : UserControl
             new DataGridViewTextBoxColumn { Name = "CashAmt", HeaderText = "현금금액", FillWeight = 13,
                 DefaultCellStyle = GridTheme.AmountStyle },
             new DataGridViewTextBoxColumn { Name = "TransferAmt", HeaderText = "계좌금액", FillWeight = 13,
-                DefaultCellStyle = GridTheme.AmountStyle }
+                DefaultCellStyle = GridTheme.AmountStyle },
+            new DataGridViewTextBoxColumn { Name = "Note", HeaderText = "비고", FillWeight = 12 },
+            new DataGridViewCheckBoxColumn { Name = "Verified", HeaderText = "정산", FillWeight = 5,
+                FalseValue = false, TrueValue = true }
         );
         _gridMain.CellEndEdit += GridMain_CellEndEdit;
         _gridMain.CellMouseClick += GridMain_CellMouseClick;
