@@ -38,7 +38,7 @@ public class AdminTab : UserControl
     // ===== 직원 관리 탭 =====
     private readonly DataGridView _gridEmployees;
 
-    // ===== 미끼관리 탭 =====
+    // ===== 알람 탭 =====
     private readonly DataGridView _gridMice;
 
     // ===== 체크리스트 관리 탭 =====
@@ -517,10 +517,10 @@ public class AdminTab : UserControl
         return page;
     }
 
-    // ==================== 탭 3: 미끼관리 ====================
+    // ==================== 탭 3: 알람 관리 ====================
     private TabPage BuildMiceTab()
     {
-        var page = new TabPage("🎯 미끼관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("🔔 알람") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         var toolbar = new FlowLayoutPanel
@@ -594,7 +594,165 @@ public class AdminTab : UserControl
             catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
         };
 
+        // ─── 하단: HR 자동 알림 설정 ───
+        var alertSettingsPanel = new GroupBox
+        {
+            Text = "⚙️ HR 자동 알림 설정",
+            Dock = DockStyle.Bottom, Height = 200,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            Padding = new Padding(12, 16, 12, 8)
+        };
+
+        var settingsFont = new Font("맑은 고딕", 9.5f, FontStyle.Regular);
+        var sy = 22;
+
+        // 1) 체크리스트 미완료 알림
+        var chkChecklist = new CheckBox
+        {
+            Text = "체크리스트 미완료 알림",
+            Location = new Point(15, sy), Size = new Size(200, 24),
+            Font = settingsFont, Checked = true
+        };
+        alertSettingsPanel.Controls.Add(chkChecklist);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "출근 후", Location = new Point(220, sy + 2), Size = new Size(45, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+        var numChecklistMin = new NumericUpDown
+        {
+            Location = new Point(268, sy - 1), Size = new Size(60, 24),
+            Minimum = 10, Maximum = 180, Value = 60, Increment = 10,
+            Font = settingsFont
+        };
+        alertSettingsPanel.Controls.Add(numChecklistMin);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "분 이내 50% 미만 시 알림", Location = new Point(332, sy + 2), Size = new Size(200, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+
+        sy += 32;
+
+        // 2) 인수인계 미확인 알림
+        var chkHandover = new CheckBox
+        {
+            Text = "인수인계 미확인 알림",
+            Location = new Point(15, sy), Size = new Size(200, 24),
+            Font = settingsFont, Checked = true
+        };
+        alertSettingsPanel.Controls.Add(chkHandover);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "출근 후", Location = new Point(220, sy + 2), Size = new Size(45, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+        var numHandoverMin = new NumericUpDown
+        {
+            Location = new Point(268, sy - 1), Size = new Size(60, 24),
+            Minimum = 10, Maximum = 120, Value = 30, Increment = 10,
+            Font = settingsFont
+        };
+        alertSettingsPanel.Controls.Add(numHandoverMin);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "분 이내 미확인 시 알림", Location = new Point(332, sy + 2), Size = new Size(200, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+
+        sy += 32;
+
+        // 3) 무단결근 자동 감지
+        var chkNoShow = new CheckBox
+        {
+            Text = "무단결근 자동 감지",
+            Location = new Point(15, sy), Size = new Size(200, 24),
+            Font = settingsFont, Checked = true
+        };
+        alertSettingsPanel.Controls.Add(chkNoShow);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "매일 12:00 이후 스케줄 대비 출근 미기록 시 알림",
+            Location = new Point(220, sy + 2), Size = new Size(350, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+
+        sy += 32;
+
+        // 4) 지각 누적 경고
+        var chkLateAccum = new CheckBox
+        {
+            Text = "지각 누적 경고",
+            Location = new Point(15, sy), Size = new Size(200, 24),
+            Font = settingsFont, Checked = true
+        };
+        alertSettingsPanel.Controls.Add(chkLateAccum);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "월간 지각", Location = new Point(220, sy + 2), Size = new Size(55, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+        var numLateThreshold = new NumericUpDown
+        {
+            Location = new Point(278, sy - 1), Size = new Size(50, 24),
+            Minimum = 1, Maximum = 10, Value = 3,
+            Font = settingsFont
+        };
+        alertSettingsPanel.Controls.Add(numLateThreshold);
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "회 이상 시 경고", Location = new Point(332, sy + 2), Size = new Size(150, 20),
+            Font = settingsFont, ForeColor = ColorPalette.TextSecondary
+        });
+
+        sy += 36;
+
+        // 저장 버튼
+        var btnSaveAlertSettings = ButtonFactory.CreatePrimary("설정 저장", 90);
+        btnSaveAlertSettings.Location = new Point(15, sy);
+        btnSaveAlertSettings.Height = 30;
+        btnSaveAlertSettings.Click += async (_, _) =>
+        {
+            try
+            {
+                await _configRepo.SetAsync("alert_checklist_enabled", chkChecklist.Checked ? "1" : "0");
+                await _configRepo.SetAsync("alert_checklist_minutes", numChecklistMin.Value.ToString());
+                await _configRepo.SetAsync("alert_handover_enabled", chkHandover.Checked ? "1" : "0");
+                await _configRepo.SetAsync("alert_handover_minutes", numHandoverMin.Value.ToString());
+                await _configRepo.SetAsync("alert_noshow_enabled", chkNoShow.Checked ? "1" : "0");
+                await _configRepo.SetAsync("alert_late_enabled", chkLateAccum.Checked ? "1" : "0");
+                await _configRepo.SetAsync("alert_late_threshold", numLateThreshold.Value.ToString());
+                ToastNotification.Show("알림 설정이 저장되었습니다.", ToastType.Success);
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+        alertSettingsPanel.Controls.Add(btnSaveAlertSettings);
+
+        // 설정 로드
+        page.VisibleChanged += async (_, _) =>
+        {
+            if (!page.Visible) return;
+            try
+            {
+                chkChecklist.Checked = (await _configRepo.GetAsync("alert_checklist_enabled")) != "0";
+                var clMin = await _configRepo.GetAsync("alert_checklist_minutes");
+                if (int.TryParse(clMin, out var clv)) numChecklistMin.Value = Math.Clamp(clv, 10, 180);
+
+                chkHandover.Checked = (await _configRepo.GetAsync("alert_handover_enabled")) != "0";
+                var hoMin = await _configRepo.GetAsync("alert_handover_minutes");
+                if (int.TryParse(hoMin, out var hov)) numHandoverMin.Value = Math.Clamp(hov, 10, 120);
+
+                chkNoShow.Checked = (await _configRepo.GetAsync("alert_noshow_enabled")) != "0";
+                chkLateAccum.Checked = (await _configRepo.GetAsync("alert_late_enabled")) != "0";
+                var ltThr = await _configRepo.GetAsync("alert_late_threshold");
+                if (int.TryParse(ltThr, out var ltv)) numLateThreshold.Value = Math.Clamp(ltv, 1, 10);
+            }
+            catch { /* 첫 실행 시 기본값 사용 */ }
+        };
+
         page.Controls.Add(_gridMice);
+        page.Controls.Add(alertSettingsPanel);
         page.Controls.Add(toolbar);
         return page;
     }
@@ -956,7 +1114,7 @@ public class AdminTab : UserControl
         catch { /* 무시 */ }
     }
 
-    // ========== 미끼관리 ==========
+    // ========== 알람(미끼) 관리 ==========
     private async Task LoadMiceAsync()
     {
         try

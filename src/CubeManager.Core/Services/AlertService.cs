@@ -13,6 +13,7 @@ public class AlertService : IAlertService
     private readonly IHandoverRepository _handoverRepo;
     private readonly IScheduleRepository _scheduleRepo;
     private readonly IEmployeeRepository _employeeRepo;
+    private readonly IConfigRepository _configRepo;
 
     public AlertService(
         IAlertLogRepository alertRepo,
@@ -20,7 +21,8 @@ public class AlertService : IAlertService
         IChecklistRepository checklistRepo,
         IHandoverRepository handoverRepo,
         IScheduleRepository scheduleRepo,
-        IEmployeeRepository employeeRepo)
+        IEmployeeRepository employeeRepo,
+        IConfigRepository configRepo)
     {
         _alertRepo = alertRepo;
         _attendanceRepo = attendanceRepo;
@@ -28,11 +30,16 @@ public class AlertService : IAlertService
         _handoverRepo = handoverRepo;
         _scheduleRepo = scheduleRepo;
         _employeeRepo = employeeRepo;
+        _configRepo = configRepo;
     }
 
-    /// <summary>체크리스트 미완료 검사: 출근 후 60분 경과 + 완료율 0%</summary>
+    /// <summary>체크리스트 미완료 검사: 출근 후 N분 경과 + 완료율 50% 미만</summary>
     public async Task CheckChecklistDelayAsync()
     {
+        // 설정 확인 (비활성이면 스킵)
+        if (await _configRepo.GetAsync("alert_checklist_enabled") == "0") return;
+        var delayMinutes = await _configRepo.GetIntAsync("alert_checklist_minutes", 60);
+
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         var now = DateTime.Now;
 
@@ -43,7 +50,7 @@ public class AlertService : IAlertService
 
             var clockIn = DateTime.Parse(att.ClockIn);
             var elapsed = (now - clockIn).TotalMinutes;
-            if (elapsed < 60) continue; // 아직 1시간 안 됨
+            if (elapsed < delayMinutes) continue;
 
             // 이미 오늘 이 직원에 대해 알림 생성했는지 확인
             if (await _alertRepo.ExistsTodayAsync(AlertTypes.ChecklistDelay, att.EmployeeId))
@@ -76,9 +83,12 @@ public class AlertService : IAlertService
         }
     }
 
-    /// <summary>인수인계 미확인 검사: 출근 후 30분 경과 + 미확인 건 존재</summary>
+    /// <summary>인수인계 미확인 검사: 출근 후 N분 경과 + 미확인 건 존재</summary>
     public async Task CheckHandoverUnreadAsync()
     {
+        if (await _configRepo.GetAsync("alert_handover_enabled") == "0") return;
+        var delayMinutes = await _configRepo.GetIntAsync("alert_handover_minutes", 30);
+
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         var now = DateTime.Now;
 
@@ -89,7 +99,7 @@ public class AlertService : IAlertService
 
             var clockIn = DateTime.Parse(att.ClockIn);
             var elapsed = (now - clockIn).TotalMinutes;
-            if (elapsed < 30) continue;
+            if (elapsed < delayMinutes) continue;
 
             if (await _alertRepo.ExistsTodayAsync(AlertTypes.HandoverUnread, att.EmployeeId))
                 continue;
@@ -122,8 +132,10 @@ public class AlertService : IAlertService
     /// <summary>무단결근 감지: 12시 기준, 스케줄 있는데 출근 기록 없는 직원</summary>
     public async Task CheckNoShowAsync()
     {
+        if (await _configRepo.GetAsync("alert_noshow_enabled") == "0") return;
+
         var now = DateTime.Now;
-        if (now.Hour < 12) return; // 12시 이전에는 체크 안 함
+        if (now.Hour < 12) return;
 
         var today = DateTime.Today.ToString("yyyy-MM-dd");
 
@@ -163,9 +175,12 @@ public class AlertService : IAlertService
         }
     }
 
-    /// <summary>지각 누적 경고: 이번 달 지각 3회 이상</summary>
+    /// <summary>지각 누적 경고: 이번 달 지각 N회 이상</summary>
     public async Task CheckLateAccumulateAsync()
     {
+        if (await _configRepo.GetAsync("alert_late_enabled") == "0") return;
+        var threshold = await _configRepo.GetIntAsync("alert_late_threshold", 3);
+
         var now = DateTime.Now;
         var yearMonth = now.ToString("yyyy-MM");
         var today = now.ToString("yyyy-MM-dd");
@@ -173,14 +188,11 @@ public class AlertService : IAlertService
         var employees = await _employeeRepo.GetActiveAsync();
         foreach (var emp in employees)
         {
-            // 이번 달 지각 횟수 (attendance 테이블에서)
-            var attendances = await _attendanceRepo.GetByDateAsync(today); // today용이지만 월간 조회 필요
-            // alert_logs에서 이미 이번 달 late_accumulate 알림이 있는지
             if (await _alertRepo.ExistsTodayAsync(AlertTypes.LateAccumulate, emp.Id))
                 continue;
 
             var lateCount = await _alertRepo.GetMonthlyCountAsync(emp.Id, AlertTypes.LateArrival, yearMonth);
-            if (lateCount >= 3)
+            if (lateCount >= threshold)
             {
                 // 이번 달 누적 경고 이미 발생했는지 확인
                 var existingWarn = await _alertRepo.GetMonthlyCountAsync(emp.Id, AlertTypes.LateAccumulate, yearMonth);
