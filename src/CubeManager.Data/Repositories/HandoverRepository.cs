@@ -12,14 +12,14 @@ public class HandoverRepository : IHandoverRepository
     public async Task<(IEnumerable<Handover> items, int total)> GetPagedAsync(int page, int pageSize, string? keyword = null)
     {
         using var conn = _db.CreateConnection();
-        var where = string.IsNullOrEmpty(keyword) ? "" : "WHERE author_name LIKE @kw OR content LIKE @kw";
+        var where = string.IsNullOrEmpty(keyword) ? "" : "WHERE author_name LIKE @kw OR content LIKE @kw OR title LIKE @kw";
         var kw = $"%{keyword}%";
 
         var total = await conn.ExecuteScalarAsync<int>(
             $"SELECT COUNT(1) FROM handovers {where}", new { kw });
 
         var items = await conn.QueryAsync<Handover>(
-            $"SELECT id, author_name, content, created_at, updated_at FROM handovers {where} " +
+            $"SELECT id, title, author_name, content, is_next_worker_checked, created_at, updated_at FROM handovers {where} " +
             "ORDER BY created_at DESC LIMIT @limit OFFSET @offset",
             new { kw, limit = pageSize, offset = (page - 1) * pageSize });
 
@@ -35,12 +35,20 @@ public class HandoverRepository : IHandoverRepository
             new { handoverId });
     }
 
-    public async Task<int> InsertHandoverAsync(string authorName, string content)
+    public async Task<int> InsertHandoverAsync(string authorName, string content, string? title = null)
     {
         using var conn = _db.CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO handovers (author_name, content) VALUES (@authorName, @content); " +
-            "SELECT last_insert_rowid()", new { authorName, content });
+            "INSERT INTO handovers (title, author_name, content) VALUES (@title, @authorName, @content); " +
+            "SELECT last_insert_rowid()", new { title = title ?? "", authorName, content });
+    }
+
+    public async Task UpdateNextWorkerCheckAsync(int id, bool isChecked)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE handovers SET is_next_worker_checked = @isChecked WHERE id = @id",
+            new { id, isChecked = isChecked ? 1 : 0 });
     }
 
     public async Task<bool> DeleteHandoverAsync(int id)

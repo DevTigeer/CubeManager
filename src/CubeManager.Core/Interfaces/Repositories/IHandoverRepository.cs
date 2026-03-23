@@ -6,7 +6,8 @@ public interface IHandoverRepository
 {
     Task<(IEnumerable<Handover> items, int total)> GetPagedAsync(int page, int pageSize, string? keyword = null);
     Task<IEnumerable<HandoverComment>> GetCommentsAsync(int handoverId);
-    Task<int> InsertHandoverAsync(string authorName, string content);
+    Task<int> InsertHandoverAsync(string authorName, string content, string? title = null);
+    Task UpdateNextWorkerCheckAsync(int id, bool isChecked);
     Task<bool> DeleteHandoverAsync(int id);
     Task<int> InsertCommentAsync(int handoverId, string authorName, string content, int? parentCommentId = null);
     Task<bool> DeleteCommentAsync(int id);

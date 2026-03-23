@@ -24,7 +24,8 @@ public class MigrationRunner
             new V009_FreePass(),
             new V010_MiceChecklist(),
             new V011_ChecklistRole(),
-            new V012_SaleNoteVerify()
+            new V012_SaleNoteVerify(),
+            new V013_HandoverTitleCheck()
         ];
     }
 

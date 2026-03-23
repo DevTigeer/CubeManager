@@ -3,8 +3,10 @@ namespace CubeManager.Core.Models;
 public class Handover
 {
     public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string AuthorName { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
+    public bool IsNextWorkerChecked { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<HandoverComment> Comments { get; set; } = [];
