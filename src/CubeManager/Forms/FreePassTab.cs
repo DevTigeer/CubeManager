@@ -117,6 +117,15 @@ public class FreePassTab : UserControl
         btnIssue.Click += BtnIssue_Click;
         inputFlow.Controls.Add(btnIssue);
 
+        // Enter키로 발급
+        void HandleEnterKey(object? s, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; BtnIssue_Click(btnIssue, EventArgs.Empty); }
+        }
+        _txtName.KeyDown += HandleEnterKey;
+        _txtPhone.KeyDown += HandleEnterKey;
+        _txtNote.KeyDown += HandleEnterKey;
+
         inputBox.Controls.Add(inputFlow);
 
         // ========== 3. 그리드 ==========

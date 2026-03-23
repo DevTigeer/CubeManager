@@ -83,6 +83,13 @@ public class AttendanceTab : UserControl
         _btnClockOut.Font = new Font("맑은 고딕", 13f, FontStyle.Bold);
         _btnClockOut.Click += BtnClockOut_Click;
 
+        // 키보드 지원: ComboBox에서 Enter→출근, Shift+Enter→퇴근
+        _cmbEmployee.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; BtnClockIn_Click(null, EventArgs.Empty); }
+            else if (e.KeyCode == Keys.Enter && e.Shift) { e.SuppressKeyPress = true; BtnClockOut_Click(null, EventArgs.Empty); }
+        };
+
         btnPanel.Controls.AddRange([lblEmp, _cmbEmployee, _btnClockIn, _btnClockOut, _lblClock]);
 
         leftPanel.Controls.Add(btnPanel);

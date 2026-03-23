@@ -37,8 +37,11 @@ public class SalaryTab : UserControl
             TextAlign = ContentAlignment.MiddleLeft
         });
 
+        var salaryTip = new ToolTip();
+
         var btnPrev = ButtonFactory.CreateNavArrow("◀");
         btnPrev.Click += (_, _) => Navigate(-1);
+        salaryTip.SetToolTip(btnPrev, "이전 달");
 
         _lblMonth = new Label
         {
@@ -49,10 +52,18 @@ public class SalaryTab : UserControl
 
         var btnNext = ButtonFactory.CreateNavArrow("▶");
         btnNext.Click += (_, _) => Navigate(1);
+        salaryTip.SetToolTip(btnNext, "다음 달");
 
         var btnCalc = ButtonFactory.CreatePrimary("재계산");
         btnCalc.Margin = new Padding(20, 0, 0, 0);
-        btnCalc.Click += BtnCalc_Click;
+        btnCalc.Click += async (s, _) => await ButtonFactory.RunWithLoadingAsync(
+            (Button)s!, "계산 중...", async () =>
+            {
+                var ym = $"{_year:D4}-{_month:D2}";
+                await _salaryService.CalculateAllAsync(ym);
+                ToastNotification.Show($"{_year}년 {_month}월 급여 계산 완료.", ToastType.Success);
+                await LoadAsync();
+            });
 
         topBar.Controls.AddRange([btnPrev, _lblMonth, btnNext, btnCalc]);
 
@@ -131,21 +142,6 @@ public class SalaryTab : UserControl
 
             if (records.Count == 0)
                 ToastNotification.Show("급여 데이터가 없습니다. '재계산' 버튼을 눌러주세요.", ToastType.Warning);
-        }
-        catch (Exception ex)
-        {
-            ToastNotification.Show(ex.Message, ToastType.Error);
-        }
-    }
-
-    private async void BtnCalc_Click(object? sender, EventArgs e)
-    {
-        try
-        {
-            var ym = $"{_year:D4}-{_month:D2}";
-            await _salaryService.CalculateAllAsync(ym);
-            ToastNotification.Show($"{_year}년 {_month}월 급여 계산 완료.", ToastType.Success);
-            await LoadAsync();
         }
         catch (Exception ex)
         {

@@ -179,6 +179,14 @@ public class ScheduleInputDialog : Form
         Controls.AddRange([btnOk, btnCancel]);
         AcceptButton = btnOk;
         CancelButton = btnCancel;
+
+        // Tab 순서 설정
+        _cmbEmployee.TabIndex = 0;
+        _cmbStart.TabIndex = 1;
+        _cmbEnd.TabIndex = 2;
+        _cmbMonth.TabIndex = 3;
+        btnOk.TabIndex = 10;
+        btnCancel.TabIndex = 11;
     }
 
     private void CmbMonth_Changed(object? sender, EventArgs e)

@@ -10,6 +10,7 @@ public class HandoverTab : UserControl
     private readonly IHandoverRepository _repo;
     private readonly Panel _listPanel;
     private readonly TextBox _txtSearch;
+    private readonly Label _lblPageInfo;
     private int _page = 1;
     private const int PageSize = 10;
 
@@ -49,9 +50,15 @@ public class HandoverTab : UserControl
         var navBar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 35, Padding = new Padding(0, 5, 0, 0) };
         var btnPrev = ButtonFactory.CreateGhost("◀ 이전", 70);
         btnPrev.Click += (_, _) => { if (_page > 1) { _page--; _ = LoadAsync(); } };
+        _lblPageInfo = new Label
+        {
+            Size = new Size(100, 28), TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary,
+            Margin = new Padding(0, 2, 0, 0)
+        };
         var btnNextPage = ButtonFactory.CreateGhost("다음 ▶", 70);
         btnNextPage.Click += (_, _) => { _page++; _ = LoadAsync(); };
-        navBar.Controls.AddRange([btnPrev, btnNextPage]);
+        navBar.Controls.AddRange([btnPrev, _lblPageInfo, btnNextPage]);
 
         Controls.Add(_listPanel);
         Controls.Add(navBar);
@@ -62,10 +69,29 @@ public class HandoverTab : UserControl
     private async Task LoadAsync()
     {
         var keyword = _txtSearch.Text.Trim();
-        var (items, _) = await _repo.GetPagedAsync(_page, PageSize,
+        var (items, totalCount) = await _repo.GetPagedAsync(_page, PageSize,
             string.IsNullOrEmpty(keyword) ? null : keyword);
 
+        var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalCount / PageSize));
+        _lblPageInfo.Text = $"{_page} / {totalPages} 페이지";
+
         _listPanel.Controls.Clear();
+
+        if (items.Count() == 0)
+        {
+            _listPanel.Controls.Add(new Label
+            {
+                Text = _page == 1 ? "📋 아직 인수인계가 없습니다.\n'새 글 작성' 버튼을 눌러 첫 글을 남겨보세요."
+                    : "더 이상 글이 없습니다.",
+                Font = new Font("맑은 고딕", 11f),
+                ForeColor = ColorPalette.TextTertiary,
+                Size = new Size(400, 60),
+                Location = new Point(20, 30),
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+            return;
+        }
+
         var y = 5;
         foreach (var h in items)
         {

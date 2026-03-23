@@ -58,7 +58,7 @@ public class InventoryTab : UserControl
 
     private async Task LoadAsync()
     {
-        var items = await _repo.GetAllAsync();
+        var items = (await _repo.GetAllAsync()).ToList();
         _grid.Rows.Clear();
         foreach (var item in items)
         {
@@ -66,6 +66,9 @@ public class InventoryTab : UserControl
                 item.CurrentQty, null, item.Category, item.Note);
             UpdateShortageCell(_grid.Rows[idx], item);
         }
+
+        if (items.Count == 0)
+            ToastNotification.Show("📦 등록된 물품이 없습니다. '+ 물품 추가'로 시작하세요.", ToastType.Info);
     }
 
     private static void UpdateShortageCell(DataGridViewRow row, InventoryItem item)
@@ -102,8 +105,11 @@ public class InventoryTab : UserControl
 
     private async Task DeleteItemAsync(int id)
     {
-        if (MessageBox.Show("이 물품을 삭제하시겠습니까?", "확인", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+        var itemName = _grid.CurrentRow?.Cells[1]?.Value?.ToString() ?? "물품";
+        if (MessageBox.Show($"'{itemName}'을(를) 삭제하시겠습니까?", "삭제 확인",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
         await _repo.DeleteAsync(id);
+        ToastNotification.Show($"'{itemName}' 삭제 완료.", ToastType.Success);
         await LoadAsync();
     }
 }
@@ -143,6 +149,15 @@ internal class InventoryEditDialog : Form
         Controls.Add(btnOk);
         Controls.Add(new Button { Text = "취소", Location = new Point(240, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
         AcceptButton = btnOk;
+        CancelButton = (Button)Controls[Controls.Count - 1]; // 취소 버튼
+
+        // Tab 순서
+        _txtName.TabIndex = 0;
+        _numReq.TabIndex = 1;
+        _numCur.TabIndex = 2;
+        _cmbCat.TabIndex = 3;
+        _txtNote.TabIndex = 4;
+        btnOk.TabIndex = 5;
     }
 
     private void AddField(string label, Control ctrl, ref int y)

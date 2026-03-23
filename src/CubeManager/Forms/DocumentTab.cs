@@ -82,6 +82,15 @@ public class DocumentTab : UserControl
             Font = new Font("Consolas", 11f),
             Visible = false
         };
+        // Ctrl+S 단축키
+        _txtEditor.KeyDown += (_, e) =>
+        {
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                e.SuppressKeyPress = true;
+                BtnSave_Click(null, EventArgs.Empty);
+            }
+        };
 
         split.Panel1.Controls.Add(_treeView);
         split.Panel2.Controls.Add(_richViewer);
@@ -120,6 +129,18 @@ public class DocumentTab : UserControl
     {
         var path = e.Node?.Tag as string;
         if (path == null || !File.Exists(path)) return;
+
+        // 편집 중 파일 전환 시 저장 확인
+        if (_isEditMode && _currentFile != null)
+        {
+            var result = MessageBox.Show("편집 중인 내용이 있습니다. 저장하시겠습니까?",
+                "저장 확인", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes) BtnSave_Click(null, EventArgs.Empty);
+            else if (result == DialogResult.Cancel) return;
+            _isEditMode = false;
+            _richViewer.Visible = true;
+            _txtEditor.Visible = false;
+        }
 
         _currentFile = path;
         var content = File.ReadAllText(path);
@@ -164,8 +185,9 @@ public class DocumentTab : UserControl
     private void BtnDelete_Click(object? sender, EventArgs e)
     {
         if (_currentFile == null || !File.Exists(_currentFile)) return;
-        if (MessageBox.Show("이 문서를 삭제하시겠습니까?", "확인",
-                MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+        var fileName = Path.GetFileNameWithoutExtension(_currentFile);
+        if (MessageBox.Show($"'{fileName}' 문서를 삭제하시겠습니까?\n(휴지통으로 이동됩니다)", "삭제 확인",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
 
         // 휴지통으로 이동
         var trashDir = Path.Combine(_docsRoot, ".trash");

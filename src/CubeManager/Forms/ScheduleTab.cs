@@ -34,13 +34,17 @@ public class ScheduleTab : UserControl
         var topBar = new Panel { Dock = DockStyle.Top, Height = 50 };
 
         // 좌: 네비게이션
+        var _tip = new ToolTip();
+
         var btnPrev = ButtonFactory.CreateGhost("◀", 36);
         btnPrev.Location = new Point(0, 10);
         btnPrev.Click += (_, _) => Navigate(-1);
+        _tip.SetToolTip(btnPrev, "이전 주");
 
         var btnNext = ButtonFactory.CreateGhost("▶", 36);
         btnNext.Location = new Point(40, 10);
         btnNext.Click += (_, _) => Navigate(1);
+        _tip.SetToolTip(btnNext, "다음 주");
 
         // 중앙: 날짜 범위 (주 정보)
         _lblDateRange = new Label
@@ -65,6 +69,7 @@ public class ScheduleTab : UserControl
         btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnAdd.Location = new Point(topBar.Width - 132, 10);
         btnAdd.Click += BtnAddSchedule_Click;
+        _tip.SetToolTip(btnAdd, "새 스케줄 추가 (직원/시간/요일 선택)");
 
         topBar.Controls.AddRange([btnPrev, btnNext, _lblDateRange, _lblWeekSub, btnAdd]);
         topBar.Resize += (_, _) => btnAdd.Location = new Point(topBar.Width - 132, 10);

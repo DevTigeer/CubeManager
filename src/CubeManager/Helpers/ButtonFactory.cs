@@ -98,6 +98,29 @@ public static class ButtonFactory
         return btn;
     }
 
+    /// <summary>
+    /// 비동기 작업 중 버튼 비활성화 + 텍스트 변경 (로딩 표시).
+    /// 사용법: await ButtonFactory.RunWithLoadingAsync(btn, "처리 중...", async () => { ... });
+    /// </summary>
+    public static async Task RunWithLoadingAsync(Button btn, string loadingText, Func<Task> action)
+    {
+        var originalText = btn.Text;
+        var originalEnabled = btn.Enabled;
+        try
+        {
+            btn.Enabled = false;
+            btn.Text = loadingText;
+            btn.Cursor = Cursors.WaitCursor;
+            await action();
+        }
+        finally
+        {
+            btn.Text = originalText;
+            btn.Enabled = originalEnabled;
+            btn.Cursor = Cursors.Hand;
+        }
+    }
+
     private static void ApplyRoundedRegion(Button btn)
     {
         if (btn.Width <= 0 || btn.Height <= 0) return;
