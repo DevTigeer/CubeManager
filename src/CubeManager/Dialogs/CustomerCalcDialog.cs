@@ -93,6 +93,13 @@ public class CustomerCalcDialog : Form
 
         y += 34;
 
+        // 구분선
+        Controls.Add(new Panel
+        {
+            Location = new Point(15, y - 2), Size = new Size(370, 1),
+            BackColor = ColorPalette.Border
+        });
+
         // ─── 인별 할인 (동적) ───
         Controls.Add(new Label
         {
@@ -122,9 +129,17 @@ public class CustomerCalcDialog : Form
         });
         y += 26;
 
+        // 구분선
+        Controls.Add(new Panel
+        {
+            Location = new Point(15, y - 4), Size = new Size(370, 1),
+            BackColor = ColorPalette.Border
+        });
+
         _lblBreakdown = new Label
         {
             Location = new Point(15, y), Size = new Size(370, 100),
+            MaximumSize = new Size(370, 0), AutoSize = true,
             Font = new Font("맑은 고딕", 10f),
             ForeColor = ColorPalette.Text
         };
@@ -158,6 +173,7 @@ public class CustomerCalcDialog : Form
         btnClose.Click += (_, _) => Close();
 
         Controls.AddRange([btnCopy, btnClose]);
+        AcceptButton = btnCopy;
         CancelButton = btnClose;
 
         RebuildDiscountRows();

@@ -57,6 +57,7 @@ public static class ColorPalette
         : Color.FromArgb(8, 0, 0, 0);
     public static Color CardHover => IsDark ? FromHex("#3B3B3B") : FromHex("#F8F9FB");
     public static Color SubtleBg => IsDark ? FromHex("#333333") : FromHex("#F0F2F5");
+    public static Color EditorBg => IsDark ? FromHex("#1E1E1E") : Color.FromArgb(252, 252, 248);
 
     // ═══════════════════════════════════════════
     // Text

@@ -167,7 +167,7 @@ public class DocumentTab : UserControl
             Multiline = true,
             ScrollBars = ScrollBars.Both,
             Font = new Font("Consolas", 11f),
-            BackColor = Color.FromArgb(252, 252, 248), // 미세한 크림색
+            BackColor = ColorPalette.EditorBg,
             ForeColor = ColorPalette.Text,
             BorderStyle = BorderStyle.None,
             Visible = false

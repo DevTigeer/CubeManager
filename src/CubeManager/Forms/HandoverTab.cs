@@ -165,6 +165,25 @@ public class HandoverTab : UserControl
             Padding = new Padding(0, 8, 0, 0)
         };
 
+        // 삭제 버튼
+        var btnDelete = ButtonFactory.CreateDanger("삭제", 60);
+        btnDelete.Dock = DockStyle.Top;
+        btnDelete.Height = 32;
+        btnDelete.Margin = new Padding(0, 8, 0, 0);
+        btnDelete.Click += async (_, _) =>
+        {
+            if (_selected == null) return;
+            var title = string.IsNullOrEmpty(_selected.Title) ? "(제목 없음)" : _selected.Title;
+            if (MessageBox.Show($"'{title}' 인수인계를 삭제하시겠습니까?", "삭제 확인",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            await _repo.DeleteHandoverAsync(_selected.Id);
+            _selected = null;
+            _detailPanel!.Visible = false;
+            _emptyDetail!.Visible = true;
+            ToastNotification.Show("인수인계가 삭제되었습니다.", ToastType.Success);
+            await LoadAsync();
+        };
+
         var lblCommentHeader = new Label
         {
             Text = "💬 댓글",
@@ -218,6 +237,7 @@ public class HandoverTab : UserControl
         commentInputPanel.Controls.AddRange([txtCommentAuthor, txtCommentContent, btnAddComment]);
 
         // Dock.Top 순서 (역순 추가 아님, 위→아래)
+        _detailPanel.Controls.Add(btnDelete);
         _detailPanel.Controls.Add(commentInputPanel);
         _detailPanel.Controls.Add(_commentListPanel);
         _detailPanel.Controls.Add(lblCommentHeader);
@@ -399,6 +419,14 @@ public class HandoverTab : UserControl
                 BackColor = ColorPalette.SubtleBg,
                 Padding = new Padding(10, 6, 10, 6)
             };
+            commentCard.Paint += (_, pe) =>
+            {
+                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var path = RoundedCard.CreateRoundedPath(
+                    new Rectangle(0, 0, commentCard.Width - 1, commentCard.Height - 1), 4);
+                using var pen = new Pen(Color.FromArgb(30, ColorPalette.Border));
+                pe.Graphics.DrawPath(pen, path);
+            };
             commentCard.Controls.Add(new Label
             {
                 Text = $"{c.AuthorName}  ·  {c.CreatedAt:MM/dd HH:mm}",
@@ -418,7 +446,7 @@ public class HandoverTab : UserControl
             _commentListPanel.Controls.Add(commentCard);
             cy += 56;
         }
-        _commentListPanel.Height = Math.Max(cy + 10, 60);
+        _commentListPanel.Height = comments.Count == 0 ? 10 : cy + 10;
     }
 
     private async void ChkNextWorker_Changed(object? sender, EventArgs e)
