@@ -80,9 +80,14 @@ public class DocumentTab : UserControl
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 200,
             SplitterWidth = 4,
             BackColor = ColorPalette.Border
+        };
+        // 1:9 비율 (Resize 시에도 유지)
+        split.SplitterDistance = Math.Max(150, (int)(Width * 0.10));
+        split.Resize += (_, _) =>
+        {
+            try { split.SplitterDistance = Math.Max(150, (int)(split.Width * 0.10)); } catch { }
         };
         split.Panel1.BackColor = ColorPalette.Surface;
         split.Panel2.BackColor = ColorPalette.Surface;

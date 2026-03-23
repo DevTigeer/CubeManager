@@ -79,9 +79,14 @@ public class HandoverTab : UserControl
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 380,
             SplitterWidth = 6,
             BackColor = ColorPalette.Border
+        };
+        // 3:7 비율
+        split.SplitterDistance = Math.Max(250, (int)(Width * 0.30));
+        split.Resize += (_, _) =>
+        {
+            try { split.SplitterDistance = Math.Max(250, (int)(split.Width * 0.30)); } catch { }
         };
         split.Panel1.BackColor = ColorPalette.Background;
         split.Panel2.BackColor = ColorPalette.Surface;
@@ -307,10 +312,15 @@ public class HandoverTab : UserControl
     /// <summary>카드 생성: 날짜 + 제목 + 다음근무자체크 아이콘</summary>
     private Panel CreateCard(Handover h)
     {
+        // 미확인=하늘색, 확인완료=흰색
+        var unreadBg = Color.FromArgb(232, 244, 253); // 하늘색 #E8F4FD
+        var readBg = ColorPalette.Surface;
+        var defaultBg = h.IsNextWorkerChecked ? readBg : unreadBg;
+
         var card = new Panel
         {
             Size = new Size(360, 68),
-            BackColor = ColorPalette.Surface,
+            BackColor = defaultBg,
             Cursor = Cursors.Hand,
             Padding = new Padding(12, 8, 12, 8)
         };
@@ -378,7 +388,7 @@ public class HandoverTab : UserControl
 
         // 호버 효과
         void OnEnter(object? s, EventArgs e) { card.BackColor = ColorPalette.CardHover; }
-        void OnLeave(object? s, EventArgs e) { card.BackColor = ColorPalette.Surface; }
+        void OnLeave(object? s, EventArgs e) { card.BackColor = defaultBg; }
         card.MouseEnter += OnEnter;
         card.MouseLeave += OnLeave;
         foreach (Control c in card.Controls) { c.MouseEnter += OnEnter; c.MouseLeave += OnLeave; }

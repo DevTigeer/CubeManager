@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using CubeManager.Controls;
 using CubeManager.Core.Helpers;
 using CubeManager.Core.Models;
 using CubeManager.Helpers;
@@ -33,7 +35,6 @@ public class ScheduleInputDialog : Form
                 .Where(c => c.Checked)
                 .Select(c => (int)c.Tag!)
                 .ToArray();
-            // 전부 체크 또는 아무것도 체크 안 하면 null (전체 적용)
             return selected.Length > 0 && selected.Length < _weekChecks.Count(c => c.Enabled)
                 ? selected : null;
         }
@@ -45,21 +46,42 @@ public class ScheduleInputDialog : Form
         _year = now.Year;
 
         Text = "스케줄 추가";
-        Size = new Size(400, 400);
+        Size = new Size(460, 480);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
+        BackColor = ColorPalette.Surface;
 
-        var y = 15;
+        var y = 12;
 
-        // 직원 선택
-        Controls.Add(new Label { Text = "직원:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
+        // ─── 타이틀 ───
+        Controls.Add(new Label
+        {
+            Text = "📋 스케줄 추가",
+            Location = new Point(20, y), Size = new Size(400, 28),
+            Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
+            ForeColor = ColorPalette.Primary
+        });
+        y += 32;
+
+        // 구분선
+        Controls.Add(new Panel
+        {
+            Location = new Point(20, y), Size = new Size(400, 1),
+            BackColor = ColorPalette.Border
+        });
+        y += 12;
+
+        // ─── 섹션 1: 직원 선택 ───
+        Controls.Add(CreateSectionLabel("직원 선택", y));
+        y += 22;
         _cmbEmployee = new ComboBox
         {
-            Location = new Point(90, y), Size = new Size(270, 25),
-            DropDownStyle = ComboBoxStyle.DropDownList
+            Location = new Point(25, y), Size = new Size(395, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("맑은 고딕", 10.5f)
         };
         foreach (var emp in employees)
             _cmbEmployee.Items.Add(emp);
@@ -67,24 +89,52 @@ public class ScheduleInputDialog : Form
         if (_cmbEmployee.Items.Count > 0) _cmbEmployee.SelectedIndex = 0;
         Controls.Add(_cmbEmployee);
 
-        y += 38;
+        y += 40;
 
-        // 시간
-        Controls.Add(new Label { Text = "출근:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
-        _cmbStart = CreateTimeCombo(new Point(90, y));
-        Controls.Add(new Label { Text = "퇴근:", Location = new Point(205, y + 2), Size = new Size(40, 22) });
-        _cmbEnd = CreateTimeCombo(new Point(255, y));
-        _cmbEnd.SelectedIndex = Math.Min(14, _cmbEnd.Items.Count - 1); // 기본 17:00
+        // ─── 섹션 2: 근무 시간 ───
+        Controls.Add(CreateSectionLabel("근무 시간", y));
+        y += 22;
+
+        Controls.Add(new Label
+        {
+            Text = "출근", Location = new Point(25, y + 3), Size = new Size(35, 20),
+            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary
+        });
+        _cmbStart = CreateTimeCombo(new Point(62, y));
+
+        Controls.Add(new Label
+        {
+            Text = "→", Location = new Point(170, y + 3), Size = new Size(25, 20),
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextTertiary,
+            TextAlign = ContentAlignment.MiddleCenter
+        });
+
+        Controls.Add(new Label
+        {
+            Text = "퇴근", Location = new Point(200, y + 3), Size = new Size(35, 20),
+            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary
+        });
+        _cmbEnd = CreateTimeCombo(new Point(237, y));
+        _cmbEnd.SelectedIndex = Math.Min(14, _cmbEnd.Items.Count - 1);
+
         Controls.Add(_cmbStart);
         Controls.Add(_cmbEnd);
 
-        y += 40;
+        y += 42;
 
-        // 월 선택
-        Controls.Add(new Label { Text = "월:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
+        // ─── 섹션 3: 적용 기간 ───
+        Controls.Add(CreateSectionLabel("적용 기간", y));
+        y += 22;
+
+        Controls.Add(new Label
+        {
+            Text = $"{_year}년", Location = new Point(25, y + 3), Size = new Size(55, 20),
+            Font = new Font("맑은 고딕", 9.5f, FontStyle.Bold), ForeColor = ColorPalette.Text
+        });
         _cmbMonth = new ComboBox
         {
-            Location = new Point(90, y), Size = new Size(80, 25),
+            Location = new Point(85, y), Size = new Size(75, 28),
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         for (var m = 1; m <= 12; m++) _cmbMonth.Items.Add($"{m}월");
@@ -92,27 +142,39 @@ public class ScheduleInputDialog : Form
         _cmbMonth.SelectedIndexChanged += CmbMonth_Changed;
         Controls.Add(_cmbMonth);
 
-        // 연도 표시
+        y += 34;
+
+        // 주차 체크박스 (카드형)
         Controls.Add(new Label
         {
-            Text = $"{_year}년",
-            Location = new Point(180, y + 2), Size = new Size(60, 22),
-            ForeColor = ColorPalette.TextSecondary
+            Text = "주차", Location = new Point(25, y + 3), Size = new Size(35, 20),
+            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary
         });
-
-        y += 38;
-
-        // 주차 선택
-        Controls.Add(new Label { Text = "주차:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
         for (var i = 0; i < 5; i++)
         {
             _weekChecks[i] = new CheckBox
             {
                 Text = $"{i + 1}주",
-                Location = new Point(90 + i * 58, y),
-                Size = new Size(55, 25),
+                Location = new Point(68 + i * 68, y),
+                Size = new Size(62, 26),
                 Tag = i + 1,
-                Checked = true
+                Checked = true,
+                Appearance = Appearance.Button,
+                TextAlign = ContentAlignment.MiddleCenter,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("맑은 고딕", 9f),
+                BackColor = ColorPalette.NavActiveBg,
+                ForeColor = ColorPalette.Primary
+            };
+            _weekChecks[i].FlatAppearance.BorderSize = 1;
+            _weekChecks[i].FlatAppearance.BorderColor = ColorPalette.Primary;
+            _weekChecks[i].FlatAppearance.CheckedBackColor = ColorPalette.NavActiveBg;
+            var chk = _weekChecks[i];
+            chk.CheckedChanged += (_, _) =>
+            {
+                chk.BackColor = chk.Checked ? ColorPalette.NavActiveBg : ColorPalette.Surface;
+                chk.ForeColor = chk.Checked ? ColorPalette.Primary : ColorPalette.TextTertiary;
+                chk.FlatAppearance.BorderColor = chk.Checked ? ColorPalette.Primary : ColorPalette.Border;
             };
             Controls.Add(_weekChecks[i]);
         }
@@ -120,47 +182,74 @@ public class ScheduleInputDialog : Form
 
         y += 38;
 
-        // 요일 체크박스
-        Controls.Add(new Label { Text = "요일:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
+        // ─── 섹션 4: 요일 ───
+        Controls.Add(new Label
+        {
+            Text = "요일", Location = new Point(25, y + 3), Size = new Size(35, 20),
+            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary
+        });
         var dayNames = new[] { "월", "화", "수", "목", "금", "토", "일" };
         var dayValues = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
             DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
 
         for (var i = 0; i < 7; i++)
         {
+            var isWeekend = i >= 5;
             _dayChecks[i] = new CheckBox
             {
                 Text = dayNames[i],
-                Location = new Point(90 + i * 42, y),
-                Size = new Size(42, 25),
+                Location = new Point(68 + i * 50, y),
+                Size = new Size(46, 26),
                 Tag = dayValues[i],
-                Checked = i < 5 // 기본: 월~금 체크
+                Checked = i < 5,
+                Appearance = Appearance.Button,
+                TextAlign = ContentAlignment.MiddleCenter,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                BackColor = i < 5 ? ColorPalette.NavActiveBg : ColorPalette.Surface,
+                ForeColor = isWeekend ? ColorPalette.Danger
+                    : i < 5 ? ColorPalette.Primary : ColorPalette.TextTertiary
+            };
+            _dayChecks[i].FlatAppearance.BorderSize = 1;
+            _dayChecks[i].FlatAppearance.BorderColor = i < 5 ? ColorPalette.Primary : ColorPalette.Border;
+            var dc = _dayChecks[i];
+            var isWE = isWeekend;
+            dc.CheckedChanged += (_, _) =>
+            {
+                dc.BackColor = dc.Checked ? ColorPalette.NavActiveBg : ColorPalette.Surface;
+                dc.ForeColor = isWE ? ColorPalette.Danger
+                    : dc.Checked ? ColorPalette.Primary : ColorPalette.TextTertiary;
+                dc.FlatAppearance.BorderColor = dc.Checked ? ColorPalette.Primary : ColorPalette.Border;
             };
             Controls.Add(_dayChecks[i]);
         }
 
-        // 기본 날짜의 요일만 체크
+        // 기본 날짜 설정
         if (defaultDate.HasValue)
         {
-            foreach (var c in _dayChecks) c.Checked = false;
+            foreach (var c in _dayChecks) { c.Checked = false; }
             var dow = (int)defaultDate.Value.DayOfWeek;
-            var idx = dow == 0 ? 6 : dow - 1; // 월=0 ~ 일=6
+            var idx = dow == 0 ? 6 : dow - 1;
             _dayChecks[idx].Checked = true;
 
-            // 기본 날짜의 주차만 체크
             var weekOfMonth = TimeHelper.GetWeekOfMonth(defaultDate.Value);
             for (var i = 0; i < 5; i++)
                 _weekChecks[i].Checked = (i + 1) == weekOfMonth;
         }
 
-        y += 50;
-        var btnOk = new Button
+        y += 48;
+
+        // 구분선
+        Controls.Add(new Panel
         {
-            Text = "적용", Location = new Point(200, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.None
-        };
-        btnOk.FlatAppearance.BorderSize = 0;
+            Location = new Point(20, y - 6), Size = new Size(400, 1),
+            BackColor = ColorPalette.Border
+        });
+
+        // ─── 버튼 영역 ───
+        var btnOk = ButtonFactory.CreatePrimary("적용", 100);
+        btnOk.Location = new Point(220, y);
+        btnOk.Height = 36;
         btnOk.Click += (_, _) =>
         {
             if (_cmbEmployee.SelectedItem is Employee emp)
@@ -170,17 +259,16 @@ public class ScheduleInputDialog : Form
             }
         };
 
-        var btnCancel = new Button
-        {
-            Text = "취소", Location = new Point(290, y), Size = new Size(80, 35),
-            DialogResult = DialogResult.Cancel
-        };
+        var btnCancel = ButtonFactory.CreateSecondary("취소", 90);
+        btnCancel.Location = new Point(330, y);
+        btnCancel.Height = 36;
+        btnCancel.DialogResult = DialogResult.Cancel;
 
         Controls.AddRange([btnOk, btnCancel]);
         AcceptButton = btnOk;
         CancelButton = btnCancel;
 
-        // Tab 순서 설정
+        // Tab 순서
         _cmbEmployee.TabIndex = 0;
         _cmbStart.TabIndex = 1;
         _cmbEnd.TabIndex = 2;
@@ -189,10 +277,15 @@ public class ScheduleInputDialog : Form
         btnCancel.TabIndex = 11;
     }
 
-    private void CmbMonth_Changed(object? sender, EventArgs e)
+    private static Label CreateSectionLabel(string text, int y) => new()
     {
-        UpdateWeekCheckboxes();
-    }
+        Text = text,
+        Location = new Point(25, y), Size = new Size(200, 18),
+        Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+        ForeColor = ColorPalette.TextSecondary
+    };
+
+    private void CmbMonth_Changed(object? sender, EventArgs e) => UpdateWeekCheckboxes();
 
     private void UpdateWeekCheckboxes()
     {
@@ -209,8 +302,9 @@ public class ScheduleInputDialog : Form
     {
         var cmb = new ComboBox
         {
-            Location = location, Size = new Size(90, 25),
-            DropDownStyle = ComboBoxStyle.DropDownList
+            Location = location, Size = new Size(95, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("맑은 고딕", 10f)
         };
         foreach (var slot in TimeHelper.TimeSlots)
             cmb.Items.Add(slot);

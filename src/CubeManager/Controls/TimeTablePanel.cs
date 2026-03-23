@@ -225,8 +225,8 @@ public class TimeTablePanel : Panel
                 using var cardFill = new SolidBrush(Color.FromArgb(35, empColor));
                 g.FillPath(cardFill, cardPath);
 
-                // 카드 테두리 (미세)
-                using var cardBorderPen = new Pen(Color.FromArgb(60, empColor), 0.5f);
+                // 카드 테두리 (4면 명확하게)
+                using var cardBorderPen = new Pen(Color.FromArgb(140, accentColor), 1f);
                 g.DrawPath(cardBorderPen, cardPath);
 
                 // ── 좌측 컬러바 (4px, 직원 식별용) ──
