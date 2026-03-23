@@ -21,6 +21,7 @@ public class AdminTab : UserControl
     private readonly IChecklistRepository _checklistRepo;
     private readonly Data.Database? _database;
     private readonly ISalaryService? _salaryService2;
+    private readonly IAlertService? _alertService;
 
     private Panel _authPanel = null!;
     private Panel _mainPanel = null!;
@@ -61,7 +62,7 @@ public class AdminTab : UserControl
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
         IMicePopupRepository miceRepo, IChecklistRepository checklistRepo,
-        Data.Database database, ISalaryService salaryService)
+        Data.Database database, ISalaryService salaryService, IAlertService alertService)
     {
         _configRepo = configRepo;
         _salesService = salesService;
@@ -71,6 +72,7 @@ public class AdminTab : UserControl
         _checklistRepo = checklistRepo;
         _database = database;
         _salaryService2 = salaryService;
+        _alertService = alertService;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
 
@@ -185,6 +187,7 @@ public class AdminTab : UserControl
         tabControl.TabPages.Add(BuildEmployeeTab());
         tabControl.TabPages.Add(BuildMiceTab());
         tabControl.TabPages.Add(BuildChecklistTab());
+        tabControl.TabPages.Add(BuildAlertHistoryTab());
 
         _mainPanel.Controls.Add(tabControl);
         _mainPanel.Controls.Add(header);
@@ -1212,6 +1215,144 @@ public class AdminTab : UserControl
         catch (Exception ex)
         {
             ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    // ==================== 탭 7: 알림 이력 ====================
+
+    private DataGridView _gridAlerts = null!;
+    private DateTimePicker _dtpAlertStart = null!;
+    private DateTimePicker _dtpAlertEnd = null!;
+    private ComboBox _cmbAlertType = null!;
+
+    private TabPage BuildAlertHistoryTab()
+    {
+        var page = new TabPage("🔔 알림 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+
+        // 상단 필터
+        var filterPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 40,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 5, 0, 5)
+        };
+
+        filterPanel.Controls.Add(new Label
+        {
+            Text = "기간:", Size = new Size(40, 28),
+            TextAlign = ContentAlignment.MiddleRight
+        });
+        _dtpAlertStart = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Short,
+            Size = new Size(110, 28),
+            Value = DateTime.Today.AddDays(-30)
+        };
+        filterPanel.Controls.Add(_dtpAlertStart);
+
+        filterPanel.Controls.Add(new Label
+        {
+            Text = "~", Size = new Size(20, 28),
+            TextAlign = ContentAlignment.MiddleCenter
+        });
+        _dtpAlertEnd = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Short,
+            Size = new Size(110, 28),
+            Value = DateTime.Today
+        };
+        filterPanel.Controls.Add(_dtpAlertEnd);
+
+        _cmbAlertType = new ComboBox
+        {
+            Size = new Size(130, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Margin = new Padding(10, 0, 0, 0)
+        };
+        _cmbAlertType.Items.AddRange(["전체", "체크리스트 지연", "지각", "인수인계 미확인", "무단결근", "지각 누적"]);
+        _cmbAlertType.SelectedIndex = 0;
+        filterPanel.Controls.Add(_cmbAlertType);
+
+        var btnSearch = ButtonFactory.CreatePrimary("조회", 60);
+        btnSearch.Margin = new Padding(10, 0, 0, 0);
+        btnSearch.Click += async (_, _) => await LoadAlertHistoryAsync();
+        filterPanel.Controls.Add(btnSearch);
+
+        var btnResolve = ButtonFactory.CreateSuccess("해결 처리", 80);
+        btnResolve.Margin = new Padding(5, 0, 0, 0);
+        btnResolve.Click += async (_, _) =>
+        {
+            if (_gridAlerts.SelectedRows.Count == 0) return;
+            var id = (int)_gridAlerts.SelectedRows[0].Cells["Id"].Value;
+            if (_alertService != null)
+            {
+                await _alertService.ResolveAlertAsync(id, "관리자");
+                ToastNotification.Show("알림이 해결 처리되었습니다.", ToastType.Success);
+                await LoadAlertHistoryAsync();
+            }
+        };
+        filterPanel.Controls.Add(btnResolve);
+
+        // 그리드
+        _gridAlerts = new DataGridView { Dock = DockStyle.Fill };
+        GridTheme.ApplyTheme(_gridAlerts);
+        _gridAlerts.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "ID", Width = 50, Visible = false },
+            new DataGridViewTextBoxColumn { Name = "AlertDate", HeaderText = "날짜", Width = 100 },
+            new DataGridViewTextBoxColumn { Name = "AlertTime", HeaderText = "시각", Width = 80 },
+            new DataGridViewTextBoxColumn { Name = "Severity", HeaderText = "심각도", Width = 70 },
+            new DataGridViewTextBoxColumn { Name = "AlertType", HeaderText = "유형", Width = 110 },
+            new DataGridViewTextBoxColumn { Name = "EmployeeName", HeaderText = "직원", Width = 90 },
+            new DataGridViewTextBoxColumn { Name = "Message", HeaderText = "내용", Width = 350 },
+            new DataGridViewCheckBoxColumn { Name = "IsResolved", HeaderText = "해결", Width = 50 }
+        );
+
+        page.Controls.Add(_gridAlerts);
+        page.Controls.Add(filterPanel);
+        return page;
+    }
+
+    private async Task LoadAlertHistoryAsync()
+    {
+        if (_alertService == null) return;
+        var start = _dtpAlertStart.Value.ToString("yyyy-MM-dd");
+        var end = _dtpAlertEnd.Value.ToString("yyyy-MM-dd");
+
+        string? typeFilter = _cmbAlertType.SelectedIndex switch
+        {
+            1 => "checklist_delay",
+            2 => "late_arrival",
+            3 => "handover_unread",
+            4 => "no_show",
+            5 => "late_accumulate",
+            _ => null
+        };
+
+        var alerts = await _alertService.GetAlertHistoryAsync(start, end, typeFilter);
+        _gridAlerts.Rows.Clear();
+
+        var typeLabels = new Dictionary<string, string>
+        {
+            ["checklist_delay"] = "체크리스트 지연",
+            ["late_arrival"] = "지각",
+            ["handover_unread"] = "인수인계 미확인",
+            ["no_show"] = "무단결근",
+            ["late_accumulate"] = "지각 누적"
+        };
+
+        var severityLabels = new Dictionary<string, string>
+        {
+            ["info"] = "ℹ️ 정보",
+            ["warning"] = "⚠️ 경고",
+            ["critical"] = "🔴 심각"
+        };
+
+        foreach (var a in alerts)
+        {
+            var typeLabel = typeLabels.GetValueOrDefault(a.AlertType, a.AlertType);
+            var sevLabel = severityLabels.GetValueOrDefault(a.Severity, a.Severity);
+            _gridAlerts.Rows.Add(a.Id, a.AlertDate, a.AlertTime, sevLabel, typeLabel,
+                a.EmployeeName ?? "-", a.Message, a.IsResolved);
         }
     }
 }

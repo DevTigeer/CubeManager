@@ -17,6 +17,8 @@ public class MainForm : Form
     private readonly Dictionary<int, UserControl?> _tabCache = new();
     private readonly System.Windows.Forms.Timer _backupTimer;
     private readonly System.Windows.Forms.Timer _miceTimer;
+    private readonly System.Windows.Forms.Timer _alertTimer;
+    private Label? _alertBadge;
 
     private static readonly string[] TabNames =
     [
@@ -86,6 +88,33 @@ public class MainForm : Form
         _miceTimer.Tick += MiceTimer_Tick;
         _miceTimer.Enabled = true;
 
+        // 알림 시스템 타이머 (5분마다 체크)
+        _alertTimer = new System.Windows.Forms.Timer { Interval = 300_000 }; // 5분
+        _alertTimer.Tick += AlertTimer_Tick;
+        _alertTimer.Enabled = true;
+
+        // 헤더에 알림 뱃지 추가
+        _alertBadge = new Label
+        {
+            Text = "", Visible = false,
+            Size = new Size(24, 18), AutoSize = false,
+            Font = new Font("맑은 고딕", 8f, FontStyle.Bold),
+            ForeColor = Color.White,
+            BackColor = ColorPalette.Danger,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(header.Width - 200, 16)
+        };
+        _alertBadge.Paint += (_, pe) =>
+        {
+            // 둥근 뱃지
+            using var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddEllipse(0, 0, _alertBadge.Width - 1, _alertBadge.Height - 1);
+            _alertBadge.Region = new Region(path);
+        };
+        header.Controls.Add(_alertBadge);
+        _ = UpdateAlertBadgeAsync();
+
         // 첫 번째 탭 로드
         LoadTab(0);
     }
@@ -142,6 +171,46 @@ public class MainForm : Form
         catch (Exception ex)
         {
             Log.Warning(ex, "미끼 팝업 처리 실패");
+        }
+    }
+
+    private async void AlertTimer_Tick(object? sender, EventArgs e)
+    {
+        try
+        {
+            var alertService = _sp.GetRequiredService<IAlertService>();
+
+            // 4가지 알림 검사 실행
+            await alertService.CheckChecklistDelayAsync();
+            await alertService.CheckHandoverUnreadAsync();
+            await alertService.CheckNoShowAsync();
+            await alertService.CheckLateAccumulateAsync();
+
+            // 뱃지 업데이트
+            await UpdateAlertBadgeAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "알림 시스템 체크 실패");
+        }
+    }
+
+    private async Task UpdateAlertBadgeAsync()
+    {
+        try
+        {
+            var alertService = _sp.GetRequiredService<IAlertService>();
+            var count = await alertService.GetUnresolvedCountAsync();
+
+            if (_alertBadge != null)
+            {
+                _alertBadge.Visible = count > 0;
+                _alertBadge.Text = count > 99 ? "99" : count.ToString();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "알림 뱃지 업데이트 실패");
         }
     }
 
@@ -223,7 +292,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IMicePopupRepository>(),
                 _sp.GetRequiredService<IChecklistRepository>(),
                 _sp.GetRequiredService<Data.Database>(),
-                _sp.GetRequiredService<ISalaryService>()),
+                _sp.GetRequiredService<ISalaryService>(),
+                _sp.GetRequiredService<IAlertService>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

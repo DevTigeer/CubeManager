@@ -108,6 +108,7 @@ static class Program
         services.AddSingleton<IFreePassRepository, FreePassRepository>();
         services.AddSingleton<IMicePopupRepository, MicePopupRepository>();
         services.AddSingleton<IChecklistRepository, ChecklistRepository>();
+        services.AddSingleton<IAlertLogRepository, AlertLogRepository>();
 
         // Services
         services.AddSingleton<IEmployeeService, EmployeeService>();
@@ -118,6 +119,7 @@ static class Program
         services.AddSingleton<IReservationScraperService, ReservationScraperService>();
         services.AddSingleton<IThemeExportService, ThemeExportService>();
         services.AddSingleton<IHolidayService, HolidayService>();
+        services.AddSingleton<IAlertService, AlertService>();
     }
 
     private static void EnsureAdminPassword()
