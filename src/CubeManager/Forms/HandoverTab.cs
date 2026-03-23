@@ -319,7 +319,8 @@ public class HandoverTab : UserControl
 
         var card = new Panel
         {
-            Size = new Size(360, 68),
+            Size = new Size(_listPanel.Width - 28, 68),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
             BackColor = defaultBg,
             Cursor = Cursors.Hand,
             Padding = new Padding(12, 8, 12, 8)
@@ -366,7 +367,8 @@ public class HandoverTab : UserControl
             Text = title,
             Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
-            Location = new Point(12, 24), Size = new Size(300, 20),
+            Location = new Point(12, 24), Size = new Size(card.Width - 60, 20),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
             AutoEllipsis = true
         };
 
@@ -376,7 +378,8 @@ public class HandoverTab : UserControl
             Text = h.AuthorName,
             Font = new Font("맑은 고딕", 9f),
             ForeColor = ColorPalette.TextSecondary,
-            Location = new Point(12, 46), Size = new Size(200, 16)
+            Location = new Point(12, 46), Size = new Size(card.Width - 60, 16),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
         };
 
         card.Controls.AddRange([lblDate, lblCheck, lblTitle, lblAuthor]);
