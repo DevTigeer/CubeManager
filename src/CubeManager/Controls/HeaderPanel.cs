@@ -28,7 +28,7 @@ public class HeaderPanel : Panel
         var lblApp = new Label
         {
             Text = "CubeManager",
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            Font = DesignTokens.FontPageTitle,
             ForeColor = ColorPalette.Text,
             Dock = DockStyle.Left,
             AutoSize = true,

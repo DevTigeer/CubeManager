@@ -20,8 +20,8 @@ public static class ColorPalette
     // Accent (활성 상태에만)
     // ═══════════════════════════════════════════
     public static Color Primary => FromHex("#3B82F6");          // Blue 500
-    public static Color Primary50 => FromHex("#1E293B");        // Slate 800 (tint)
-    public static Color Primary100 => FromHex("#1E3A5F");       // Dark blue bg
+    public static Color Primary50 => FromHex("#2A3A50");        // Blue tint on dark
+    public static Color Primary100 => FromHex("#2A4A7F");       // Blue bg
     public static Color Primary700 => FromHex("#2563EB");       // Blue 600
     public static Color Primary900 => FromHex("#1E3A8A");       // Blue 900
 
@@ -38,20 +38,20 @@ public static class ColorPalette
     public static Color InfoLight => FromHex("#1E3A5F");
 
     // ═══════════════════════════════════════════
-    // Surface / Background — 진한 그레이 계층
+    // Surface / Background — 밝은 그레이 계층
     // ═══════════════════════════════════════════
-    public static Color Background => FromHex("#121212");       // 가장 어두운 배경
-    public static Color Surface => FromHex("#1E1E1E");          // 메인 패널 배경
-    public static Color Card => FromHex("#262626");             // 카드/섹션 배경
-    public static Color Border => FromHex("#333333");           // 구분선
-    public static Color Divider => FromHex("#2A2A2A");          // 미세 구분
+    public static Color Background => FromHex("#2A2A2A");       // 사이드바/가장 어두운 영역
+    public static Color Surface => FromHex("#333333");          // 메인 패널 배경
+    public static Color Card => FromHex("#3D3D3D");             // 카드/섹션 배경
+    public static Color Border => FromHex("#4A4A4A");           // 구분선
+    public static Color Divider => FromHex("#404040");          // 미세 구분
     public static Color ManualEdit => FromHex("#5C4800");       // 수기 편집
 
-    // Grid / Table — 어두운 배경 + 밝은 텍스트
-    public static Color HeaderBg => FromHex("#1A1A1A");         // 테이블 헤더
-    public static Color RowAlt => FromHex("#222222");           // 교차행
-    public static Color HoverBg => FromHex("#2D2D2D");          // 행 호버
-    public static Color SelectedBg => FromHex("#1E3A5F");       // 선택행 (파란 tint)
+    // Grid / Table — 배경보다 밝은 화이트 톤 (대비)
+    public static Color HeaderBg => FromHex("#484848");         // 테이블 헤더 (밝은 그레이)
+    public static Color RowAlt => FromHex("#424242");           // 교차행
+    public static Color HoverBg => FromHex("#505050");          // 행 호버
+    public static Color SelectedBg => FromHex("#2A4A7F");       // 선택행 (파란 tint)
 
     // 뉴모피즘 그림자 쌍
     public static Color NeuLight => Color.FromArgb(15, 255, 255, 255);  // 밝은 그림자
@@ -63,9 +63,9 @@ public static class ColorPalette
 
     // 깊이감
     public static Color ShadowLight => Color.FromArgb(40, 0, 0, 0);
-    public static Color CardHover => FromHex("#2D2D2D");
-    public static Color SubtleBg => FromHex("#1A1A1A");
-    public static Color EditorBg => FromHex("#1A1A1A");
+    public static Color CardHover => FromHex("#474747");
+    public static Color SubtleBg => FromHex("#353535");
+    public static Color EditorBg => FromHex("#383838");
 
     // ═══════════════════════════════════════════
     // Text — 밝은 톤 계층
@@ -80,9 +80,9 @@ public static class ColorPalette
     // ═══════════════════════════════════════════
     public static Color NavDefault => FromHex("#808080");       // 비활성 아이콘
     public static Color NavHover => FromHex("#D0D0D0");         // 호버 (밝아짐)
-    public static Color NavHoverBg => FromHex("#2A2A2A");       // 호버 배경
+    public static Color NavHoverBg => FromHex("#3A3A3A");       // 호버 배경
     public static Color NavActive => FromHex("#3B82F6");        // 활성 (파란)
-    public static Color NavActiveBg => FromHex("#1E3A5F");      // 활성 배경
+    public static Color NavActiveBg => FromHex("#2A4A7F");      // 활성 배경
 
     // ═══════════════════════════════════════════
     // Payment Tags

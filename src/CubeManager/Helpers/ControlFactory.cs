@@ -225,7 +225,7 @@ public static class ControlFactory
     /// <summary>다이얼로그 전체를 다크 모던 스타일로 적용</summary>
     public static void ApplyModernDialog(Form form)
     {
-        form.Font = new Font("Segoe UI", 10f);
+        form.Font = DesignTokens.FontBody;
         form.BackColor = ColorPalette.Surface;
         form.ForeColor = ColorPalette.Text;
         ApplyModernStyle(form);
@@ -283,8 +283,7 @@ public static class ControlFactory
                     bounds.X + 8, bounds.Bottom - 3, bounds.Width - 16, 3);
             }
 
-            using var textFont = new Font("맑은 고딕", 9.5f,
-                isSelected ? FontStyle.Bold : FontStyle.Regular);
+            using var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
             using var textBrush = new SolidBrush(
                 isSelected ? ColorPalette.Primary : ColorPalette.TextSecondary);
             var sf = new StringFormat
@@ -305,41 +304,41 @@ public static class ControlFactory
             {
                 case TextBox tb when tb.BorderStyle != BorderStyle.None:
                     tb.BorderStyle = BorderStyle.FixedSingle;
-                    tb.Font = new Font("Segoe UI", 10f);
+                    tb.Font = DesignTokens.FontBody;
                     tb.ForeColor = ColorPalette.Text;
                     tb.BackColor = ColorPalette.Card;
                     break;
 
                 case ComboBox cb:
                     cb.FlatStyle = FlatStyle.Flat;
-                    cb.Font = new Font("Segoe UI", 10f);
+                    cb.Font = DesignTokens.FontBody;
                     cb.ForeColor = ColorPalette.Text;
                     cb.BackColor = ColorPalette.Card;
                     break;
 
                 case CheckBox chk when chk.FlatStyle != FlatStyle.Flat:
                     chk.FlatStyle = FlatStyle.Flat;
-                    chk.Font = new Font("Segoe UI", 10f);
+                    chk.Font = DesignTokens.FontBody;
                     chk.ForeColor = ColorPalette.Text;
                     chk.FlatAppearance.BorderColor = ColorPalette.Border;
                     chk.FlatAppearance.CheckedBackColor = ColorPalette.Primary;
                     break;
 
                 case NumericUpDown nud:
-                    nud.Font = new Font("Segoe UI", 10f);
+                    nud.Font = DesignTokens.FontBody;
                     nud.ForeColor = ColorPalette.Text;
                     nud.BackColor = ColorPalette.Card;
                     break;
 
                 case DateTimePicker dtp:
-                    dtp.Font = new Font("Segoe UI", 10f);
+                    dtp.Font = DesignTokens.FontBody;
                     dtp.CalendarTitleBackColor = ColorPalette.Primary;
                     dtp.CalendarTitleForeColor = Color.White;
                     dtp.CalendarMonthBackground = ColorPalette.Card;
                     break;
 
                 case GroupBox gb:
-                    gb.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                    gb.Font = DesignTokens.FontSectionTitle;
                     gb.ForeColor = ColorPalette.TextSecondary;
                     gb.BackColor = ColorPalette.Surface;
                     break;

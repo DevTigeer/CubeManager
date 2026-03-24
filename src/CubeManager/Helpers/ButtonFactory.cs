@@ -17,7 +17,7 @@ public static class ButtonFactory
     public static Button CreatePrimary(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Primary, Color.White, width);
-        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        btn.Font = DesignTokens.FontButton;
         btn.FlatAppearance.MouseOverBackColor = ColorPalette.Primary700;
         btn.FlatAppearance.MouseDownBackColor = ColorPalette.Primary900;
         return btn;
@@ -27,7 +27,7 @@ public static class ButtonFactory
     public static Button CreateSecondary(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Card, ColorPalette.Text, width);
-        btn.Font = new Font("Segoe UI", 10f);
+        btn.Font = DesignTokens.FontBody;
         btn.FlatAppearance.BorderColor = ColorPalette.Border;
         btn.FlatAppearance.BorderSize = 1;
         btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
@@ -39,7 +39,7 @@ public static class ButtonFactory
     public static Button CreateDanger(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Danger, Color.White, width);
-        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        btn.Font = DesignTokens.FontButton;
         btn.FlatAppearance.MouseOverBackColor = DarkenColor(ColorPalette.Danger, 25);
         btn.FlatAppearance.MouseDownBackColor = DarkenColor(ColorPalette.Danger, 50);
         return btn;
@@ -49,7 +49,7 @@ public static class ButtonFactory
     public static Button CreateSuccess(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Success, Color.White, width);
-        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        btn.Font = DesignTokens.FontButton;
         btn.FlatAppearance.MouseOverBackColor = DarkenColor(ColorPalette.Success, 25);
         btn.FlatAppearance.MouseDownBackColor = DarkenColor(ColorPalette.Success, 50);
         return btn;
@@ -59,7 +59,7 @@ public static class ButtonFactory
     public static Button CreateGhost(string text, int width = 0)
     {
         var btn = CreateBase(text, Color.Transparent, ColorPalette.TextSecondary, width);
-        btn.Font = new Font("Segoe UI", 10f);
+        btn.Font = DesignTokens.FontBody;
         btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
         btn.FlatAppearance.MouseDownBackColor = ColorPalette.Border;
         return btn;
@@ -69,7 +69,7 @@ public static class ButtonFactory
     public static Button CreateNavArrow(string arrow)
     {
         var btn = CreateGhost(arrow, 36);
-        btn.Font = new Font("Segoe UI", 12f);
+        btn.Font = new Font("맑은 고딕", 12f);
         btn.ForeColor = ColorPalette.Text;
         return btn;
     }

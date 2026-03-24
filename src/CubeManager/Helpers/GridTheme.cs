@@ -32,7 +32,7 @@ public static class GridTheme
         {
             BackColor = ColorPalette.HeaderBg,
             ForeColor = ColorPalette.TextSecondary,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Font = DesignTokens.FontTabMenu,
             Padding = new Padding(12, 0, 12, 0),
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
@@ -43,7 +43,7 @@ public static class GridTheme
         {
             BackColor = ColorPalette.Surface,
             ForeColor = ColorPalette.Text,
-            Font = new Font("Segoe UI", 10f),
+            Font = DesignTokens.FontBody,
             Padding = new Padding(12, 4, 12, 4),
             SelectionBackColor = ColorPalette.SelectedBg,
             SelectionForeColor = Color.White

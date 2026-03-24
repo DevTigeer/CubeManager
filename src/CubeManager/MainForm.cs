@@ -35,7 +35,7 @@ public class MainForm : Form
         WindowState = FormWindowState.Maximized;
         BackColor = ColorPalette.Surface;
         ForeColor = ColorPalette.Text;
-        Font = new Font("Segoe UI", 10f);
+        Font = DesignTokens.FontBody;
 
         // === 레이아웃 구조 ===
         // StatusBar (하단)

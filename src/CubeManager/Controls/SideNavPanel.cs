@@ -185,7 +185,7 @@ public class SideNavPanel : Panel
         var textColor = isSelected ? ColorPalette.NavActive :
                         isHover ? ColorPalette.Text :
                         ColorPalette.TextSecondary;
-        using var textFont = new Font("맑은 고딕", 10.5f, isSelected ? FontStyle.Bold : FontStyle.Regular);
+        using var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
         using var textBrush = new SolidBrush(textColor);
         g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
     }
