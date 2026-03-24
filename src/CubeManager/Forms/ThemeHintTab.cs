@@ -158,11 +158,14 @@ public class ThemeHintTab : UserControl
     private Panel CreateThemeCard(Theme theme, int top)
     {
         var isSelected = theme.Id == _selectedThemeId;
+        var normalBg = isSelected ? ColorPalette.Card : ColorPalette.Surface;       // 선택: Card(#3F425D), 일반: Surface(#2D3047)
+        var hoverBg = isSelected ? ColorPalette.Card : ColorPalette.NavHoverBg;      // hover: #353850
+
         var card = new Panel
         {
             Location = new Point(4, top),
             Size = new Size(220, 46),
-            BackColor = isSelected ? ColorPalette.SelectedBg : ColorPalette.Surface,
+            BackColor = normalBg,
             Cursor = Cursors.Hand,
             Tag = theme.Id
         };
@@ -170,8 +173,8 @@ public class ThemeHintTab : UserControl
         var lbl = new Label
         {
             Text = theme.ThemeName,
-            Font = new Font("맑은 고딕", 11f, isSelected ? FontStyle.Bold : FontStyle.Regular),
-            ForeColor = isSelected ? ColorPalette.Primary : ColorPalette.Text,
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
+            ForeColor = isSelected ? ColorPalette.Accent : ColorPalette.Text,       // 선택: 주황(보색), 일반: 밝은 흰
             Location = new Point(12, 4),
             Size = new Size(196, 22),
             Cursor = Cursors.Hand
@@ -180,12 +183,25 @@ public class ThemeHintTab : UserControl
         var lblDesc = new Label
         {
             Text = theme.Description ?? (theme.IsActive ? "활성" : "비활성"),
-            Font = new Font("맑은 고딕", 9f),
+            Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
             ForeColor = ColorPalette.TextTertiary,
             Location = new Point(12, 24),
             Size = new Size(196, 18),
             Cursor = Cursors.Hand
         };
+
+        // hover 효과 (테마 가이드 색상)
+        void SetHover(bool hover)
+        {
+            if (isSelected) return; // 선택된 카드는 hover 변경 안 함
+            card.BackColor = hover ? hoverBg : normalBg;
+        }
+        card.MouseEnter += (_, _) => SetHover(true);
+        card.MouseLeave += (_, _) => SetHover(false);
+        lbl.MouseEnter += (_, _) => SetHover(true);
+        lbl.MouseLeave += (_, _) => SetHover(false);
+        lblDesc.MouseEnter += (_, _) => SetHover(true);
+        lblDesc.MouseLeave += (_, _) => SetHover(false);
 
         // 클릭 이벤트 (카드 전체)
         EventHandler onClick = async (_, _) => await SelectThemeAsync(theme.Id);
