@@ -14,6 +14,7 @@ public class HeaderPanel : Panel
     private readonly Label _lblTime;
     private readonly Button _btnMinimize;
     private readonly Button _btnClose;
+    private System.Windows.Forms.Timer? _timer;
 
     public event Action? RefreshRequested;
 
@@ -144,10 +145,10 @@ public class HeaderPanel : Panel
         };
         MouseUp += (_, _) => dragging = false;
 
-        // 타이머
-        var timer = new System.Windows.Forms.Timer { Interval = 1000 };
-        timer.Tick += (_, _) => UpdateTime();
-        timer.Start();
+        // 타이머 (필드로 저장하여 dispose 가능)
+        _timer = new System.Windows.Forms.Timer { Interval = 1000 };
+        _timer.Tick += (_, _) => UpdateTime();
+        _timer.Start();
 
         // 초기 위치 + Resize 시 위치 갱신
         Resize += (_, _) => LayoutWindowButtons();
@@ -165,6 +166,12 @@ public class HeaderPanel : Panel
     private void UpdateTime()
     {
         _lblTime.Text = DateTime.Now.ToString("yyyy-MM-dd (ddd)  HH:mm:ss");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { _timer?.Stop(); _timer?.Dispose(); }
+        base.Dispose(disposing);
     }
 
     protected override void OnPaint(PaintEventArgs e)

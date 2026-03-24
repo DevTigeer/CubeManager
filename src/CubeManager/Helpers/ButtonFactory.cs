@@ -162,6 +162,7 @@ public static class ButtonFactory
     private static void ApplyRoundedRegion(Button btn)
     {
         if (btn.Width <= 0 || btn.Height <= 0) return;
+        btn.Region?.Dispose(); // 이전 Region 해제
         using var path = new GraphicsPath();
         var d = Radius * 2;
         var rect = new Rectangle(0, 0, btn.Width, btn.Height);

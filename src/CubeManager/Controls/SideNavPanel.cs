@@ -34,6 +34,10 @@ public class SideNavPanel : Panel
     private static readonly string[] FallbackIcons =
         ["📅", "📋", "✅", "⏰", "📝", "🎫", "📦", "📄", "🔑", "⚙️", "🛡️"];
     private static readonly bool _useMdl2 = IsMdl2Available();
+    private static readonly Font _iconFont = _useMdl2
+        ? new Font("Segoe MDL2 Assets", 14f)
+        : new Font("Segoe UI Emoji", 14f);
+    private static readonly Font _logoFont = new("Segoe UI", 11f, FontStyle.Bold);
 
     public int SelectedIndex
     {
@@ -119,14 +123,12 @@ public class SideNavPanel : Panel
         var iconBg = new Rectangle(12, 12, 32, 32);
         using var iconBgBrush = new SolidBrush(ColorPalette.Text);
         g.FillEllipse(iconBgBrush, iconBg);
-        using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
         using var whiteBrush = new SolidBrush(ColorPalette.Surface);
-        g.DrawString("C", iconFont, whiteBrush, 20, 17);
+        g.DrawString("C", _logoFont, whiteBrush, 20, 17);
 
         // 로고 텍스트 (무채색)
         using var logoBrush = new SolidBrush(ColorPalette.Text);
-        using var logoFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        g.DrawString("CubeManager", logoFont, logoBrush, 48, 18);
+        g.DrawString("CubeManager", _logoFont, logoBrush, 48, 18);
 
         // 하단 구분선
         using var divPen = new Pen(ColorPalette.Divider, 1);
@@ -174,9 +176,7 @@ public class SideNavPanel : Panel
 
         // 아이콘 (MDL2 우선, 폴백=이모지)
         var icons = _useMdl2 ? Icons : FallbackIcons;
-        using var iconFont = _useMdl2
-            ? new Font("Segoe MDL2 Assets", 14f)
-            : new Font("Segoe UI Emoji", 14f);
+        var iconFont = _iconFont;
         using var iconBrush = new SolidBrush(iconColor);
         var iconX = (IconAreaWidth - 24) / 2f;
         g.DrawString(icons[index], iconFont, iconBrush, iconX, y + 12);
@@ -185,7 +185,7 @@ public class SideNavPanel : Panel
         var textColor = isSelected ? ColorPalette.NavActive :
                         isHover ? ColorPalette.Text :
                         ColorPalette.TextSecondary;
-        using var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
+        var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
         using var textBrush = new SolidBrush(textColor);
         g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
     }
