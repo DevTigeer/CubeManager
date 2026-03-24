@@ -87,7 +87,7 @@ public static class GridTheme
                 },
                 LineAlignment = StringAlignment.Center
             };
-            e.Graphics.DrawString(e.FormattedValue?.ToString() ?? "", font, brush, textRect, sf);
+            e.Graphics!.DrawString(e.FormattedValue?.ToString() ?? "", font, brush, textRect, sf);
             e.Handled = true;
         };
 
