@@ -171,19 +171,32 @@ public class DocumentTab : UserControl
         _fileInfoPanel.Controls.Add(_lblFileName);
         _fileInfoPanel.Controls.Add(_lblEditMode);
 
-        // 뷰어
+        // 뷰어 (Panel 래핑으로 좌측 여백 확보)
+        var viewerWrapper = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = ColorPalette.Card,
+            Padding = new Padding(20, 16, 20, 16)  // 좌우 20px 여백
+        };
         _richViewer = new RichTextBox
         {
             Dock = DockStyle.Fill,
             ReadOnly = true,
-            Font = new Font("맑은 고딕", 11f),
-            BackColor = ColorPalette.Card,            // 제목색과 동일
-            ForeColor = Color.White,                  // 흰색 글씨
-            BorderStyle = BorderStyle.None,
-            Padding = new Padding(16, 12, 16, 12)
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
+            BackColor = ColorPalette.Card,
+            ForeColor = Color.White,
+            BorderStyle = BorderStyle.None
         };
+        viewerWrapper.Controls.Add(_richViewer);
 
         // 에디터
+        var editorWrapper = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = ColorPalette.Card,
+            Padding = new Padding(20, 16, 20, 16),
+            Visible = false
+        };
         _txtEditor = new TextBox
         {
             Dock = DockStyle.Fill,
@@ -192,9 +205,9 @@ public class DocumentTab : UserControl
             Font = new Font("Consolas", 11f),
             BackColor = ColorPalette.Card,
             ForeColor = Color.White,
-            BorderStyle = BorderStyle.None,
-            Visible = false
+            BorderStyle = BorderStyle.None
         };
+        editorWrapper.Controls.Add(_txtEditor);
         _txtEditor.KeyDown += (_, e) =>
         {
             if (e.Control && e.KeyCode == Keys.S)
@@ -215,8 +228,8 @@ public class DocumentTab : UserControl
             TextAlign = ContentAlignment.MiddleCenter
         });
 
-        split.Panel2.Controls.Add(_richViewer);
-        split.Panel2.Controls.Add(_txtEditor);
+        split.Panel2.Controls.Add(viewerWrapper);
+        split.Panel2.Controls.Add(editorWrapper);
         split.Panel2.Controls.Add(_emptyState);
         split.Panel2.Controls.Add(_fileInfoPanel);
 
@@ -276,16 +289,16 @@ public class DocumentTab : UserControl
 
         _fileInfoPanel.Visible = true;
         _emptyState.Visible = false;
-        _richViewer.Visible = true;
-        _txtEditor.Visible = false;
+        _richViewer.Parent!.Visible = true;
+        _txtEditor.Parent!.Visible = false;
         SetEditMode(false);
     }
 
     private void SetEditMode(bool editing)
     {
         _isEditMode = editing;
-        _richViewer.Visible = !editing;
-        _txtEditor.Visible = editing;
+        _richViewer.Parent!.Visible = !editing;
+        _txtEditor.Parent!.Visible = editing;
         _lblEditMode.Visible = editing;
         _btnSave.Enabled = editing;
         _btnEdit.Text = editing ? "취소" : "편집";
@@ -391,7 +404,7 @@ public class DocumentTab : UserControl
         _richViewer.Text = "";
         _fileInfoPanel.Visible = false;
         _emptyState.Visible = true;
-        _richViewer.Visible = false;
+        _richViewer.Parent!.Visible = false;
         LoadTree();
         ToastNotification.Show("문서가 삭제되었습니다.", ToastType.Success);
     }

@@ -207,7 +207,7 @@ public class AdminTab : UserControl
     // ==================== 탭 1: 대시보드 ====================
     private TabPage BuildDashboardTab()
     {
-        var page = new TabPage("📊 대시보드") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("대시보드") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         _summaryCards.AddCard("이번 달 매출", "₩0", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
         _summaryCards.AddCard("이번 달 지출", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
@@ -363,7 +363,7 @@ public class AdminTab : UserControl
     // ==================== 탭 2: 급여 관리 ====================
     private TabPage BuildSalaryTab()
     {
-        var page = new TabPage("💰 급여 관리") { BackColor = ColorPalette.Surface };
+        var page = new TabPage("급여 관리") { BackColor = ColorPalette.Surface };
 
         // SalaryTab을 UserControl로 내장
         if (_salaryService2 != null)
@@ -391,7 +391,7 @@ public class AdminTab : UserControl
     // ==================== 탭 3: 출퇴근 이력 ====================
     private TabPage BuildAttendanceHistoryTab()
     {
-        var page = new TabPage("⏰ 출퇴근 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("출퇴근 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         // 상단: 기간 선택
         var filterPanel = new FlowLayoutPanel
@@ -499,7 +499,7 @@ public class AdminTab : UserControl
     // ==================== 탭 4: 직원 관리 ====================
     private TabPage BuildEmployeeTab()
     {
-        var page = new TabPage("👤 직원 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("직원 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         var toolbar = new FlowLayoutPanel
@@ -542,7 +542,7 @@ public class AdminTab : UserControl
     // ==================== 탭 3: 알람 관리 ====================
     private TabPage BuildMiceTab()
     {
-        var page = new TabPage("🔔 알람") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("알람") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         var toolbar = new FlowLayoutPanel
@@ -789,7 +789,7 @@ public class AdminTab : UserControl
     // ==================== 탭 4: 체크리스트 관리 ====================
     private TabPage BuildChecklistTab()
     {
-        var page = new TabPage("✅ 체크리스트") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("체크리스트") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
         var toolbar = new FlowLayoutPanel
@@ -1414,7 +1414,7 @@ public class AdminTab : UserControl
 
     private TabPage BuildAlertHistoryTab()
     {
-        var page = new TabPage("🔔 알림 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+        var page = new TabPage("알림 이력") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
 
         // 상단 필터
         var filterPanel = new FlowLayoutPanel

@@ -945,15 +945,26 @@ public class ReservationSalesTab : UserControl
             if (colName == null) continue;
 
             row.Cells[colName].Value = item.Amount.ToString("N0");
-            var tagColor = item.PaymentType switch
+
+            // 취소/노쇼 행이면 연한 색으로 표시
+            var status = row.Cells["Status"].Value?.ToString();
+            if (status is "취소" or "노쇼")
             {
-                "card" => ColorPalette.PaymentCard,
-                "cash" => ColorPalette.PaymentCash,
-                "transfer" => ColorPalette.PaymentTransfer,
-                _ => (ColorPalette.Surface, ColorPalette.Text)
-            };
-            row.Cells[colName].Style.BackColor = tagColor.Item1;
-            row.Cells[colName].Style.ForeColor = tagColor.Item2;
+                row.Cells[colName].Style.BackColor = Color.FromArgb(138, 149, 184); // #8A95B8
+                row.Cells[colName].Style.ForeColor = Color.White;
+            }
+            else
+            {
+                var tagColor = item.PaymentType switch
+                {
+                    "card" => ColorPalette.PaymentCard,
+                    "cash" => ColorPalette.PaymentCash,
+                    "transfer" => ColorPalette.PaymentTransfer,
+                    _ => (ColorPalette.Surface, ColorPalette.Text)
+                };
+                row.Cells[colName].Style.BackColor = tagColor.Item1;
+                row.Cells[colName].Style.ForeColor = tagColor.Item2;
+            }
         }
     }
 
