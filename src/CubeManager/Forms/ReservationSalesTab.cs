@@ -470,22 +470,26 @@ public class ReservationSalesTab : UserControl
             var isNoshow = r.Status == "noshow";
             var isWalkin = r.Status == "walkin";
             row.Cells["Status"].Value = isRemoved ? "취소" : isNoshow ? "노쇼" : isWalkin ? "워크인" : "확정";
-            // 상태별 선명한 색상 (배경 대비 강조)
+            // 상태별 배경색 + 글씨색 (배지 스타일)
             if (isRemoved)
             {
-                row.Cells["Status"].Style.ForeColor = ColorPalette.Danger;        // 빨강
+                row.Cells["Status"].Style.BackColor = Color.FromArgb(60, 20, 20);   // 어두운 빨강
+                row.Cells["Status"].Style.ForeColor = Color.FromArgb(255, 130, 130); // 밝은 빨강
             }
             else if (isNoshow)
             {
-                row.Cells["Status"].Style.ForeColor = ColorPalette.Accent;        // 주황 (#F18A3D)
+                row.Cells["Status"].Style.BackColor = Color.FromArgb(60, 45, 20);   // 어두운 주황
+                row.Cells["Status"].Style.ForeColor = Color.FromArgb(255, 180, 100); // 밝은 주황
             }
             else if (isWalkin)
             {
-                row.Cells["Status"].Style.ForeColor = ColorPalette.Primary;       // 청록 (#47A8D7)
+                row.Cells["Status"].Style.BackColor = Color.FromArgb(25, 55, 75);   // 어두운 청록
+                row.Cells["Status"].Style.ForeColor = Color.FromArgb(120, 200, 240); // 밝은 청록
             }
             else
             {
-                row.Cells["Status"].Style.ForeColor = ColorPalette.Success;       // 초록 (#22C55E)
+                row.Cells["Status"].Style.BackColor = Color.FromArgb(20, 55, 35);   // 어두운 초록
+                row.Cells["Status"].Style.ForeColor = Color.FromArgb(100, 220, 140); // 밝은 초록
             }
 
             // 취소/노쇼 행 스타일
