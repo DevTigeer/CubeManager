@@ -115,15 +115,15 @@ public class SideNavPanel : Panel
 
     private void DrawLogo(Graphics g)
     {
-        // 로고 아이콘 (인디고 원형 배경 + 흰 텍스트)
+        // 로고 아이콘 (블랙 원형 배경 + 흰 텍스트)
         var iconBg = new Rectangle(12, 12, 32, 32);
-        using var iconBgBrush = new SolidBrush(ColorPalette.Primary);
+        using var iconBgBrush = new SolidBrush(ColorPalette.Text);
         g.FillEllipse(iconBgBrush, iconBg);
         using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        using var whiteBrush = new SolidBrush(Color.White);
+        using var whiteBrush = new SolidBrush(ColorPalette.Surface);
         g.DrawString("C", iconFont, whiteBrush, 20, 17);
 
-        // 로고 텍스트
+        // 로고 텍스트 (무채색)
         using var logoBrush = new SolidBrush(ColorPalette.Text);
         using var logoFont = new Font("Segoe UI", 11f, FontStyle.Bold);
         g.DrawString("CubeManager", logoFont, logoBrush, 48, 18);

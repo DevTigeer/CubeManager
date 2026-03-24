@@ -28,8 +28,8 @@ public class HeaderPanel : Panel
         var lblApp = new Label
         {
             Text = "CubeManager",
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
-            ForeColor = ColorPalette.Primary,
+            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
             Dock = DockStyle.Left,
             AutoSize = true,
             TextAlign = ContentAlignment.MiddleLeft,

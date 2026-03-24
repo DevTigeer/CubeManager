@@ -22,37 +22,43 @@ public static class ButtonFactory
         return btn;
     }
 
-    /// <summary>테두리 보조 버튼</summary>
+    /// <summary>테두리 보조 버튼 (무채색 기본)</summary>
     public static Button CreateSecondary(string text, int width = 0)
     {
-        var btn = CreateBase(text, ColorPalette.Surface, ColorPalette.Primary, width);
+        var btn = CreateBase(text, ColorPalette.Surface, ColorPalette.Text, width);
         btn.FlatAppearance.BorderColor = ColorPalette.Border;
         btn.FlatAppearance.BorderSize = 1;
-        btn.FlatAppearance.MouseOverBackColor = ColorPalette.Primary50;
+        btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
         return btn;
     }
 
-    /// <summary>위험 액션 버튼 (빨간 배경)</summary>
+    /// <summary>위험 액션 버튼 (빨간 포인트)</summary>
     public static Button CreateDanger(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Danger, ColorPalette.TextWhite, width);
-        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(
+            Math.Max(ColorPalette.Danger.R - 20, 0),
+            Math.Max(ColorPalette.Danger.G - 20, 0),
+            Math.Max(ColorPalette.Danger.B - 20, 0));
         return btn;
     }
 
-    /// <summary>성공/확인 버튼 (초록 배경)</summary>
+    /// <summary>성공/확인 버튼 (초록 포인트)</summary>
     public static Button CreateSuccess(string text, int width = 0)
     {
         var btn = CreateBase(text, ColorPalette.Success, ColorPalette.TextWhite, width);
-        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(56, 142, 60);
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(
+            Math.Max(ColorPalette.Success.R - 20, 0),
+            Math.Max(ColorPalette.Success.G - 20, 0),
+            Math.Max(ColorPalette.Success.B - 20, 0));
         return btn;
     }
 
-    /// <summary>투명 텍스트 버튼 (Ghost)</summary>
+    /// <summary>투명 텍스트 버튼 (무채색 Ghost)</summary>
     public static Button CreateGhost(string text, int width = 0)
     {
         var btn = CreateBase(text, Color.Transparent, ColorPalette.TextSecondary, width);
-        btn.FlatAppearance.MouseOverBackColor = ColorPalette.NavHoverBg;
+        btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
         btn.FlatAppearance.MouseDownBackColor = ColorPalette.Border;
         return btn;
     }

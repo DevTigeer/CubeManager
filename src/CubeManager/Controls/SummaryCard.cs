@@ -69,19 +69,20 @@ public class SummaryCard : Panel
         var cardRect = new Rectangle(0, 0, Width - 1, Height - 2);
         using var path = RoundedCard.CreateRoundedPath(cardRect, Radius);
 
-        // 하단 미세 그림자
-        using var shadowPen = new Pen(ColorPalette.ShadowLight);
-        g.DrawLine(shadowPen,
-            Radius, cardRect.Bottom + 1,
-            cardRect.Right - Radius, cardRect.Bottom + 1);
+        // ── 뉴모피즘 그림자 ──
+        // 어두운 그림자 (우하)
+        var shadowRect = new Rectangle(cardRect.X + 2, cardRect.Y + 2, cardRect.Width, cardRect.Height);
+        using var shadowPath = RoundedCard.CreateRoundedPath(shadowRect, Radius);
+        using var darkPen = new Pen(ColorPalette.NeuDark, 1.5f);
+        g.DrawPath(darkPen, shadowPath);
 
-        // 카드 배경 (호버 시 약간 어두운 배경)
+        // 카드 배경 (호버 시 미세 변화)
         var bgColor = _isHovered ? ColorPalette.CardHover : ColorPalette.Surface;
         using var bgBrush = new SolidBrush(bgColor);
         g.FillPath(bgBrush, path);
 
-        // 테두리
-        using var borderPen = new Pen(ColorPalette.Border, 1);
+        // 미세 테두리
+        using var borderPen = new Pen(ColorPalette.Border, 0.5f);
         g.DrawPath(borderPen, path);
 
         var pad = DesignTokens.SpaceLG;
