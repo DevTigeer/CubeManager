@@ -106,7 +106,7 @@ public class DocumentTab : UserControl
             try { split.SplitterDistance = Math.Max(150, (int)(split.Width * 0.10)); } catch { }
         };
         split.Panel1.BackColor = ColorPalette.Surface;
-        split.Panel2.BackColor = ColorPalette.Surface;
+        split.Panel2.BackColor = ColorPalette.Card;
 
         // ── 좌측: 트리 ──
         _treeView = new TreeView
@@ -129,7 +129,7 @@ public class DocumentTab : UserControl
         _fileInfoPanel = new Panel
         {
             Dock = DockStyle.Top, Height = 60,
-            BackColor = ColorPalette.Surface,
+            BackColor = ColorPalette.Card,
             Padding = new Padding(16, 10, 16, 0),
             Visible = false
         };
@@ -175,7 +175,7 @@ public class DocumentTab : UserControl
             Dock = DockStyle.Fill,
             ReadOnly = true,
             Font = new Font("맑은 고딕", 11f),
-            BackColor = ColorPalette.Surface,
+            BackColor = ColorPalette.Card,
             ForeColor = ColorPalette.Text,
             BorderStyle = BorderStyle.None,
             Padding = new Padding(16, 12, 16, 12)
