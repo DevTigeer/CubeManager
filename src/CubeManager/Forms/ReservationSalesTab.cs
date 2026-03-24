@@ -470,25 +470,22 @@ public class ReservationSalesTab : UserControl
             var isNoshow = r.Status == "noshow";
             var isWalkin = r.Status == "walkin";
             row.Cells["Status"].Value = isRemoved ? "취소" : isNoshow ? "노쇼" : isWalkin ? "워크인" : "확정";
+            // 상태별 선명한 색상 (배경 대비 강조)
             if (isRemoved)
             {
-                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentExpense.Item1;
-                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentExpense.Item2;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.Danger;        // 빨강
             }
             else if (isNoshow)
             {
-                row.Cells["Status"].Style.BackColor = ColorPalette.AccentOrange.Light;
-                row.Cells["Status"].Style.ForeColor = ColorPalette.AccentOrange.Main;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.Accent;        // 주황 (#F18A3D)
             }
             else if (isWalkin)
             {
-                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentTransfer.Item1;
-                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentTransfer.Item2;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.Primary;       // 청록 (#47A8D7)
             }
             else
             {
-                row.Cells["Status"].Style.BackColor = ColorPalette.PaymentCash.Item1;
-                row.Cells["Status"].Style.ForeColor = ColorPalette.PaymentCash.Item2;
+                row.Cells["Status"].Style.ForeColor = ColorPalette.Success;       // 초록 (#22C55E)
             }
 
             // 취소/노쇼 행 스타일
