@@ -11,20 +11,8 @@ public static class GridTheme
 {
     private static readonly Color SelectRowBg = Color.FromArgb(250, 235, 220);
 
-    // 캐싱된 스타일
-    private static readonly DataGridViewCellStyle _amountStyle = new()
-    {
-        Alignment = DataGridViewContentAlignment.MiddleRight,
-        Format = "N0",
-        Font = new Font("Segoe UI", 10f, FontStyle.Bold)
-    };
-
     public static void ApplyTheme(DataGridView grid)
     {
-        // 이벤트 핸들러 중복 방지
-        if (grid.Tag as string == "__gridThemed") return;
-        grid.Tag = "__gridThemed";
-
         grid.BorderStyle = BorderStyle.None;
         grid.BackgroundColor = ColorPalette.Surface;
         grid.GridColor = ColorPalette.Border;
@@ -139,7 +127,12 @@ public static class GridTheme
         };
     }
 
-    public static DataGridViewCellStyle AmountStyle => _amountStyle;
+    public static DataGridViewCellStyle AmountStyle => new()
+    {
+        Alignment = DataGridViewContentAlignment.MiddleRight,
+        Format = "N0",
+        Font = new Font("Segoe UI", 10f, FontStyle.Bold)
+    };
 
     public static DataGridViewCellStyle CenterStyle => new()
     {

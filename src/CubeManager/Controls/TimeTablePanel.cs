@@ -26,12 +26,6 @@ public class TimeTablePanel : Panel
     private readonly Dictionary<int, int> _employeeColorIndex = new();
     private int _nextColorIndex;
 
-    // 캐싱된 폰트 (OnPaint에서 매번 생성 방지)
-    private static readonly Font _timeAxisFont = new("맑은 고딕", 7.5f, FontStyle.Bold);
-    private static readonly Font _cardNameFont = new("맑은 고딕", 10f, FontStyle.Bold);
-    private static readonly Font _cardSmallFont = new("맑은 고딕", 8.5f, FontStyle.Bold);
-    private static readonly Font _nowLabelFont = new("맑은 고딕", 7f, FontStyle.Bold);
-
     public event EventHandler<ScheduleBlockClickEventArgs>? BlockClicked;
     public event EventHandler<EmptyCellClickEventArgs>? EmptyCellDoubleClicked;
 
@@ -81,12 +75,12 @@ public class TimeTablePanel : Panel
         var cellW = (Width - TimeColWidth) / days;
         var cellH = Math.Max(18, (Height - HeaderHeight) / slots.Length);
 
-        // ──── Fonts (캐싱, dispose 금지) ────
-        var headerDateFont = DesignTokens.FontTabMenu;
-        var headerDayFont = DesignTokens.FontCaption;
-        var timeAxisFont = _timeAxisFont;
-        var cardNameFont = _cardNameFont;
-        var cardSmallFont = _cardSmallFont;
+        // ──── Fonts (모두 Bold) ────
+        using var headerDateFont = DesignTokens.FontTabMenu;           // Aptos 10.5f Bold
+        using var headerDayFont = DesignTokens.FontCaption;            // 맑은 고딕 8.5f Bold
+        using var timeAxisFont = new Font("맑은 고딕", 7.5f, FontStyle.Bold);
+        using var cardNameFont = new Font("맑은 고딕", 10f, FontStyle.Bold);   // 이름 키움 (8.5→10)
+        using var cardSmallFont = new Font("맑은 고딕", 8.5f, FontStyle.Bold); // 좁을 때도 키움 (7→8.5)
 
         // ──── 1. 전체 배경: MainDark ────
         using var bgBrush = new SolidBrush(ColorPalette.Background);
@@ -282,7 +276,7 @@ public class TimeTablePanel : Panel
 
                 // 시각 라벨 (주황 배경)
                 var nowLabel = now.ToString("HH:mm");
-                var nowFont = _nowLabelFont;
+                using var nowFont = new Font("맑은 고딕", 7f, FontStyle.Bold);
                 using var nowBgBrush = new SolidBrush(ColorPalette.Accent);
                 using var nowFgBrush = new SolidBrush(Color.White);
                 var labelSize = g.MeasureString(nowLabel, nowFont);

@@ -28,18 +28,28 @@ public static class DesignTokens
 
     private static readonly string HeadingFont = IsAptoAvailable() ? "Aptos" : "Segoe UI";
 
-    // ── 캐싱된 폰트 (앱 수명 동안 1회 생성, dispose 금지) ──
-    public static readonly Font FontPageTitle = new(HeadingFont, 16f, FontStyle.Bold);
-    public static readonly Font FontSectionTitle = new(HeadingFont, 13f, FontStyle.Bold);
-    public static readonly Font FontTabMenu = new(HeadingFont, 10.5f, FontStyle.Bold);
-    public static readonly Font FontBody = new("맑은 고딕", 10f, FontStyle.Bold);
-    public static readonly Font FontBodyLarge = new("맑은 고딕", 11f, FontStyle.Bold);
-    public static readonly Font FontBodySmall = new("맑은 고딕", 9f, FontStyle.Bold);
-    public static readonly Font FontCaption = new("맑은 고딕", 8.5f, FontStyle.Bold);
-    public static readonly Font FontStatValue = new("Segoe UI", 24f, FontStyle.Bold);
-    public static readonly Font FontStatSub = new("Segoe UI", 18f, FontStyle.Bold);
-    public static readonly Font FontStatUnit = new("Segoe UI", 12f, FontStyle.Bold);
-    public static readonly Font FontButton = new(HeadingFont, 10f, FontStyle.Bold);
+    /// <summary>페이지 제목: Aptos 16px Bold</summary>
+    public static Font FontPageTitle => new(HeadingFont, 16f, FontStyle.Bold);
+    /// <summary>섹션 제목: Aptos 13px Bold</summary>
+    public static Font FontSectionTitle => new(HeadingFont, 13f, FontStyle.Bold);
+    /// <summary>탭/메뉴: Aptos 10.5px Bold</summary>
+    public static Font FontTabMenu => new(HeadingFont, 10.5f, FontStyle.Bold);
+    /// <summary>본문: 맑은 고딕 10px Bold (모든 텍스트 Bold)</summary>
+    public static Font FontBody => new("맑은 고딕", 10f, FontStyle.Bold);
+    /// <summary>본문 큰: 맑은 고딕 11px Bold (기존 Bold 구분용)</summary>
+    public static Font FontBodyLarge => new("맑은 고딕", 11f, FontStyle.Bold);
+    /// <summary>본문 작은: 맑은 고딕 9px Bold (기존 Regular 구분용)</summary>
+    public static Font FontBodySmall => new("맑은 고딕", 9f, FontStyle.Bold);
+    /// <summary>캡션/힌트: 맑은 고딕 8.5px Bold</summary>
+    public static Font FontCaption => new("맑은 고딕", 8.5f, FontStyle.Bold);
+    /// <summary>통계 메인값: Segoe UI 24px Bold</summary>
+    public static Font FontStatValue => new("Segoe UI", 24f, FontStyle.Bold);
+    /// <summary>통계 서브값: Segoe UI 18px Bold</summary>
+    public static Font FontStatSub => new("Segoe UI", 18f, FontStyle.Bold);
+    /// <summary>통계 단위: Segoe UI 12px Bold</summary>
+    public static Font FontStatUnit => new("Segoe UI", 12f, FontStyle.Bold);
+    /// <summary>버튼 텍스트: Aptos 10px Bold</summary>
+    public static Font FontButton => new(HeadingFont, 10f, FontStyle.Bold);
 
     private static bool IsAptoAvailable()
     {

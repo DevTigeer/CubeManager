@@ -99,32 +99,38 @@ public class SummaryCard : Panel
 
         var textX = pad + 36 + DesignTokens.SpaceMD;
 
-        // 라벨 (Title) — 캐싱된 폰트
+        // 라벨 (Title) — Caption 스타일
+        using var titleFont = new Font("맑은 고딕", 9f, FontStyle.Regular);
         using var titleBrush = new SolidBrush(ColorPalette.TextSecondary);
-        g.DrawString(_title, DesignTokens.FontBodySmall, titleBrush, textX, pad);
+        g.DrawString(_title, titleFont, titleBrush, textX, pad);
 
-        // 메인 값 (Value)
+        // 메인 값 (Value) — Segoe UI 숫자 전용 폰트
+        using var valueFont = new Font("Segoe UI", 22f, FontStyle.Bold);
         using var valueBrush = new SolidBrush(ColorPalette.Text);
-        var (numPart, unitPart) = SplitValueUnit(_value);
-        var numSize = g.MeasureString(numPart, DesignTokens.FontStatValue);
-        g.DrawString(numPart, DesignTokens.FontStatValue, valueBrush, textX, pad + 16);
 
-        // 단위
+        // 값과 단위 분리 ("1,234,000원" → "1,234,000" + "원")
+        var (numPart, unitPart) = SplitValueUnit(_value);
+        var numSize = g.MeasureString(numPart, valueFont);
+        g.DrawString(numPart, valueFont, valueBrush, textX, pad + 16);
+
+        // 단위 (작게, 연하게)
         if (!string.IsNullOrEmpty(unitPart))
         {
+            using var unitFont = new Font("맑은 고딕", 11f);
             using var unitBrush = new SolidBrush(ColorPalette.TextTertiary);
-            g.DrawString(unitPart, DesignTokens.FontBodyLarge, unitBrush,
+            g.DrawString(unitPart, unitFont, unitBrush,
                 textX + numSize.Width - 4, pad + 28);
         }
 
         // 서브텍스트
         if (!string.IsNullOrEmpty(_subText))
         {
+            using var subFont = new Font("맑은 고딕", 8.5f, FontStyle.Regular);
             var subColor = _subText.StartsWith('▲') ? ColorPalette.Success :
                            _subText.StartsWith('▼') ? ColorPalette.Danger :
                            ColorPalette.TextTertiary;
             using var subBrush = new SolidBrush(subColor);
-            g.DrawString(_subText, DesignTokens.FontCaption, subBrush, textX, pad + 50);
+            g.DrawString(_subText, subFont, subBrush, textX, pad + 50);
         }
     }
 }
