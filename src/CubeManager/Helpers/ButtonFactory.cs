@@ -87,9 +87,41 @@ public static class ButtonFactory
             Height = DefaultHeight,
             Width = width > 0 ? width : Math.Max(MinWidth, text.Length * 13 + 32),
             Cursor = Cursors.Hand,
-            Margin = new Padding(4, 0, 4, 0)
+            Margin = new Padding(DesignTokens.SpaceXS, 0, DesignTokens.SpaceXS, 0)
         };
         btn.FlatAppearance.BorderSize = 0;
+
+        // Pressed 효과: 살짝 눌림감 (1px 오프셋)
+        btn.MouseDown += (_, _) => btn.Padding = new Padding(0, 1, 0, 0);
+        btn.MouseUp += (_, _) => btn.Padding = Padding.Empty;
+
+        // Focus 효과: Primary 테두리 (키보드 접근성)
+        btn.GotFocus += (_, _) =>
+        {
+            btn.FlatAppearance.BorderSize = 2;
+            btn.FlatAppearance.BorderColor = ColorPalette.Primary;
+        };
+        btn.LostFocus += (_, _) =>
+        {
+            btn.FlatAppearance.BorderSize = 0;
+        };
+
+        // Disabled 상태: 투명도 낮춤
+        btn.EnabledChanged += (_, _) =>
+        {
+            if (!btn.Enabled)
+            {
+                btn.BackColor = Color.FromArgb(100, backColor);
+                btn.ForeColor = Color.FromArgb(100, foreColor);
+                btn.Cursor = Cursors.Default;
+            }
+            else
+            {
+                btn.BackColor = backColor;
+                btn.ForeColor = foreColor;
+                btn.Cursor = Cursors.Hand;
+            }
+        };
 
         // 둥근 모서리 (Region 기반 — 성능 영향 0)
         btn.Resize += (_, _) => ApplyRoundedRegion(btn);

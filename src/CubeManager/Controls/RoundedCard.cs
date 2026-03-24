@@ -35,14 +35,9 @@ public class RoundedCard : Panel
 
         using var path = CreateRoundedPath(cardRect, Radius);
 
-        // 미세 그림자 (하단 1px)
+        // Elevation 그림자 (토큰 기반)
         if (ShowShadow)
-        {
-            using var shadowPen = new Pen(ColorPalette.ShadowLight);
-            g.DrawLine(shadowPen,
-                Radius, cardRect.Bottom + 1,
-                cardRect.Right - Radius, cardRect.Bottom + 1);
-        }
+            DesignTokens.DrawElevation(g, cardRect, DesignTokens.Elevation1);
 
         // 카드 배경
         using var bg = new SolidBrush(ColorPalette.Surface);

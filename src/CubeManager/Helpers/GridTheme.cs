@@ -68,12 +68,12 @@ public static class GridTheme
         };
     }
 
-    /// <summary>금액 컬럼용 오른쪽 정렬 스타일</summary>
+    /// <summary>금액 컬럼용 오른쪽 정렬 — Segoe UI 숫자 가독성</summary>
     public static DataGridViewCellStyle AmountStyle => new()
     {
         Alignment = DataGridViewContentAlignment.MiddleRight,
         Format = "N0",
-        Font = new Font("맑은 고딕", 10f)
+        Font = new Font("Segoe UI", 10f)
     };
 
     /// <summary>가운데 정렬 스타일</summary>

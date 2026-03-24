@@ -29,6 +29,18 @@ public class SummaryCard : Panel
         Invalidate();
     }
 
+    /// <summary>값과 단위를 분리: "1,234,000원" → ("1,234,000", "원")</summary>
+    private static (string num, string unit) SplitValueUnit(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return ("0", "");
+        // 끝에서부터 한글/영문 단위를 분리
+        var i = value.Length - 1;
+        while (i >= 0 && !char.IsDigit(value[i]) && value[i] != ',' && value[i] != '.')
+            i--;
+        if (i < 0) return (value, "");
+        return (value[..(i + 1)], value[(i + 1)..].TrimStart());
+    }
+
     private const int Radius = 8;
 
     public SummaryCard()
@@ -72,29 +84,42 @@ public class SummaryCard : Panel
         using var borderPen = new Pen(ColorPalette.Border, 1);
         g.DrawPath(borderPen, path);
 
-        var pad = 16;
+        var pad = DesignTokens.SpaceLG;
 
         // 아이콘 원형 배경 (36x36)
         var iconRect = new Rectangle(pad, pad, 36, 36);
         using var iconBgBrush = new SolidBrush(_accentLightColor);
         g.FillEllipse(iconBgBrush, iconRect);
 
-        // 아이콘 원형 안에 작은 원 (Accent 색상, 시각적 포인트)
+        // 아이콘 원형 안에 작은 원 (Accent 색상)
         var innerRect = new Rectangle(pad + 10, pad + 10, 16, 16);
         using var innerBrush = new SolidBrush(_accentColor);
         g.FillEllipse(innerBrush, innerRect);
 
-        var textX = pad + 36 + 12; // 아이콘 우측
+        var textX = pad + 36 + DesignTokens.SpaceMD;
 
-        // 라벨 (Title)
+        // 라벨 (Title) — Caption 스타일
         using var titleFont = new Font("맑은 고딕", 9f, FontStyle.Regular);
         using var titleBrush = new SolidBrush(ColorPalette.TextSecondary);
         g.DrawString(_title, titleFont, titleBrush, textX, pad);
 
-        // 메인 값 (Value)
-        using var valueFont = new Font("맑은 고딕", 18f, FontStyle.Bold);
+        // 메인 값 (Value) — Segoe UI 숫자 전용 폰트
+        using var valueFont = new Font("Segoe UI", 22f, FontStyle.Bold);
         using var valueBrush = new SolidBrush(ColorPalette.Text);
-        g.DrawString(_value, valueFont, valueBrush, textX, pad + 18);
+
+        // 값과 단위 분리 ("1,234,000원" → "1,234,000" + "원")
+        var (numPart, unitPart) = SplitValueUnit(_value);
+        var numSize = g.MeasureString(numPart, valueFont);
+        g.DrawString(numPart, valueFont, valueBrush, textX, pad + 16);
+
+        // 단위 (작게, 연하게)
+        if (!string.IsNullOrEmpty(unitPart))
+        {
+            using var unitFont = new Font("맑은 고딕", 11f);
+            using var unitBrush = new SolidBrush(ColorPalette.TextTertiary);
+            g.DrawString(unitPart, unitFont, unitBrush,
+                textX + numSize.Width - 4, pad + 28);
+        }
 
         // 서브텍스트
         if (!string.IsNullOrEmpty(_subText))
@@ -104,7 +129,7 @@ public class SummaryCard : Panel
                            _subText.StartsWith('▼') ? ColorPalette.Danger :
                            ColorPalette.TextTertiary;
             using var subBrush = new SolidBrush(subColor);
-            g.DrawString(_subText, subFont, subBrush, textX, pad + 48);
+            g.DrawString(_subText, subFont, subBrush, textX, pad + 50);
         }
     }
 }
