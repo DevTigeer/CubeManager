@@ -235,21 +235,29 @@ public class AdminTab : UserControl
             Margin = new Padding(10, 0, 0, 0)
         });
 
-        // 현금 보정
-        var cashPanel = new GroupBox
+        // 현금 보정 (GroupBox 제거 → 섹션 제목 + Panel)
+        var cashPanel = new Panel
         {
-            Text = "현금 잔액 수기 보정",
-            Dock = DockStyle.Top, Height = 80,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-            Padding = new Padding(10, 5, 10, 5)
+            Dock = DockStyle.Top, Height = 75,
+            BackColor = ColorPalette.Surface,
+            Padding = new Padding(0, 0, 0, 8)
         };
 
-        var nf = new Font("맑은 고딕", 10f, FontStyle.Regular);
+        var cashTitle = new Label
+        {
+            Text = "현금 잔액 수기 보정",
+            Dock = DockStyle.Top, Height = 28,
+            Font = DesignTokens.FontSectionTitle,
+            ForeColor = ColorPalette.TextSecondary,
+            Padding = new Padding(0, 4, 0, 0)
+        };
+
+        var nf = DesignTokens.FontBody;
         var cashFlow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 5, 0, 0)
+            Padding = new Padding(0, 2, 0, 0)
         };
 
         cashFlow.Controls.Add(new Label { Text = "날짜:", Size = new Size(40, 25), Font = nf, TextAlign = ContentAlignment.MiddleRight });
@@ -269,6 +277,7 @@ public class AdminTab : UserControl
         btnApplyCash.Click += BtnApplyCash_Click;
         cashFlow.Controls.Add(btnApplyCash);
         cashPanel.Controls.Add(cashFlow);
+        cashPanel.Controls.Add(cashTitle);
 
         // 하단 분할: 지각/조퇴(좌) + 매출 통계(우)
         var bottomSplit = new SplitContainer
@@ -276,12 +285,14 @@ public class AdminTab : UserControl
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
             SplitterDistance = 500,
-            SplitterWidth = 5,
-            BackColor = ColorPalette.Border
+            SplitterWidth = 2,
+            BackColor = ColorPalette.Divider
         };
+        bottomSplit.Panel1.BackColor = ColorPalette.Surface;
+        bottomSplit.Panel2.BackColor = ColorPalette.Surface;
 
         // 좌: 지각/조퇴 통계
-        var attendPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 5, 5, 0) };
+        var attendPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 0) };
         var attendHeader = new FlowLayoutPanel
         {
             Dock = DockStyle.Top, Height = 35,
@@ -313,7 +324,7 @@ public class AdminTab : UserControl
         attendPanel.Controls.Add(attendHeader);
 
         // 우: 매출 통계
-        var salesPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(5, 5, 0, 0) };
+        var salesPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8, 8, 0, 0) };
         var salesHeader = new Label
         {
             Text = "월별 매출 요약",
@@ -605,16 +616,23 @@ public class AdminTab : UserControl
         };
 
         // ─── 하단: HR 자동 알림 설정 ───
-        var alertSettingsPanel = new GroupBox
+        var alertSettingsPanel = new Panel
         {
-            Text = "⚙️ HR 자동 알림 설정",
             Dock = DockStyle.Bottom, Height = 200,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
-            ForeColor = ColorPalette.Text,
-            Padding = new Padding(12, 16, 12, 8)
+            BackColor = ColorPalette.Surface,
+            Padding = new Padding(12, 8, 12, 8)
         };
 
-        var settingsFont = new Font("맑은 고딕", 9.5f, FontStyle.Regular);
+        // 섹션 제목
+        alertSettingsPanel.Controls.Add(new Label
+        {
+            Text = "⚙️ HR 자동 알림 설정",
+            Dock = DockStyle.Top, Height = 28,
+            Font = DesignTokens.FontSectionTitle,
+            ForeColor = ColorPalette.TextSecondary
+        });
+
+        var settingsFont = DesignTokens.FontBodySmall;
         var sy = 22;
 
         // 1) 체크리스트 미완료 알림
