@@ -130,7 +130,7 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(_chkAutoRefresh);
 
-        var btnRecalc = CreateBtn("계산 반영", ColorPalette.AccentGreen.Main);
+        var btnRecalc = CreateBtn("표새로고침", ColorPalette.AccentGreen.Main);
         btnRecalc.Click += async (_, _) =>
         {
             await _salesService.RecalculateTotalsAsync(_currentDate);
@@ -139,7 +139,7 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(btnRecalc);
 
-        var btnCustomerCalc = CreateBtn("손님계산", ColorPalette.AccentBlue.Main);
+        var btnCustomerCalc = CreateBtn("금액계산", ColorPalette.AccentBlue.Main);
         btnCustomerCalc.Click += (_, _) =>
         {
             using var dlg = new Dialogs.CustomerCalcDialog();
@@ -147,7 +147,7 @@ public class ReservationSalesTab : UserControl
         };
         topPanel.Controls.Add(btnCustomerCalc);
 
-        var btnAddWalkin = CreateBtn("+ 워크인", ColorPalette.Primary);
+        var btnAddWalkin = CreateBtn("+현장", ColorPalette.Primary);
         btnAddWalkin.Click += (_, _) => AddWalkinReservation();
         topPanel.Controls.Add(btnAddWalkin);
 
