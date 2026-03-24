@@ -17,6 +17,8 @@ public class ReservationScraperService : IReservationScraperService
     private readonly IConfigRepository _configRepo;
     private HttpClient? _httpClient;
     private System.Net.CookieContainer? _cookieContainer;
+    private DateTime _lastLoginTime = DateTime.MinValue;
+    private static readonly TimeSpan SessionTimeout = TimeSpan.FromMinutes(30);
 
     public ReservationScraperService(IConfigRepository configRepo)
     {
@@ -120,7 +122,18 @@ public class ReservationScraperService : IReservationScraperService
 
     private async Task EnsureLoggedInAsync(string id, string pw)
     {
-        if (_httpClient != null) return;
+        // 세션 타임아웃 체크: 마지막 로그인 후 30분 경과 시 재로그인
+        if (_httpClient != null && DateTime.Now - _lastLoginTime < SessionTimeout)
+            return;
+
+        // 기존 클라이언트 정리
+        if (_httpClient != null)
+        {
+            Log.Information("세션 타임아웃 ({Minutes}분 경과) — 재로그인",
+                (int)(DateTime.Now - _lastLoginTime).TotalMinutes);
+            _httpClient.Dispose();
+            _httpClient = null;
+        }
 
         var baseUrl = await _configRepo.GetAsync("web_base_url")
                       ?? "http://www.cubeescape.co.kr";
@@ -136,7 +149,8 @@ public class ReservationScraperService : IReservationScraperService
         ]);
 
         await _httpClient.PostAsync($"{baseUrl}/bbs/login_check.php", loginData);
-        Log.Information("웹 로그인 완료");
+        _lastLoginTime = DateTime.Now;
+        Log.Information("웹 로그인 완료 (세션 갱신)");
     }
 
     /// <summary>
