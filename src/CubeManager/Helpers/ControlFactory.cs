@@ -222,26 +222,106 @@ public static class ControlFactory
     // 기존 컨트롤에 모던 스타일 일괄 적용
     // ═══════════════════════════════════════════
 
-    /// <summary>다이얼로그 전체를 다크 모던 스타일로 적용</summary>
+    /// <summary>다이얼로그 전체를 다크 모던 스타일로 적용 (타이틀바 제거 + X 버튼)</summary>
     public static void ApplyModernDialog(Form form)
     {
         form.Font = DesignTokens.FontBody;
         form.BackColor = ColorPalette.Surface;
         form.ForeColor = ColorPalette.Text;
+
+        // MainForm은 이미 FormBorderStyle.None — 서브 다이얼로그만 처리
+        if (form.FormBorderStyle != FormBorderStyle.None && form.Owner != null)
+        {
+            var title = form.Text;
+            form.FormBorderStyle = FormBorderStyle.None;
+
+            // 커스텀 타이틀바 (35px)
+            var titleBar = new Panel
+            {
+                Dock = DockStyle.Top, Height = 35,
+                BackColor = ColorPalette.Card
+            };
+
+            // 제목 라벨
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = DesignTokens.FontTabMenu,
+                ForeColor = ColorPalette.Text,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(12, 0, 0, 0)
+            };
+
+            // X 닫기 버튼
+            var btnX = new Button
+            {
+                Text = "✕",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = ColorPalette.TextSecondary,
+                BackColor = Color.Transparent,
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(35, 35),
+                Dock = DockStyle.Right,
+                Cursor = Cursors.Hand,
+                TabStop = false
+            };
+            btnX.FlatAppearance.BorderSize = 0;
+            btnX.FlatAppearance.MouseOverBackColor = ColorPalette.Danger;
+            btnX.Click += (_, _) =>
+            {
+                if (form.Modal)
+                    form.DialogResult = DialogResult.Cancel;
+                form.Close();
+            };
+
+            titleBar.Controls.Add(lblTitle);
+            titleBar.Controls.Add(btnX);
+
+            // 드래그 이동
+            var dragging = false;
+            var dragStart = Point.Empty;
+            lblTitle.MouseDown += (_, me) => { dragging = true; dragStart = me.Location; };
+            lblTitle.MouseMove += (_, me) =>
+            {
+                if (!dragging) return;
+                form.Location = new Point(
+                    form.Location.X + me.X - dragStart.X,
+                    form.Location.Y + me.Y - dragStart.Y);
+            };
+            lblTitle.MouseUp += (_, _) => dragging = false;
+
+            // 기존 컨트롤을 아래로 밀기
+            form.Height += 35;
+            form.Controls.Add(titleBar);
+            titleBar.BringToFront();
+
+            // 테두리 (1px)
+            form.Paint += (_, pe) =>
+            {
+                using var pen = new Pen(ColorPalette.Border);
+                pe.Graphics.DrawRectangle(pen, 0, 0, form.Width - 1, form.Height - 1);
+            };
+        }
+
         ApplyModernStyle(form);
     }
 
     /// <summary>앱 전역: 새 Form이 열릴 때 자동으로 모던 스타일 적용</summary>
     public static void EnableGlobalDialogStyling(Form mainForm)
     {
-        // MainForm 자체 적용
-        ApplyModernDialog(mainForm);
+        // MainForm 자체는 스타일만 (타이틀바 이미 None)
+        mainForm.Font = DesignTokens.FontBody;
+        mainForm.BackColor = ColorPalette.Surface;
+        mainForm.ForeColor = ColorPalette.Text;
+        ApplyModernStyle(mainForm);
 
         // 이후 열리는 모든 자식 Form에도 적용
         mainForm.Activated += (_, _) =>
         {
             foreach (Form f in Application.OpenForms)
             {
+                if (f == mainForm) continue;
                 if (f.Tag as string != "__styled")
                 {
                     f.Tag = "__styled";

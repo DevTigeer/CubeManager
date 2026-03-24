@@ -99,6 +99,16 @@ public class AdminTab : UserControl
 
         _mainPanel.Visible = false;
         _authPanel.Visible = true;
+
+        // 탭 떠날 때 인증 초기화 (재진입 시 비밀번호 다시 입력)
+        VisibleChanged += (_, _) =>
+        {
+            if (!Visible)
+            {
+                _mainPanel.Visible = false;
+                _authPanel.Visible = true;
+            }
+        };
     }
 
     // ========== 인증 화면 ==========
