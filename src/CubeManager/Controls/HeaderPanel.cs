@@ -114,14 +114,15 @@ public class HeaderPanel : Panel
         };
         MouseUp += (_, _) => dragging = false;
 
-        // Dock.Right는 역순 추가: 가장 오른쪽부터
-        Controls.Add(btnClose);
-        Controls.Add(btnMinimize);
+        // Dock.Right: 먼저 Add = 가장 오른쪽
+        // 순서: [앱이름 ← ... ← 지점명 ← 🔄 ← 🧮 ← 시각 ← ─ ← ✕]
+        Controls.Add(lblApp);          // 좌측 Dock.Left
+        Controls.Add(btnClose);        // 가장 오른쪽
+        Controls.Add(btnMinimize);     // 닫기 왼쪽
         Controls.Add(_lblTime);
         Controls.Add(btnCalc);
         Controls.Add(btnRefresh);
         Controls.Add(lblBranch);
-        Controls.Add(lblApp);
 
         // 1초 타이머
         var timer = new System.Windows.Forms.Timer { Interval = 1000 };
