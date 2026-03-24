@@ -492,11 +492,13 @@ public class ReservationSalesTab : UserControl
                 row.Cells["Status"].Style.ForeColor = Color.FromArgb(100, 220, 140); // 밝은 초록
             }
 
-            // 취소/노쇼 행 스타일
+            // 취소/노쇼 행 스타일: 어두운 배경 + 흐린 글씨 + 취소선
             if (isRemoved || isNoshow)
             {
+                var dimBg = Color.FromArgb(218, 218, 218); // TableBg(#F0F0F0)보다 어둡게
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
+                    row.Cells[c].Style.BackColor = dimBg;
                     row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
                     row.Cells[c].Style.Font = StrikeoutFont;
                 }
