@@ -37,8 +37,11 @@ public static class GridTheme
             ForeColor = ColorPalette.TableHeaderText,
             Font = DesignTokens.FontTabMenu,
             Padding = new Padding(12, 0, 12, 0),
-            Alignment = DataGridViewContentAlignment.MiddleLeft
+            Alignment = DataGridViewContentAlignment.MiddleLeft,
+            SelectionBackColor = ColorPalette.HeaderBg,     // hover/선택 시에도 배경 동일
+            SelectionForeColor = ColorPalette.TableHeaderText // hover/선택 시에도 글씨 동일
         };
+        grid.ColumnHeaderMouseClick += (_, _) => { }; // 헤더 클릭 선택 방지
 
         // 데이터 행 — 선택 시 피치색 배경 (WinForms 내장 처리, 격자선 유지)
         grid.RowTemplate.Height = 44;
