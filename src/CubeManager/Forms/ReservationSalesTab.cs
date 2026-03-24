@@ -498,6 +498,7 @@ public class ReservationSalesTab : UserControl
                 var dimBg = Color.FromArgb(218, 218, 218); // TableBg(#F0F0F0)보다 어둡게
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
+                    if (row.Cells[c].OwningColumn.Name == "Status") continue; // 상태 셀은 배지 유지
                     row.Cells[c].Style.BackColor = dimBg;
                     row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
                     row.Cells[c].Style.Font = StrikeoutFont;
