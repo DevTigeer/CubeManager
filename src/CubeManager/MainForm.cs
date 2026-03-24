@@ -115,6 +115,9 @@ public class MainForm : Form
         header.Controls.Add(_alertBadge);
         _ = UpdateAlertBadgeAsync();
 
+        // 전역 모던 스타일 적용
+        ControlFactory.EnableGlobalDialogStyling(this);
+
         // 첫 번째 탭 로드
         LoadTab(0);
     }
@@ -239,6 +242,8 @@ public class MainForm : Form
         {
             Log.Information("탭 로드: {TabName}", TabNames[index]);
             _tabCache[index] = CreateTab(index);
+            if (_tabCache[index] != null)
+                ControlFactory.ApplyModernStyle(_tabCache[index]!);
         }
 
         // ContentPanel 콘텐츠 교체
