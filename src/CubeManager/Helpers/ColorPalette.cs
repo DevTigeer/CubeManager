@@ -108,15 +108,15 @@ public static class ColorPalette
     // ═══════════════════════════════════════════
     // Payment Tags
     // ═══════════════════════════════════════════
-    // 배경: 투명도 낮춤 (alpha 90), 글씨: 흰색
+    // 결제 셀: 테마 기본색 배경 + 흰 글씨
     public static (Color Bg, Color Fg) PaymentCard =>
-        (Color.FromArgb(90, 45, 74, 95), Color.White);       // 청록 tint + 흰글씨
+        (FromHex("#3F425D"), Color.White);        // Card (유사색 밝은)
     public static (Color Bg, Color Fg) PaymentCash =>
-        (Color.FromArgb(90, 26, 61, 42), Color.White);       // 초록 tint + 흰글씨
+        (FromHex("#3F425D"), Color.White);
     public static (Color Bg, Color Fg) PaymentTransfer =>
-        (Color.FromArgb(90, 61, 48, 32), Color.White);       // 앰버 tint + 흰글씨
+        (FromHex("#3F425D"), Color.White);
     public static (Color Bg, Color Fg) PaymentExpense =>
-        (Color.FromArgb(90, 61, 26, 26), Color.White);       // 빨강 tint + 흰글씨
+        (FromHex("#3F425D"), Color.White);
 
     // ═══════════════════════════════════════════
     // Attendance

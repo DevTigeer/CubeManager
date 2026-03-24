@@ -492,24 +492,23 @@ public class ReservationSalesTab : UserControl
                 row.Cells["Status"].Style.ForeColor = Color.FromArgb(100, 220, 140); // 밝은 초록
             }
 
-            // 취소/노쇼 행 스타일: 어두운 배경 + 흐린 글씨 + 취소선
+            // 취소/노쇼 행: 색/글씨 유지 + 취소선만 추가
             if (isRemoved || isNoshow)
             {
-                var dimBg = Color.FromArgb(218, 218, 218); // TableBg(#F0F0F0)보다 어둡게
+                var dimBg = Color.FromArgb(218, 218, 218);
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
-                    if (row.Cells[c].OwningColumn.Name == "Status") continue; // 상태 셀은 배지 유지
+                    if (row.Cells[c].OwningColumn.Name == "Status") continue;
                     row.Cells[c].Style.BackColor = dimBg;
-                    row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
-                    row.Cells[c].Style.Font = StrikeoutFont;
+                    row.Cells[c].Style.Font = StrikeoutFont; // 취소선만
                 }
-                // 결제 셀 비활성 + 색상도 어둡게 통일
-                var dimFg = Color.FromArgb(160, 160, 160);
+                // 결제 셀: 밝게 + 취소선 + 비활성
+                var lightBg = Color.FromArgb(200, 200, 210); // 기본 결제 셀보다 밝게
                 foreach (var col in new[] { "CardAmt", "CashAmt", "TransferAmt" })
                 {
                     row.Cells[col].ReadOnly = true;
-                    row.Cells[col].Style.BackColor = dimBg;
-                    row.Cells[col].Style.ForeColor = dimFg;
+                    row.Cells[col].Style.BackColor = lightBg;
+                    row.Cells[col].Style.Font = StrikeoutFont;
                 }
             }
 

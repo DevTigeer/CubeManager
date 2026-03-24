@@ -112,13 +112,14 @@ public class DocumentTab : UserControl
         _treeView = new TreeView
         {
             Dock = DockStyle.Fill,
-            Font = new Font("맑은 고딕", 10f),
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
             ShowLines = true,
             BorderStyle = BorderStyle.None,
             BackColor = ColorPalette.Surface,
             ForeColor = ColorPalette.Text,
             ItemHeight = 28,
-            Indent = 20
+            Indent = 16,
+            Padding = new Padding(4, 4, 0, 0)
         };
         _treeView.AfterSelect += TreeView_AfterSelect;
         split.Panel1.Controls.Add(_treeView);
@@ -175,8 +176,8 @@ public class DocumentTab : UserControl
             Dock = DockStyle.Fill,
             ReadOnly = true,
             Font = new Font("맑은 고딕", 11f),
-            BackColor = ColorPalette.Card,
-            ForeColor = ColorPalette.Text,
+            BackColor = ColorPalette.TableBg,         // 밝은 배경 (#F0F0F0, 대비)
+            ForeColor = ColorPalette.TableText,       // 어두운 글씨 (#1E2335)
             BorderStyle = BorderStyle.None,
             Padding = new Padding(16, 12, 16, 12)
         };
@@ -188,8 +189,8 @@ public class DocumentTab : UserControl
             Multiline = true,
             ScrollBars = ScrollBars.Both,
             Font = new Font("Consolas", 11f),
-            BackColor = ColorPalette.EditorBg,
-            ForeColor = ColorPalette.Text,
+            BackColor = ColorPalette.TableBg,
+            ForeColor = ColorPalette.TableText,
             BorderStyle = BorderStyle.None,
             Visible = false
         };

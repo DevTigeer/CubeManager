@@ -39,25 +39,6 @@ public class MainForm : Form
         Font = DesignTokens.FontBody;
 
         // === 레이아웃 구조 ===
-        // StatusBar (하단)
-        var statusBar = new Panel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 28,
-            BackColor = ColorPalette.Primary900,
-            Padding = new Padding(10, 0, 10, 0)
-        };
-        var statusLabel = new Label
-        {
-            Text = "CubeManager v0.2.0",
-            ForeColor = Color.FromArgb(180, 200, 255),
-            Font = new Font("맑은 고딕", 8.5f),
-            Dock = DockStyle.Left,
-            AutoSize = true,
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-        statusBar.Controls.Add(statusLabel);
-
         // HeaderPanel (상단)
         var header = new HeaderPanel();
         header.RefreshRequested += OnRefreshRequested;
@@ -78,7 +59,6 @@ public class MainForm : Form
         Controls.Add(_contentPanel);   // Fill (마지막 추가 = 남은 공간)
         Controls.Add(_sideNav);        // Left
         Controls.Add(header);          // Top
-        Controls.Add(statusBar);       // Bottom
 
         // 자동 백업 타이머 (10분마다 체크, 월/금 17시에 실행)
         _backupTimer = new System.Windows.Forms.Timer { Interval = 600_000 }; // 10분

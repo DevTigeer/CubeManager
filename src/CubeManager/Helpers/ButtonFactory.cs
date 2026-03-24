@@ -104,16 +104,7 @@ public static class ButtonFactory
         btn.MouseDown += (_, _) => btn.Padding = new Padding(0, 1, 0, 0);
         btn.MouseUp += (_, _) => btn.Padding = Padding.Empty;
 
-        // Focus: 파란 테두리 (키보드 접근성)
-        btn.GotFocus += (_, _) =>
-        {
-            btn.FlatAppearance.BorderSize = 2;
-            btn.FlatAppearance.BorderColor = ColorPalette.Primary;
-        };
-        btn.LostFocus += (_, _) =>
-        {
-            btn.FlatAppearance.BorderSize = 0;
-        };
+        // Focus 표시 제거 (BorderSize 변경이 repaint 잔상 유발)
 
         // Disabled: 투명도
         btn.EnabledChanged += (_, _) =>
