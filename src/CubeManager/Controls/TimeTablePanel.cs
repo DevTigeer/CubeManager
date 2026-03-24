@@ -6,22 +6,26 @@ using CubeManager.Helpers;
 
 namespace CubeManager.Controls;
 
-/// <summary>주간 타임테이블 커스텀 GDI+ Panel — 2025 리디자인</summary>
+/// <summary>
+/// 주간 타임테이블 — #2D3047 색상 가이드 적용.
+/// 배경: MainDark(#1E2335), 헤더: Main(#2D3047), 표 영역: TableBg(#F0F0F0)
+/// 블록: 직원별 색상 + 보색(#F18A3D) 선택 바
+/// 모든 폰트 Bold.
+/// </summary>
 public class TimeTablePanel : Panel
 {
     private List<Schedule> _schedules = [];
     private DateTime _weekStart;
     private DateTime _weekEnd;
     private HashSet<string> _holidayDates = new();
-    private const int HeaderHeight = 40;
-    private const int TimeColWidth = 50;
-    private const int CardGap = 3;       // 카드 간 간격
-    private const int CardRadius = 6;    // 카드 라운드
-    private const int AccentBarWidth = 4; // 좌측 컬러바 폭
+    private const int HeaderHeight = 42;
+    private const int TimeColWidth = 52;
+    private const int CardGap = 3;
+    private const int CardRadius = 6;
+    private const int AccentBarWidth = 4;
     private readonly Dictionary<int, int> _employeeColorIndex = new();
     private int _nextColorIndex;
 
-    // 클릭 이벤트
     public event EventHandler<ScheduleBlockClickEventArgs>? BlockClicked;
     public event EventHandler<EmptyCellClickEventArgs>? EmptyCellDoubleClicked;
 
@@ -54,15 +58,8 @@ public class TimeTablePanel : Panel
         return ColorPalette.GetEmployeeColor(idx);
     }
 
-    /// <summary>진한 악센트 색 (컬러바용)</summary>
-    private static Color GetAccentColor(Color baseColor) => Color.FromArgb(
-        Math.Max(baseColor.R - 80, 0),
-        Math.Max(baseColor.G - 80, 0),
-        Math.Max(baseColor.B - 80, 0));
-
-    /// <summary>시간 단축 표시: "10:00" → "10", "10:30" → "10:30"</summary>
-    private static string ShortTime(string time) =>
-        time.EndsWith(":00") ? time[..^3] : time;
+    private static Color BrightenColor(Color c, int amount) => Color.FromArgb(
+        c.A, Math.Min(c.R + amount, 255), Math.Min(c.G + amount, 255), Math.Min(c.B + amount, 255));
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -78,41 +75,44 @@ public class TimeTablePanel : Panel
         var cellW = (Width - TimeColWidth) / days;
         var cellH = Math.Max(18, (Height - HeaderHeight) / slots.Length);
 
-        // ──── Fonts ────
-        using var headerDateFont = new Font("맑은 고딕", 9.5f, FontStyle.Bold);
-        using var headerDayFont = new Font("맑은 고딕", 8f);
-        using var timeAxisFont = new Font("맑은 고딕", 7.5f);
+        // ──── Fonts (모두 Bold) ────
+        using var headerDateFont = DesignTokens.FontTabMenu;           // Aptos 10.5f Bold
+        using var headerDayFont = DesignTokens.FontCaption;            // 맑은 고딕 8.5f Bold
+        using var timeAxisFont = new Font("맑은 고딕", 7.5f, FontStyle.Bold);
         using var cardNameFont = new Font("맑은 고딕", 8.5f, FontStyle.Bold);
-        using var cardTimeFont = new Font("맑은 고딕", 7.5f);
-        using var cardSmallFont = new Font("맑은 고딕", 7.5f, FontStyle.Bold);
+        using var cardSmallFont = new Font("맑은 고딕", 7f, FontStyle.Bold);
 
-        // ──── Brushes & Pens ────
-        using var textBrush = new SolidBrush(ColorPalette.Text);
-        using var subTextBrush = new SolidBrush(ColorPalette.TextTertiary);
-        using var gridPen = new Pen(Color.FromArgb(40, ColorPalette.Border)) { Width = 0.5f };
-        using var halfGridPen = new Pen(Color.FromArgb(20, ColorPalette.Border)) { DashStyle = DashStyle.Dot, Width = 0.5f };
-        using var colDividerPen = new Pen(Color.FromArgb(50, ColorPalette.Border)) { Width = 0.5f };
+        // ──── 1. 전체 배경: MainDark ────
+        using var bgBrush = new SolidBrush(ColorPalette.Background);
+        g.FillRectangle(bgBrush, 0, 0, Width, Height);
 
-        // ──── 1. 헤더 배경 ────
-        using var headerBg = new SolidBrush(ColorPalette.Background);
+        // ──── 2. 표 영역 배경: TableBg (밝은 회색, 대비) ────
+        using var tableBg = new SolidBrush(ColorPalette.TableBg);
+        g.FillRectangle(tableBg, TimeColWidth, HeaderHeight, Width - TimeColWidth, Height - HeaderHeight);
+
+        // ──── 3. 헤더 배경: Main (#2D3047) ────
+        using var headerBg = new SolidBrush(ColorPalette.Main);
         g.FillRectangle(headerBg, 0, 0, Width, HeaderHeight);
 
-        // ──── 2. 오늘 열 강조 (헤더 포함) ────
+        // 시간 열 배경: Main
+        g.FillRectangle(headerBg, 0, HeaderHeight, TimeColWidth, Height - HeaderHeight);
+
+        // ──── 4. 오늘 열 강조 ────
         var todayDate = DateTime.Today;
         var todayDayIdx = -1;
         if (todayDate >= _weekStart && todayDate <= _weekEnd)
         {
             todayDayIdx = (int)(todayDate - _weekStart).TotalDays;
             var todayX = TimeColWidth + todayDayIdx * cellW;
-            // 헤더 강조
-            using var todayHeaderBg = new SolidBrush(Color.FromArgb(25, ColorPalette.Primary));
-            g.FillRectangle(todayHeaderBg, todayX, 0, cellW, HeaderHeight);
-            // 본문 강조
-            using var todayBodyBg = new SolidBrush(Color.FromArgb(12, ColorPalette.Primary));
+            // 헤더: 청록 tint
+            using var todayHdrBg = new SolidBrush(Color.FromArgb(40, ColorPalette.Primary));
+            g.FillRectangle(todayHdrBg, todayX, 0, cellW, HeaderHeight);
+            // 본문: 연한 청록 tint
+            using var todayBodyBg = new SolidBrush(Color.FromArgb(15, ColorPalette.Primary));
             g.FillRectangle(todayBodyBg, todayX, HeaderHeight, cellW, Height - HeaderHeight);
         }
 
-        // ──── 3. 요일 헤더 렌더링 ────
+        // ──── 5. 요일 헤더 ────
         var dayNames = new[] { "일", "월", "화", "수", "목", "금", "토" };
         for (var d = 0; d < days; d++)
         {
@@ -123,53 +123,53 @@ public class TimeTablePanel : Panel
             var isRedDay = isWeekend || isHoliday;
             var isToday = d == todayDayIdx;
 
-            // 날짜 (상단): "3/9"
+            // 날짜
             var dateText = $"{date.Month}/{date.Day}";
             using var dateBrush = new SolidBrush(
-                isToday ? ColorPalette.Primary :
+                isToday ? ColorPalette.Accent :     // 오늘 = 주황(보색)
                 isRedDay ? ColorPalette.Danger : ColorPalette.Text);
             g.DrawString(dateText, headerDateFont, dateBrush,
                 new RectangleF(x, 2, cellW, HeaderHeight / 2f),
                 new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
 
-            // 요일 (하단): "(월)"
-            var dayText = dayNames[(int)date.DayOfWeek];
+            // 요일
             using var dayBrush = new SolidBrush(
-                isToday ? ColorPalette.Primary :
+                isToday ? Color.FromArgb(200, ColorPalette.Accent) :
                 isRedDay ? Color.FromArgb(180, ColorPalette.Danger) : ColorPalette.TextTertiary);
-            g.DrawString(dayText, headerDayFont, dayBrush,
+            g.DrawString(dayNames[(int)date.DayOfWeek], headerDayFont, dayBrush,
                 new RectangleF(x, HeaderHeight / 2f, cellW, HeaderHeight / 2f),
                 new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
 
             // 열 구분선
             if (d > 0)
-                g.DrawLine(colDividerPen, x, 0, x, Height);
-        }
-
-        // 헤더 하단 구분선
-        using var headerLine = new Pen(Color.FromArgb(60, ColorPalette.Border));
-        g.DrawLine(headerLine, 0, HeaderHeight, Width, HeaderHeight);
-
-        // ──── 4. 시간 라벨 + 격자 (연한 보조선) ────
-        for (var r = 0; r < slots.Length; r++)
-        {
-            var y = HeaderHeight + r * cellH;
-            // 정시=연한 실선, 30분=점선 (거의 안보이게)
-            g.DrawLine(r % 2 == 0 ? gridPen : halfGridPen, TimeColWidth, y, Width, y);
-
-            if (r % 2 == 0) // 정시만 라벨
             {
-                g.DrawString(slots[r], timeAxisFont, subTextBrush,
-                    new RectangleF(0, y - 1, TimeColWidth - 4, cellH + 2),
-                    new StringFormat
-                    {
-                        Alignment = StringAlignment.Far,
-                        LineAlignment = StringAlignment.Center
-                    });
+                using var divPen = new Pen(Color.FromArgb(30, ColorPalette.Border));
+                g.DrawLine(divPen, x, HeaderHeight, x, Height);
             }
         }
 
-        // ──── 5. 스케줄 블록 렌더링 ────
+        // 헤더 하단 구분선
+        using var hdrLine = new Pen(ColorPalette.Border);
+        g.DrawLine(hdrLine, 0, HeaderHeight, Width, HeaderHeight);
+
+        // ──── 6. 시간 라벨 + 격자 ────
+        using var gridPen = new Pen(Color.FromArgb(25, 0, 0, 0));           // 밝은 배경 위 연한 선
+        using var halfPen = new Pen(Color.FromArgb(10, 0, 0, 0)) { DashStyle = DashStyle.Dot };
+        using var timeTextBrush = new SolidBrush(ColorPalette.TextTertiary);
+        for (var r = 0; r < slots.Length; r++)
+        {
+            var y = HeaderHeight + r * cellH;
+            g.DrawLine(r % 2 == 0 ? gridPen : halfPen, TimeColWidth, y, Width, y);
+
+            if (r % 2 == 0)
+            {
+                g.DrawString(slots[r], timeAxisFont, timeTextBrush,
+                    new RectangleF(0, y - 1, TimeColWidth - 4, cellH + 2),
+                    new StringFormat { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center });
+            }
+        }
+
+        // ──── 7. 스케줄 블록 ────
         var grouped = _schedules.GroupBy(s => new { s.EmployeeId, s.WorkDate });
         var blockList = new List<(int dayIdx, int startSlot, int endSlot, Schedule sched)>();
 
@@ -207,9 +207,8 @@ public class TimeTablePanel : Panel
                     o.sched.WorkDate == current.sched.WorkDate);
                 if (overlapIndex < 0) overlapIndex = 0;
 
-                // 간격 포함 레이아웃
                 var dayX = TimeColWidth + current.dayIdx * cellW;
-                var totalW = cellW - CardGap * 2; // 좌우 마진
+                var totalW = cellW - CardGap * 2;
                 var gapTotal = (overlapCount - 1) * CardGap;
                 var blockW = (totalW - gapTotal) / overlapCount;
                 var x = dayX + CardGap + overlapIndex * (blockW + CardGap);
@@ -217,35 +216,33 @@ public class TimeTablePanel : Panel
                 var h = (current.endSlot - current.startSlot) * cellH - 4;
 
                 var empColor = GetEmployeeColor(current.sched.EmployeeId);
-                var accentColor = GetAccentColor(empColor);
+                var brightEmp = BrightenColor(empColor, 60);
                 var rect = new Rectangle(x, y, Math.Max(blockW, 20), Math.Max(h, cellH));
 
-                // ── 카드 배경: 연한 직원 색상 (표 격자와 구분) ──
+                // 카드 배경: 밝은 직원 색상 (TableBg 위에서 구분됨)
                 using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                using var cardFill = new SolidBrush(Color.FromArgb(35, empColor));
+                using var cardFill = new SolidBrush(BrightenColor(empColor, 120));
                 g.FillPath(cardFill, cardPath);
 
-                // 카드 테두리 (4면 명확하게)
-                using var cardBorderPen = new Pen(Color.FromArgb(140, accentColor), 1f);
-                g.DrawPath(cardBorderPen, cardPath);
+                // 카드 테두리
+                using var cardBorder = new Pen(brightEmp, 1.2f);
+                g.DrawPath(cardBorder, cardPath);
 
-                // ── 좌측 컬러바 (4px, 직원 식별용) ──
+                // 좌측 컬러바
                 var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
                 using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
-                using var barBrush = new SolidBrush(accentColor);
+                using var barBrush = new SolidBrush(empColor);
                 g.FillPath(barBrush, barPath);
 
-                // ── 이름만 블록 중앙에 표시 (시간 제거, 줄넘김 허용) ──
+                // 이름 (어두운 텍스트, 밝은 카드 위)
                 var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
                 var innerX = rect.X + AccentBarWidth + 3;
                 var innerW = rect.Width - AccentBarWidth - 6;
                 var innerH = rect.Height - 4;
 
-                // 블록 폭에 따라 폰트 크기 조정
                 var nameFont = blockW >= 55 ? cardNameFont : cardSmallFont;
-                using var nameClr = new SolidBrush(accentColor);
+                using var nameClr = new SolidBrush(ColorPalette.TableText);  // 어두운 텍스트
 
-                // 이름을 블록 영역 내 수평·수직 중앙, 넘치면 줄넘김
                 var textRect = new RectangleF(innerX, rect.Y + 2, innerW, innerH);
                 g.DrawString(name, nameFont, nameClr, textRect,
                     new StringFormat
@@ -253,56 +250,53 @@ public class TimeTablePanel : Panel
                         Alignment = StringAlignment.Center,
                         LineAlignment = StringAlignment.Center,
                         Trimming = StringTrimming.EllipsisCharacter
-                        // NoWrap 제거 → 자동 줄넘김
                     });
             }
         }
 
-        // ──── 6. 현재 시간 표시선 ────
+        // ──── 8. 현재 시간선 (주황 보색) ────
         if (todayDate >= _weekStart && todayDate <= _weekEnd)
         {
             var now = DateTime.Now;
             var nowMinutes = now.Hour * 60 + now.Minute;
-            if (nowMinutes < 600) nowMinutes += 1440; // 자정 보정
+            if (nowMinutes < 600) nowMinutes += 1440;
 
             var startMinutes = 10 * 60;
             var nowY = HeaderHeight + (nowMinutes - startMinutes) / 30.0f * cellH;
 
             if (nowY > HeaderHeight && nowY < Height)
             {
-                using var timePen = new Pen(ColorPalette.Danger, 1.5f);
+                // 주황 시간선 (보색)
+                using var timePen = new Pen(ColorPalette.Accent, 2f);
                 g.DrawLine(timePen, TimeColWidth, nowY, Width, nowY);
 
-                // 좌측 원형 인디케이터
+                // 좌측 원형
                 var dotSize = 8;
-                g.FillEllipse(Brushes.Red, TimeColWidth - dotSize / 2, nowY - dotSize / 2, dotSize, dotSize);
+                using var dotBrush = new SolidBrush(ColorPalette.Accent);
+                g.FillEllipse(dotBrush, TimeColWidth - dotSize / 2, nowY - dotSize / 2, dotSize, dotSize);
 
-                // 현재 시각 라벨
+                // 시각 라벨 (주황 배경)
                 var nowLabel = now.ToString("HH:mm");
                 using var nowFont = new Font("맑은 고딕", 7f, FontStyle.Bold);
-                using var nowBg = new SolidBrush(ColorPalette.Danger);
-                using var nowFg = new SolidBrush(Color.White);
+                using var nowBgBrush = new SolidBrush(ColorPalette.Accent);
+                using var nowFgBrush = new SolidBrush(Color.White);
                 var labelSize = g.MeasureString(nowLabel, nowFont);
-                var labelRect = new RectangleF(2, nowY - labelSize.Height / 2, labelSize.Width + 4, labelSize.Height);
-                using var labelPath = RoundedCard.CreateRoundedPath(
-                    Rectangle.Round(labelRect), 3);
-                g.FillPath(nowBg, labelPath);
-                g.DrawString(nowLabel, nowFont, nowFg, labelRect.X + 2, labelRect.Y);
+                var labelRect = new RectangleF(2, nowY - labelSize.Height / 2, labelSize.Width + 6, labelSize.Height + 2);
+                using var labelPath = RoundedCard.CreateRoundedPath(Rectangle.Round(labelRect), 3);
+                g.FillPath(nowBgBrush, labelPath);
+                g.DrawString(nowLabel, nowFont, nowFgBrush, labelRect.X + 3, labelRect.Y + 1);
             }
         }
     }
 
-    /// <summary>좌측만 라운드된 경로 생성 (컬러바용)</summary>
     private static GraphicsPath CreateLeftRoundedPath(Rectangle rect, int radius)
     {
         var path = new GraphicsPath();
         var d = radius * 2;
-
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
         path.AddLine(rect.Right, rect.Y, rect.Right, rect.Bottom);
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
-
         return path;
     }
 
