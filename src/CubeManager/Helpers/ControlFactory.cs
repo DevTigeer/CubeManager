@@ -352,6 +352,10 @@ public static class ControlFactory
                     break;
             }
 
+            // 모든 컨트롤 폰트 Bold 강제 (크기는 유지)
+            if (ctrl.Font is { Bold: false } f)
+                ctrl.Font = new Font(f.FontFamily, f.Size, f.Style | FontStyle.Bold);
+
             // 재귀 적용
             if (ctrl.HasChildren)
                 ApplyModernStyle(ctrl);
