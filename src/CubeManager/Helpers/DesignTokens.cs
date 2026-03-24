@@ -19,32 +19,35 @@ public static class DesignTokens
     public const int SpaceXXL = 32;  // 페이지 여백
 
     // ═══════════════════════════════════════════
-    // Typography
+    // Typography — 모든 텍스트 Bold, 크기로 계층 구분
     // ═══════════════════════════════════════════
-    // 제목/탭/메뉴: Aptos Bold (MS Office 2024+ 기본 폰트)
-    // 본문/데이터: 맑은 고딕 Bold
+    // 제목/탭/메뉴: Aptos Bold (큰 사이즈)
+    // 본문/데이터: 맑은 고딕 Bold (기본 사이즈)
     // 숫자/통계: Segoe UI Bold
+    // 기존 Bold/Regular 구분 → 사이즈 구분으로 전환
 
     private static readonly string HeadingFont = IsAptoAvailable() ? "Aptos" : "Segoe UI";
 
     /// <summary>페이지 제목: Aptos 16px Bold</summary>
     public static Font FontPageTitle => new(HeadingFont, 16f, FontStyle.Bold);
-    /// <summary>섹션 제목: Aptos 12px Bold</summary>
-    public static Font FontSectionTitle => new(HeadingFont, 12f, FontStyle.Bold);
+    /// <summary>섹션 제목: Aptos 13px Bold</summary>
+    public static Font FontSectionTitle => new(HeadingFont, 13f, FontStyle.Bold);
     /// <summary>탭/메뉴: Aptos 10.5px Bold</summary>
     public static Font FontTabMenu => new(HeadingFont, 10.5f, FontStyle.Bold);
-    /// <summary>본문: 맑은 고딕 10px</summary>
-    public static Font FontBody => new("맑은 고딕", 10f);
-    /// <summary>본문 Bold: 맑은 고딕 10px Bold</summary>
-    public static Font FontBodyBold => new("맑은 고딕", 10f, FontStyle.Bold);
-    /// <summary>캡션/힌트: 맑은 고딕 9px</summary>
-    public static Font FontCaption => new("맑은 고딕", 9f);
+    /// <summary>본문: 맑은 고딕 10px Bold (모든 텍스트 Bold)</summary>
+    public static Font FontBody => new("맑은 고딕", 10f, FontStyle.Bold);
+    /// <summary>본문 큰: 맑은 고딕 11px Bold (기존 Bold 구분용)</summary>
+    public static Font FontBodyLarge => new("맑은 고딕", 11f, FontStyle.Bold);
+    /// <summary>본문 작은: 맑은 고딕 9px Bold (기존 Regular 구분용)</summary>
+    public static Font FontBodySmall => new("맑은 고딕", 9f, FontStyle.Bold);
+    /// <summary>캡션/힌트: 맑은 고딕 8.5px Bold</summary>
+    public static Font FontCaption => new("맑은 고딕", 8.5f, FontStyle.Bold);
     /// <summary>통계 메인값: Segoe UI 24px Bold</summary>
     public static Font FontStatValue => new("Segoe UI", 24f, FontStyle.Bold);
     /// <summary>통계 서브값: Segoe UI 18px Bold</summary>
     public static Font FontStatSub => new("Segoe UI", 18f, FontStyle.Bold);
-    /// <summary>통계 단위: Segoe UI 12px</summary>
-    public static Font FontStatUnit => new("Segoe UI", 12f);
+    /// <summary>통계 단위: Segoe UI 12px Bold</summary>
+    public static Font FontStatUnit => new("Segoe UI", 12f, FontStyle.Bold);
     /// <summary>버튼 텍스트: Aptos 10px Bold</summary>
     public static Font FontButton => new(HeadingFont, 10f, FontStyle.Bold);
 
