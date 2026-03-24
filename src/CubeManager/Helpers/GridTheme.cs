@@ -5,10 +5,14 @@ namespace CubeManager.Helpers;
 
 /// <summary>
 /// 2025 DataGridView 테마 — #2D3047 기반.
-/// 선택행: 배경 변경 없이 테두리만 표시 (테마 보색 #F18A3D).
+/// 선택행: 연한 밝은 주황 배경 + 좌측 바 + 테두리.
 /// </summary>
 public static class GridTheme
 {
+    // 선택행 배경: 보색(#F18A3D) 아주 연한 tint
+    private static readonly Color SelectRowBg = Color.FromArgb(255, 250, 235, 220);  // 연한 피치
+    private static readonly Color SelectRowAltBg = Color.FromArgb(255, 245, 228, 210); // 교차행용
+
     public static void ApplyTheme(DataGridView grid)
     {
         grid.BorderStyle = BorderStyle.None;
@@ -37,7 +41,7 @@ public static class GridTheme
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // 데이터 행 — 선택 시에도 배경/글씨 동일 (테두리로 구분)
+        // 데이터 행
         grid.RowTemplate.Height = 44;
         grid.DefaultCellStyle = new DataGridViewCellStyle
         {
@@ -45,8 +49,8 @@ public static class GridTheme
             ForeColor = ColorPalette.TableText,
             Font = DesignTokens.FontBody,
             Padding = new Padding(12, 4, 12, 4),
-            SelectionBackColor = ColorPalette.TableBg,      // 선택해도 배경 그대로
-            SelectionForeColor = ColorPalette.TableText      // 선택해도 글씨 그대로
+            SelectionBackColor = SelectRowBg,           // 연한 피치
+            SelectionForeColor = ColorPalette.TableText  // 글씨색 유지
         };
 
         // 교차행
@@ -54,11 +58,22 @@ public static class GridTheme
         {
             BackColor = ColorPalette.RowAlt,
             ForeColor = ColorPalette.TableText,
-            SelectionBackColor = ColorPalette.RowAlt,        // 선택해도 배경 그대로
+            SelectionBackColor = SelectRowAltBg,        // 교차행 선택 시 약간 더 진한 피치
             SelectionForeColor = ColorPalette.TableText
         };
 
-        // 선택행: 좌측 주황 바 + 테두리 (RowPostPaint)
+        // 선택 변경 시 이전 행 다시 그리기 (잔상 방지)
+        var prevSelectedRow = -1;
+        grid.SelectionChanged += (_, _) =>
+        {
+            // 이전 선택행 강제 repaint (테두리 잔상 제거)
+            if (prevSelectedRow >= 0 && prevSelectedRow < grid.RowCount)
+                grid.InvalidateRow(prevSelectedRow);
+
+            prevSelectedRow = grid.CurrentRow?.Index ?? -1;
+        };
+
+        // 선택행: 좌측 주황 바 + 테두리
         grid.RowPostPaint += (_, e) =>
         {
             if (e.RowIndex < 0 || !grid.Rows[e.RowIndex].Selected) return;
@@ -70,8 +85,8 @@ public static class GridTheme
             using var barBrush = new SolidBrush(ColorPalette.Accent);
             g.FillRectangle(barBrush, bounds.X, bounds.Y + 4, 3, bounds.Height - 8);
 
-            // 행 전체 테두리 (연한 주황, 1px)
-            using var borderPen = new Pen(Color.FromArgb(120, ColorPalette.Accent), 1.5f);
+            // 테두리 (연한 주황)
+            using var borderPen = new Pen(Color.FromArgb(150, ColorPalette.Accent), 1.5f);
             var borderRect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 3, bounds.Height - 1);
             g.DrawRectangle(borderPen, borderRect);
         };
