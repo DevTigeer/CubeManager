@@ -5,13 +5,14 @@ namespace CubeManager.Helpers;
 
 /// <summary>
 /// 2025 DataGridView 테마 — #2D3047 기반.
-/// 선택행: 연한 밝은 주황 배경 + 좌측 바 + 테두리.
+/// 선택행: 연한 피치 배경 + 주황 테두리/바.
+/// RowPrePaint/PostPaint로 잔상 없이 처리.
 /// </summary>
 public static class GridTheme
 {
-    // 선택행 배경: 보색(#F18A3D) 아주 연한 tint
-    private static readonly Color SelectRowBg = Color.FromArgb(255, 250, 235, 220);  // 연한 피치
-    private static readonly Color SelectRowAltBg = Color.FromArgb(255, 245, 228, 210); // 교차행용
+    // 선택행 배경
+    private static readonly Color SelectRowBg = Color.FromArgb(250, 235, 220);
+    private static readonly Color SelectRowAltBg = Color.FromArgb(245, 228, 210);
 
     public static void ApplyTheme(DataGridView grid)
     {
@@ -41,7 +42,7 @@ public static class GridTheme
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // 데이터 행
+        // 데이터 행 — Selection 색상은 RowPrePaint에서 직접 처리
         grid.RowTemplate.Height = 44;
         grid.DefaultCellStyle = new DataGridViewCellStyle
         {
@@ -49,8 +50,8 @@ public static class GridTheme
             ForeColor = ColorPalette.TableText,
             Font = DesignTokens.FontBody,
             Padding = new Padding(12, 4, 12, 4),
-            SelectionBackColor = SelectRowBg,           // 연한 피치
-            SelectionForeColor = ColorPalette.TableText  // 글씨색 유지
+            SelectionBackColor = SelectRowBg,
+            SelectionForeColor = ColorPalette.TableText
         };
 
         // 교차행
@@ -58,22 +59,55 @@ public static class GridTheme
         {
             BackColor = ColorPalette.RowAlt,
             ForeColor = ColorPalette.TableText,
-            SelectionBackColor = SelectRowAltBg,        // 교차행 선택 시 약간 더 진한 피치
+            SelectionBackColor = SelectRowAltBg,
             SelectionForeColor = ColorPalette.TableText
         };
 
-        // 선택 변경 시 이전 행 다시 그리기 (잔상 방지)
+        // 1) 헤더 CellPainting: 선택행이 바로 아래일 때 헤더 텍스트 대비 보장
+        grid.CellPainting += (_, e) =>
+        {
+            if (e.RowIndex != -1) return; // 헤더만
+            if (e.ColumnIndex < 0) return;
+
+            e.PaintBackground(e.ClipBounds, false);
+
+            // 헤더 텍스트: 항상 어두운 배경 위 밝은 글씨
+            using var brush = new SolidBrush(ColorPalette.TableHeaderText);
+            using var font = DesignTokens.FontTabMenu;
+            var textRect = new Rectangle(
+                e.CellBounds.X + 12, e.CellBounds.Y,
+                e.CellBounds.Width - 24, e.CellBounds.Height);
+            var sf = new StringFormat
+            {
+                Alignment = e.CellStyle?.Alignment switch
+                {
+                    DataGridViewContentAlignment.MiddleRight => StringAlignment.Far,
+                    DataGridViewContentAlignment.MiddleCenter => StringAlignment.Center,
+                    _ => StringAlignment.Near
+                },
+                LineAlignment = StringAlignment.Center
+            };
+            e.Graphics.DrawString(e.FormattedValue?.ToString() ?? "", font, brush, textRect, sf);
+            e.Handled = true;
+        };
+
+        // 2) 선택 변경 시 이전+현재 행 모두 repaint (잔상 완전 제거)
         var prevSelectedRow = -1;
         grid.SelectionChanged += (_, _) =>
         {
-            // 이전 선택행 강제 repaint (테두리 잔상 제거)
             if (prevSelectedRow >= 0 && prevSelectedRow < grid.RowCount)
+            {
                 grid.InvalidateRow(prevSelectedRow);
-
-            prevSelectedRow = grid.CurrentRow?.Index ?? -1;
+            }
+            var newRow = grid.CurrentRow?.Index ?? -1;
+            if (newRow >= 0 && newRow < grid.RowCount)
+            {
+                grid.InvalidateRow(newRow);
+            }
+            prevSelectedRow = newRow;
         };
 
-        // 선택행: 좌측 주황 바 + 테두리
+        // 3) 선택행: 좌측 주황 바 + 테두리 (PostPaint)
         grid.RowPostPaint += (_, e) =>
         {
             if (e.RowIndex < 0 || !grid.Rows[e.RowIndex].Selected) return;
@@ -81,11 +115,11 @@ public static class GridTheme
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var bounds = e.RowBounds;
 
-            // 좌측 주황 악센트 바 (3px)
+            // 좌측 주황 악센트 바
             using var barBrush = new SolidBrush(ColorPalette.Accent);
             g.FillRectangle(barBrush, bounds.X, bounds.Y + 4, 3, bounds.Height - 8);
 
-            // 테두리 (연한 주황)
+            // 테두리
             using var borderPen = new Pen(Color.FromArgb(150, ColorPalette.Accent), 1.5f);
             var borderRect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 3, bounds.Height - 1);
             g.DrawRectangle(borderPen, borderRect);
