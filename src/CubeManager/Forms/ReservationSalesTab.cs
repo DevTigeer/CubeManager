@@ -510,8 +510,8 @@ public class ReservationSalesTab : UserControl
             LoadExistingPayments(row, r);
         }
 
-        // 현재 시간에 가장 가까운 예약 행으로 스크롤
-        ScrollToCurrentTime();
+        // 현재 시간에 가장 가까운 예약 행으로 스크롤 (레이아웃 완료 후 실행)
+        BeginInvoke(ScrollToCurrentTime);
     }
 
     private void ScrollToCurrentTime()
