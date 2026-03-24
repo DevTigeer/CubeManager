@@ -17,8 +17,6 @@ public class ReservationScraperService : IReservationScraperService
     private readonly IConfigRepository _configRepo;
     private HttpClient? _httpClient;
     private System.Net.CookieContainer? _cookieContainer;
-    private DateTime _lastLoginTime = DateTime.MinValue;
-    private static readonly TimeSpan SessionTimeout = TimeSpan.FromMinutes(30);
 
     public ReservationScraperService(IConfigRepository configRepo)
     {
@@ -31,13 +29,24 @@ public class ReservationScraperService : IReservationScraperService
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(pw))
             throw new InvalidOperationException("웹 자격증명이 설정되지 않았습니다. 설정 탭에서 입력하세요.");
 
-        await EnsureLoggedInAsync(id, pw);
-
         var baseUrl = await _configRepo.GetAsync("web_base_url")
                       ?? "http://www.cubeescape.co.kr";
+
+        // 1) 클라이언트가 없으면 새로 로그인
+        if (_httpClient == null)
+            await LoginAsync(id, pw, baseUrl);
+
+        // 2) 세션 유효성 검증: 관리자 페이지 접근 시도
+        if (!await IsSessionValidAsync(baseUrl))
+        {
+            Log.Information("세션 만료 확인 — 재로그인");
+            DisposeClient();
+            await LoginAsync(id, pw, baseUrl);
+        }
+
+        // 3) 실제 예약 조회
         var dateStr = date.ToString("yy-MM-dd");
         var url = $"{baseUrl}/adm/room_list.php?sfl=r_date&stx={dateStr}";
-
         Log.Information("예약 조회: {Url}", url);
 
         string html;
@@ -47,21 +56,19 @@ public class ReservationScraperService : IReservationScraperService
         }
         catch (HttpRequestException ex)
         {
-            // 세션 만료 가능성 → 재로그인 1회 시도
+            // 네트워크 에러 → 재로그인 1회 시도
             Log.Warning(ex, "HTTP 요청 실패 — 재로그인 시도");
-            _httpClient?.Dispose();
-            _httpClient = null;
-            await EnsureLoggedInAsync(id, pw);
+            DisposeClient();
+            await LoginAsync(id, pw, baseUrl);
             html = await _httpClient!.GetStringAsync(url);
         }
 
-        // 로그인 페이지로 리다이렉트 감지 (세션 만료)
-        if (html.Contains("login_check") || html.Contains("mb_password"))
+        // 응답이 로그인 페이지면 재시도 (이중 방어)
+        if (IsLoginPage(html))
         {
-            Log.Warning("세션 만료 감지 — 재로그인");
-            _httpClient?.Dispose();
-            _httpClient = null;
-            await EnsureLoggedInAsync(id, pw);
+            Log.Warning("응답이 로그인 페이지 — 재로그인");
+            DisposeClient();
+            await LoginAsync(id, pw, baseUrl);
             html = await _httpClient!.GetStringAsync(url);
         }
 
@@ -120,24 +127,31 @@ public class ReservationScraperService : IReservationScraperService
         return (CredentialHelper.Decrypt(encId), CredentialHelper.Decrypt(encPw));
     }
 
-    private async Task EnsureLoggedInAsync(string id, string pw)
+    /// <summary>세션 유효성 검증: 관리자 페이지에 실제 접근 가능한지 확인</summary>
+    private async Task<bool> IsSessionValidAsync(string baseUrl)
     {
-        // 세션 타임아웃 체크: 마지막 로그인 후 30분 경과 시 재로그인
-        if (_httpClient != null && DateTime.Now - _lastLoginTime < SessionTimeout)
-            return;
-
-        // 기존 클라이언트 정리
-        if (_httpClient != null)
+        if (_httpClient == null) return false;
+        try
         {
-            Log.Information("세션 타임아웃 ({Minutes}분 경과) — 재로그인",
-                (int)(DateTime.Now - _lastLoginTime).TotalMinutes);
-            _httpClient.Dispose();
-            _httpClient = null;
+            var html = await _httpClient.GetStringAsync($"{baseUrl}/adm/");
+            // 로그인 페이지로 리다이렉트되면 세션 만료
+            if (IsLoginPage(html)) return false;
+            // 관리자 페이지 컨텐츠가 있으면 유효
+            return html.Contains("예약") || html.Contains("관리") || html.Contains("adm");
         }
+        catch
+        {
+            return false;
+        }
+    }
 
-        var baseUrl = await _configRepo.GetAsync("web_base_url")
-                      ?? "http://www.cubeescape.co.kr";
+    /// <summary>응답 HTML이 로그인 페이지인지 판별</summary>
+    private static bool IsLoginPage(string html) =>
+        html.Contains("login_check") || html.Contains("mb_password") || html.Contains("로그인");
 
+    /// <summary>새로 로그인</summary>
+    private async Task LoginAsync(string id, string pw, string baseUrl)
+    {
         _cookieContainer = new System.Net.CookieContainer();
         var handler = new HttpClientHandler { CookieContainer = _cookieContainer };
         _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
@@ -149,8 +163,14 @@ public class ReservationScraperService : IReservationScraperService
         ]);
 
         await _httpClient.PostAsync($"{baseUrl}/bbs/login_check.php", loginData);
-        _lastLoginTime = DateTime.Now;
-        Log.Information("웹 로그인 완료 (세션 갱신)");
+        Log.Information("웹 로그인 완료");
+    }
+
+    /// <summary>기존 HttpClient 정리</summary>
+    private void DisposeClient()
+    {
+        _httpClient?.Dispose();
+        _httpClient = null;
     }
 
     /// <summary>
