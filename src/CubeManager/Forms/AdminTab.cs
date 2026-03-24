@@ -187,8 +187,9 @@ public class AdminTab : UserControl
         var tabControl = new TabControl
         {
             Dock = DockStyle.Fill,
-            Font = new Font("맑은 고딕", 10f),
-            Padding = new Point(12, 4)
+            Font = DesignTokens.FontBody,
+            Padding = new Point(12, 4),
+            Appearance = TabAppearance.FlatButtons  // 탭 테두리 제거
         };
 
         tabControl.TabPages.Add(BuildDashboardTab());

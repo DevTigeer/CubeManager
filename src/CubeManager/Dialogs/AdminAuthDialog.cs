@@ -19,45 +19,45 @@ public class AdminAuthDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
+        BackColor = ColorPalette.Surface;
+        ForeColor = ColorPalette.Text;
 
-        var lbl = new Label { Text = "비밀번호:", Location = new Point(20, 25), Size = new Size(70, 20) };
+        var lbl = new Label
+        {
+            Text = "비밀번호:",
+            Location = new Point(20, 25),
+            Size = new Size(70, 20),
+            Font = DesignTokens.FontBody,
+            ForeColor = ColorPalette.Text
+        };
+
         _txtPassword = new TextBox
         {
             Location = new Point(100, 23),
             Size = new Size(210, 25),
-            UseSystemPasswordChar = true
+            UseSystemPasswordChar = true,
+            Font = DesignTokens.FontBody,
+            BackColor = ColorPalette.Card,
+            ForeColor = ColorPalette.Text
         };
 
-        var btnOk = new Button
-        {
-            Text = "확인",
-            Location = new Point(140, 70),
-            Size = new Size(80, 35),
-            DialogResult = DialogResult.None
-        };
+        var btnOk = ButtonFactory.CreatePrimary("확인", 80);
+        btnOk.Location = new Point(140, 70);
+        btnOk.DialogResult = DialogResult.None;
         btnOk.Click += BtnOk_Click;
 
-        var btnCancel = new Button
-        {
-            Text = "취소",
-            Location = new Point(230, 70),
-            Size = new Size(80, 35),
-            DialogResult = DialogResult.Cancel
-        };
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(230, 70);
+        btnCancel.DialogResult = DialogResult.Cancel;
 
         Controls.AddRange([lbl, _txtPassword, btnOk, btnCancel]);
         AcceptButton = btnOk;
         CancelButton = btnCancel;
     }
 
-    /// <summary>
-    /// 관리자 인증을 요청한다. 캐시 유효 시 바로 true 반환.
-    /// </summary>
     public static bool Authenticate(IConfigRepository configRepo, IWin32Window? owner = null)
     {
-        if (AdminAuthCache.IsValid())
-            return true;
-
+        // 캐시 무효화 — 매번 인증 필요
         using var dlg = new AdminAuthDialog(configRepo);
         return dlg.ShowDialog(owner) == DialogResult.OK;
     }
@@ -69,21 +69,18 @@ public class AdminAuthDialog : Form
             var hash = await _configRepo.GetAsync("admin_password_hash");
             if (hash != null && BCrypt.Net.BCrypt.Verify(_txtPassword.Text, hash))
             {
-                AdminAuthCache.SetAuthenticated();
                 DialogResult = DialogResult.OK;
             }
             else
             {
-                MessageBox.Show("비밀번호가 틀렸습니다.", "인증 실패",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Show("비밀번호가 틀렸습니다.", ToastType.Error);
                 _txtPassword.Clear();
                 _txtPassword.Focus();
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"인증 오류: {ex.Message}", "오류",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            ToastNotification.Show($"인증 오류: {ex.Message}", ToastType.Error);
         }
     }
 }

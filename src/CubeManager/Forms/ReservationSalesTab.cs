@@ -497,7 +497,7 @@ public class ReservationSalesTab : UserControl
             if (isRemoved || isNoshow)
             {
                 var dimBg = Color.FromArgb(218, 218, 218);  // 일반 셀 어두운 배경
-                var payLightBg = Color.FromArgb(200, 200, 210); // 결제 셀 (금액 있을 때) — 기본보다 연하게
+                var payLightBg = Color.FromArgb(170, 175, 190); // 결제 셀 (금액 있을 때) — 확실히 밝게 구분
                 var payEmptyBg = dimBg;                          // 결제 셀 (금액 없을 때) — 일반 셀과 동일
 
                 // 1) 시간/테마/예약자 등 일반 셀: 어두운 배경 + 취소선

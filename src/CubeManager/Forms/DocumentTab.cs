@@ -106,6 +106,7 @@ public class DocumentTab : UserControl
             try { split.SplitterDistance = Math.Max(150, (int)(split.Width * 0.10)); } catch { }
         };
         split.Panel1.BackColor = ColorPalette.Surface;
+        split.Panel1.Padding = new Padding(8, 8, 4, 8);  // 좌측 여백 확보
         split.Panel2.BackColor = ColorPalette.Card;
 
         // ── 좌측: 트리 ──
@@ -176,8 +177,8 @@ public class DocumentTab : UserControl
             Dock = DockStyle.Fill,
             ReadOnly = true,
             Font = new Font("맑은 고딕", 11f),
-            BackColor = ColorPalette.TableBg,         // 밝은 배경 (#F0F0F0, 대비)
-            ForeColor = ColorPalette.TableText,       // 어두운 글씨 (#1E2335)
+            BackColor = ColorPalette.Card,            // 제목색과 동일
+            ForeColor = Color.White,                  // 흰색 글씨
             BorderStyle = BorderStyle.None,
             Padding = new Padding(16, 12, 16, 12)
         };
@@ -189,8 +190,8 @@ public class DocumentTab : UserControl
             Multiline = true,
             ScrollBars = ScrollBars.Both,
             Font = new Font("Consolas", 11f),
-            BackColor = ColorPalette.TableBg,
-            ForeColor = ColorPalette.TableText,
+            BackColor = ColorPalette.Card,
+            ForeColor = Color.White,
             BorderStyle = BorderStyle.None,
             Visible = false
         };
