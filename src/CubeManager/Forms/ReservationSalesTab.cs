@@ -8,7 +8,8 @@ namespace CubeManager.Forms;
 
 public class ReservationSalesTab : UserControl
 {
-    private static readonly Font StrikeoutFont = new("맑은 고딕", 10f, FontStyle.Strikeout);
+    private static readonly Font StrikeoutFont = new("맑은 고딕", 10f, FontStyle.Strikeout | FontStyle.Bold);
+    private static readonly Font StrikeoutBoldFont = new("맑은 고딕", 10f, FontStyle.Strikeout | FontStyle.Bold);
 
     private readonly ISalesService _salesService;
     private readonly IReservationScraperService _scraperService;
@@ -492,24 +493,34 @@ public class ReservationSalesTab : UserControl
                 row.Cells["Status"].Style.ForeColor = Color.FromArgb(100, 220, 140); // 밝은 초록
             }
 
-            // 취소/노쇼 행: 색/글씨 유지 + 취소선만 추가
+            // 취소/노쇼 행 스타일
             if (isRemoved || isNoshow)
             {
-                var dimBg = Color.FromArgb(218, 218, 218);
+                var dimBg = Color.FromArgb(218, 218, 218);  // 일반 셀 어두운 배경
+                var payLightBg = Color.FromArgb(200, 200, 210); // 결제 셀 (금액 있을 때) — 기본보다 연하게
+                var payEmptyBg = dimBg;                          // 결제 셀 (금액 없을 때) — 일반 셀과 동일
+
+                // 1) 시간/테마/예약자 등 일반 셀: 어두운 배경 + 취소선
                 for (var c = 0; c < row.Cells.Count; c++)
                 {
-                    if (row.Cells[c].OwningColumn.Name == "Status") continue;
+                    var colName = row.Cells[c].OwningColumn.Name;
+                    if (colName is "Status" or "CardAmt" or "CashAmt" or "TransferAmt") continue;
                     row.Cells[c].Style.BackColor = dimBg;
-                    row.Cells[c].Style.Font = StrikeoutFont; // 취소선만
+                    row.Cells[c].Style.Font = StrikeoutFont;
                 }
-                // 결제 셀: 밝게 + 취소선 + 비활성
-                var lightBg = Color.FromArgb(200, 200, 210); // 기본 결제 셀보다 밝게
+
+                // 2) 결제 셀: 금액 유무에 따라 분기
                 foreach (var col in new[] { "CardAmt", "CashAmt", "TransferAmt" })
                 {
                     row.Cells[col].ReadOnly = true;
-                    row.Cells[col].Style.BackColor = lightBg;
+                    var hasAmount = row.Cells[col].Value is int v && v > 0;
+                    row.Cells[col].Style.BackColor = hasAmount ? payLightBg : payEmptyBg;
+                    row.Cells[col].Style.ForeColor = hasAmount ? Color.White : ColorPalette.TextTertiary;
                     row.Cells[col].Style.Font = StrikeoutFont;
                 }
+
+                // 3) 상태 셀: 배지 색상 유지 + 취소선 추가
+                row.Cells["Status"].Style.Font = StrikeoutBoldFont;
             }
 
             // 기존 결제 데이터 로드하여 금액 셀 채우기
