@@ -28,15 +28,9 @@ public class SideNavPanel : Panel
     private static readonly string[] Labels =
         ["예약/매출", "스케줄", "체크리스트", "출퇴근", "인수인계", "무료이용권", "물품", "업무자료", "테마힌트", "설정", "관리자"];
 
-    // MDL2 아이콘 (Windows 10/11 내장 — 일관된 크기/스타일)
-    private static readonly string[] Icons = DesignTokens.SideNavIcons;
-    // 폴백: 이모지 (MDL2 미지원 환경)
-    private static readonly string[] FallbackIcons =
+    private static readonly string[] Icons =
         ["📅", "📋", "✅", "⏰", "📝", "🎫", "📦", "📄", "🔑", "⚙️", "🛡️"];
-    private static readonly bool _useMdl2 = IsMdl2Available();
-    private static readonly Font _iconFont = _useMdl2
-        ? new Font("Segoe MDL2 Assets", 14f)
-        : new Font("Segoe UI Emoji", 14f);
+    private static readonly Font _iconFont = new("Segoe UI Emoji", 14f);
     private static readonly Font _logoFont = new("Segoe UI", 11f, FontStyle.Bold);
 
     public int SelectedIndex
@@ -174,12 +168,11 @@ public class SideNavPanel : Panel
                         isHover ? ColorPalette.NavHover :
                         ColorPalette.NavDefault;
 
-        // 아이콘 (MDL2 우선, 폴백=이모지)
-        var icons = _useMdl2 ? Icons : FallbackIcons;
+        // 아이콘 (이모지)
         var iconFont = _iconFont;
         using var iconBrush = new SolidBrush(iconColor);
         var iconX = (IconAreaWidth - 24) / 2f;
-        g.DrawString(icons[index], iconFont, iconBrush, iconX, y + 12);
+        g.DrawString(Icons[index], iconFont, iconBrush, iconX, y + 12);
 
         // 텍스트 (항상 표시)
         var textColor = isSelected ? ColorPalette.NavActive :
@@ -188,17 +181,6 @@ public class SideNavPanel : Panel
         var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
         using var textBrush = new SolidBrush(textColor);
         g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
-    }
-
-    /// <summary>Segoe MDL2 Assets 폰트 사용 가능 여부 확인</summary>
-    private static bool IsMdl2Available()
-    {
-        try
-        {
-            using var font = new Font("Segoe MDL2 Assets", 12f);
-            return font.Name == "Segoe MDL2 Assets";
-        }
-        catch { return false; }
     }
 
     private static GraphicsPath CreateRoundedPath(Rectangle rect, int radius)
