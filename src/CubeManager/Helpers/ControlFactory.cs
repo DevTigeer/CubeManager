@@ -251,6 +251,51 @@ public static class ControlFactory
         };
     }
 
+    /// <summary>TabControl OwnerDraw 모던 스타일 (하단 Primary 인디케이터)</summary>
+    public static void StyleTabControl(TabControl tc)
+    {
+        tc.DrawMode = TabDrawMode.OwnerDrawFixed;
+        tc.SizeMode = TabSizeMode.Fixed;
+        tc.ItemSize = new Size(Math.Max(100, tc.Width / Math.Max(tc.TabCount, 1)), 36);
+        tc.Padding = new Point(DesignTokens.SpaceMD, DesignTokens.SpaceSM);
+
+        // 이미 바인딩된 핸들러 중복 방지 (Tag 체크)
+        if (tc.Tag as string == "__tabStyled") return;
+        tc.Tag = "__tabStyled";
+
+        tc.DrawItem += (sender, e) =>
+        {
+            var tab = (TabControl)sender!;
+            if (e.Index < 0 || e.Index >= tab.TabCount) return;
+            var page = tab.TabPages[e.Index];
+            var isSelected = e.Index == tab.SelectedIndex;
+            var bounds = e.Bounds;
+
+            using var bgBrush = new SolidBrush(
+                isSelected ? ColorPalette.Surface : ColorPalette.Background);
+            e.Graphics.FillRectangle(bgBrush, bounds);
+
+            // 선택 탭 하단 Primary 인디케이터 (3px)
+            if (isSelected)
+            {
+                using var barBrush = new SolidBrush(ColorPalette.Primary);
+                e.Graphics.FillRectangle(barBrush,
+                    bounds.X + 8, bounds.Bottom - 3, bounds.Width - 16, 3);
+            }
+
+            using var textFont = new Font("맑은 고딕", 9.5f,
+                isSelected ? FontStyle.Bold : FontStyle.Regular);
+            using var textBrush = new SolidBrush(
+                isSelected ? ColorPalette.Primary : ColorPalette.TextSecondary);
+            var sf = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            };
+            e.Graphics.DrawString(page.Text, textFont, textBrush, bounds, sf);
+        };
+    }
+
     /// <summary>기존 Form/Panel 내 모든 컨트롤에 모던 스타일 적용</summary>
     public static void ApplyModernStyle(Control parent)
     {
@@ -297,8 +342,12 @@ public static class ControlFactory
                     gb.ForeColor = ColorPalette.TextSecondary;
                     break;
 
-                case Label lbl when lbl.Font.Size < 9:
-                    lbl.Font = new Font("맑은 고딕", 9f);
+                case TabControl tc when tc.DrawMode != TabDrawMode.OwnerDrawFixed:
+                    StyleTabControl(tc);
+                    break;
+
+                case Label lbl when lbl.ForeColor == SystemColors.ControlText:
+                    lbl.ForeColor = ColorPalette.Text;
                     break;
             }
 

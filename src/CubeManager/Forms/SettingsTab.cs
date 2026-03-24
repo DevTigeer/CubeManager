@@ -46,32 +46,22 @@ public class SettingsTab : UserControl
         var lblPw = new Label { Text = "비밀번호:", Location = new Point(15, 88), Size = new Size(70, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
         var txtPw = new TextBox { Name = "txtWebPw", Location = new Point(90, 86), Size = new Size(200, 25), UseSystemPasswordChar = true, Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
 
-        var btnTest = new Button
-        {
-            Text = "연결 테스트", Location = new Point(310, 54), Size = new Size(100, 30),
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 9f, FontStyle.Regular)
-        };
+        var btnTest = ButtonFactory.CreateSecondary("연결 테스트", 100);
+        btnTest.Location = new Point(310, 54);
+        btnTest.Height = 30;
         btnTest.Click += async (_, _) =>
         {
-            btnTest.Enabled = false;
-            btnTest.Text = "테스트 중...";
-            try
+            await ButtonFactory.RunWithLoadingAsync(btnTest, "테스트 중...", async () =>
             {
                 var ok = await _scraperService.TestConnectionAsync(txtId.Text, txtPw.Text);
                 ToastNotification.Show(ok ? "연결 성공!" : "로그인 실패: ID/PW를 확인하세요.",
                     ok ? ToastType.Success : ToastType.Error);
-            }
-            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
-            finally { btnTest.Enabled = true; btnTest.Text = "연결 테스트"; }
+            });
         };
 
-        var btnSaveWeb = new Button
-        {
-            Text = "저장", Location = new Point(310, 84), Size = new Size(100, 30),
-            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
-            FlatStyle = FlatStyle.Flat, Font = new Font("맑은 고딕", 9f, FontStyle.Regular)
-        };
-        btnSaveWeb.FlatAppearance.BorderSize = 0;
+        var btnSaveWeb = ButtonFactory.CreatePrimary("저장", 100);
+        btnSaveWeb.Location = new Point(310, 84);
+        btnSaveWeb.Height = 30;
         btnSaveWeb.Click += async (_, _) =>
         {
             await _configRepo.SetAsync("web_base_url", txtUrl.Text.Trim());
@@ -129,19 +119,13 @@ internal class EmployeeEditDialog : Form
         AddField("연락처:", _txtPhone = new TextBox(), ref y);
 
         y += 10;
-        var btnOk = new Button
-        {
-            Text = existing == null ? "추가" : "수정",
-            Location = new Point(150, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
-            FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK
-        };
-        btnOk.FlatAppearance.BorderSize = 0;
-        var btnCancel = new Button
-        {
-            Text = "취소", Location = new Point(240, y), Size = new Size(80, 35),
-            DialogResult = DialogResult.Cancel
-        };
+        var btnOk = ButtonFactory.CreatePrimary(existing == null ? "추가" : "수정", 80);
+        btnOk.Location = new Point(150, y);
+        btnOk.DialogResult = DialogResult.OK;
+
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(240, y);
+        btnCancel.DialogResult = DialogResult.Cancel;
         Controls.AddRange([btnOk, btnCancel]);
         AcceptButton = btnOk;
         CancelButton = btnCancel;

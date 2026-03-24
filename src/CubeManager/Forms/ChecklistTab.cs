@@ -40,11 +40,11 @@ public class ChecklistTab : UserControl
 
     private static readonly Dictionary<string, Color> RoleColors = new()
     {
-        ["open"] = Color.FromArgb(227, 242, 253),    // 파랑 라이트
-        ["close"] = Color.FromArgb(255, 243, 224),    // 주황 라이트
-        ["middle1"] = Color.FromArgb(232, 245, 233),  // 초록 라이트
-        ["middle2"] = Color.FromArgb(232, 245, 233),
-        ["all"] = Color.FromArgb(245, 245, 245)
+        ["open"] = ColorPalette.InfoLight,        // 파랑 라이트
+        ["close"] = ColorPalette.WarningLight,    // 주황 라이트
+        ["middle1"] = ColorPalette.SuccessLight,  // 초록 라이트
+        ["middle2"] = ColorPalette.SuccessLight,
+        ["all"] = ColorPalette.Background
     };
 
     public ChecklistTab(IChecklistRepository checklistRepo,

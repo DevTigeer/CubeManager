@@ -143,13 +143,18 @@ internal class InventoryEditDialog : Form
         }, ref y);
         AddField("비고:", _txtNote = new TextBox(), ref y);
 
-        var btnOk = new Button { Text = "추가", Location = new Point(150, y), Size = new Size(80, 35),
-            BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite, FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK };
-        btnOk.FlatAppearance.BorderSize = 0;
+        var btnOk = ButtonFactory.CreatePrimary("추가", 80);
+        btnOk.Location = new Point(150, y);
+        btnOk.DialogResult = DialogResult.OK;
         Controls.Add(btnOk);
-        Controls.Add(new Button { Text = "취소", Location = new Point(240, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
+
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(240, y);
+        btnCancel.DialogResult = DialogResult.Cancel;
+        Controls.Add(btnCancel);
+
         AcceptButton = btnOk;
-        CancelButton = (Button)Controls[Controls.Count - 1]; // 취소 버튼
+        CancelButton = btnCancel;
 
         // Tab 순서
         _txtName.TabIndex = 0;

@@ -48,40 +48,18 @@ public class HeaderPanel : Panel
         };
         UpdateTime();
 
-        // 우측: 새로고침 버튼
-        var btnRefresh = new Button
-        {
-            Text = "🔄",
-            Font = new Font("Segoe UI Emoji", 12f),
-            Size = new Size(40, 34),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = ColorPalette.Surface,
-            ForeColor = ColorPalette.TextSecondary,
-            Cursor = Cursors.Hand,
-            Dock = DockStyle.Right,
-            Margin = new Padding(0, 8, 4, 8)
-        };
-        btnRefresh.FlatAppearance.BorderSize = 0;
-        btnRefresh.FlatAppearance.MouseOverBackColor = ColorPalette.NavHoverBg;
+        // 우측: 새로고침 버튼 (ButtonFactory 사용)
+        var btnRefresh = ButtonFactory.CreateIcon(DesignTokens.IconRefresh);
+        btnRefresh.Dock = DockStyle.Right;
+        btnRefresh.Margin = new Padding(0, 8, 4, 8);
         var tip = new ToolTip();
         tip.SetToolTip(btnRefresh, "데이터 새로고침 (모든 탭 최신화)");
         btnRefresh.Click += (_, _) => RefreshRequested?.Invoke();
 
-        // 우측: 계산기 버튼
-        var btnCalc = new Button
-        {
-            Text = "\U0001f9ee",
-            Font = new Font("Segoe UI Emoji", 12f),
-            Size = new Size(40, 34),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = ColorPalette.Surface,
-            ForeColor = ColorPalette.TextSecondary,
-            Cursor = Cursors.Hand,
-            Dock = DockStyle.Right,
-            Margin = new Padding(0, 8, 0, 8)
-        };
-        btnCalc.FlatAppearance.BorderSize = 0;
-        btnCalc.FlatAppearance.MouseOverBackColor = ColorPalette.NavHoverBg;
+        // 우측: 계산기 버튼 (ButtonFactory 사용)
+        var btnCalc = ButtonFactory.CreateIcon(DesignTokens.IconCalculator);
+        btnCalc.Dock = DockStyle.Right;
+        btnCalc.Margin = new Padding(0, 8, 0, 8);
         tip.SetToolTip(btnCalc, "간이 계산기");
         btnCalc.Click += (_, _) =>
         {
