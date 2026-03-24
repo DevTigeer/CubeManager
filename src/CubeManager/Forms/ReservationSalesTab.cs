@@ -502,10 +502,14 @@ public class ReservationSalesTab : UserControl
                     row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
                     row.Cells[c].Style.Font = StrikeoutFont;
                 }
-                // 결제 셀 비활성
-                row.Cells["CardAmt"].ReadOnly = true;
-                row.Cells["CashAmt"].ReadOnly = true;
-                row.Cells["TransferAmt"].ReadOnly = true;
+                // 결제 셀 비활성 + 색상도 어둡게 통일
+                var dimFg = Color.FromArgb(160, 160, 160);
+                foreach (var col in new[] { "CardAmt", "CashAmt", "TransferAmt" })
+                {
+                    row.Cells[col].ReadOnly = true;
+                    row.Cells[col].Style.BackColor = dimBg;
+                    row.Cells[col].Style.ForeColor = dimFg;
+                }
             }
 
             // 기존 결제 데이터 로드하여 금액 셀 채우기
