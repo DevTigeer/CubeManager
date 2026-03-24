@@ -127,16 +127,18 @@ public static class ColorPalette
     // ═══════════════════════════════════════════
     // Employee Schedule Colors
     // ═══════════════════════════════════════════
+    // 주색 #2D3047 톤과 조화되는 중채도 파스텔
+    // 밝은 배경(#F0F0F0) 위에서 카드 배경으로 사용, 텍스트 대비 확보
     public static Color[] EmployeeColors =>
     [
-        FromHex("#2D5F7F"),  // 딥 사이안
-        FromHex("#2D7F4A"),  // 딥 에메랄드
-        FromHex("#7F2D5F"),  // 딥 로즈
-        FromHex("#7F5F2D"),  // 딥 앰버
-        FromHex("#5F2D7F"),  // 딥 퍼플
-        FromHex("#2D7F7F"),  // 딥 틸
-        FromHex("#7F4A2D"),  // 딥 브론즈
-        FromHex("#4A4D68"),  // 딥 슬레이트
+        FromHex("#5B8FB9"),  // 스틸 블루 (주색 청록 계열)
+        FromHex("#7BC47F"),  // 세이지 그린
+        FromHex("#E07B7B"),  // 소프트 코랄
+        FromHex("#D4A056"),  // 머스타드 골드 (보색 #F18A3D 계열)
+        FromHex("#9B7EC8"),  // 라벤더 퍼플
+        FromHex("#5BBFBF"),  // 틸 (삼분색 #47A8D7 계열)
+        FromHex("#C8856E"),  // 테라코타
+        FromHex("#8B8FAA"),  // 슬레이트 (주색 #2D3047 밝은 변형)
     ];
 
     public static Color GetEmployeeColor(int index) =>

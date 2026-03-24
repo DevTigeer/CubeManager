@@ -58,8 +58,8 @@ public class TimeTablePanel : Panel
         return ColorPalette.GetEmployeeColor(idx);
     }
 
-    private static Color BrightenColor(Color c, int amount) => Color.FromArgb(
-        c.A, Math.Min(c.R + amount, 255), Math.Min(c.G + amount, 255), Math.Min(c.B + amount, 255));
+    private static Color DarkenColor(Color c, int amount) => Color.FromArgb(
+        c.A, Math.Max(c.R - amount, 0), Math.Max(c.G - amount, 0), Math.Max(c.B - amount, 0));
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -79,8 +79,8 @@ public class TimeTablePanel : Panel
         using var headerDateFont = DesignTokens.FontTabMenu;           // Aptos 10.5f Bold
         using var headerDayFont = DesignTokens.FontCaption;            // 맑은 고딕 8.5f Bold
         using var timeAxisFont = new Font("맑은 고딕", 7.5f, FontStyle.Bold);
-        using var cardNameFont = new Font("맑은 고딕", 8.5f, FontStyle.Bold);
-        using var cardSmallFont = new Font("맑은 고딕", 7f, FontStyle.Bold);
+        using var cardNameFont = new Font("맑은 고딕", 10f, FontStyle.Bold);   // 이름 키움 (8.5→10)
+        using var cardSmallFont = new Font("맑은 고딕", 8.5f, FontStyle.Bold); // 좁을 때도 키움 (7→8.5)
 
         // ──── 1. 전체 배경: MainDark ────
         using var bgBrush = new SolidBrush(ColorPalette.Background);
@@ -216,32 +216,31 @@ public class TimeTablePanel : Panel
                 var h = (current.endSlot - current.startSlot) * cellH - 4;
 
                 var empColor = GetEmployeeColor(current.sched.EmployeeId);
-                var brightEmp = BrightenColor(empColor, 60);
                 var rect = new Rectangle(x, y, Math.Max(blockW, 20), Math.Max(h, cellH));
 
-                // 카드 배경: 밝은 직원 색상 (TableBg 위에서 구분됨)
+                // ── 카드 배경: 직원 색상 그대로 (중채도 파스텔) ──
                 using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                using var cardFill = new SolidBrush(BrightenColor(empColor, 120));
+                using var cardFill = new SolidBrush(Color.FromArgb(180, empColor));
                 g.FillPath(cardFill, cardPath);
 
-                // 카드 테두리
-                using var cardBorder = new Pen(brightEmp, 1.2f);
+                // 카드 테두리: 약간 어둡게
+                using var cardBorder = new Pen(Color.FromArgb(200, DarkenColor(empColor, 40)), 1f);
                 g.DrawPath(cardBorder, cardPath);
 
-                // 좌측 컬러바
+                // 좌측 컬러바: 진한 버전
                 var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
                 using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
-                using var barBrush = new SolidBrush(empColor);
+                using var barBrush = new SolidBrush(DarkenColor(empColor, 60));
                 g.FillPath(barBrush, barPath);
 
-                // 이름 (어두운 텍스트, 밝은 카드 위)
+                // ── 이름: 흰색 텍스트 (중채도 배경 위 고대비) ──
                 var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
-                var innerX = rect.X + AccentBarWidth + 3;
-                var innerW = rect.Width - AccentBarWidth - 6;
+                var innerX = rect.X + AccentBarWidth + 2;
+                var innerW = rect.Width - AccentBarWidth - 4;
                 var innerH = rect.Height - 4;
 
-                var nameFont = blockW >= 55 ? cardNameFont : cardSmallFont;
-                using var nameClr = new SolidBrush(ColorPalette.TableText);  // 어두운 텍스트
+                var nameFont = blockW >= 50 ? cardNameFont : cardSmallFont;
+                using var nameClr = new SolidBrush(Color.White);
 
                 var textRect = new RectangleF(innerX, rect.Y + 2, innerW, innerH);
                 g.DrawString(name, nameFont, nameClr, textRect,
