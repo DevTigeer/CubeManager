@@ -40,7 +40,7 @@ public static class GridTheme
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // 데이터 행 — SelectionBackColor를 일반과 동일하게 (자체 처리)
+        // 데이터 행 — 선택 시 피치색 배경 (WinForms 내장 처리, 격자선 유지)
         grid.RowTemplate.Height = 44;
         grid.DefaultCellStyle = new DataGridViewCellStyle
         {
@@ -48,7 +48,7 @@ public static class GridTheme
             ForeColor = ColorPalette.TableText,
             Font = DesignTokens.FontBody,
             Padding = new Padding(12, 4, 12, 4),
-            SelectionBackColor = ColorPalette.TableBg,
+            SelectionBackColor = SelectRowBg,
             SelectionForeColor = ColorPalette.TableText
         };
 
@@ -56,74 +56,24 @@ public static class GridTheme
         {
             BackColor = ColorPalette.RowAlt,
             ForeColor = ColorPalette.TableText,
-            SelectionBackColor = ColorPalette.RowAlt,
+            SelectionBackColor = SelectRowBg,
             SelectionForeColor = ColorPalette.TableText
         };
 
-        // 헤더 OwnerDraw (항상 밝은 텍스트 보장)
-        grid.CellPainting += (_, e) =>
-        {
-            if (e.RowIndex != -1 || e.ColumnIndex < 0) return;
-            e.PaintBackground(e.ClipBounds, false);
-
-            using var brush = new SolidBrush(ColorPalette.TableHeaderText);
-            using var font = DesignTokens.FontTabMenu;
-            var textRect = new Rectangle(
-                e.CellBounds.X + 12, e.CellBounds.Y,
-                e.CellBounds.Width - 24, e.CellBounds.Height);
-            var sf = new StringFormat
-            {
-                Alignment = e.CellStyle?.Alignment switch
-                {
-                    DataGridViewContentAlignment.MiddleRight => StringAlignment.Far,
-                    DataGridViewContentAlignment.MiddleCenter => StringAlignment.Center,
-                    _ => StringAlignment.Near
-                },
-                LineAlignment = StringAlignment.Center
-            };
-            e.Graphics!.DrawString(e.FormattedValue?.ToString() ?? "", font, brush, textRect, sf);
-            e.Handled = true;
-        };
-
-        // RowPrePaint: 선택행 배경을 직접 칠함 (잔상 근본 해결)
-        grid.RowPrePaint += (_, e) =>
-        {
-            if (e.RowIndex < 0) return;
-            var row = grid.Rows[e.RowIndex];
-
-            if (row.Selected)
-            {
-                // 선택행: 피치 배경으로 전체 행 덮기
-                using var brush = new SolidBrush(SelectRowBg);
-                e.Graphics.FillRectangle(brush, e.RowBounds);
-                e.PaintParts &= ~DataGridViewPaintParts.Background; // 기본 배경 그리기 스킵
-            }
-        };
-
-        // RowPostPaint: 선택행 테두리 + 악센트 바
+        // 선택행: 좌측 주황 바 + 테두리 (PostPaint만, PrePaint 제거)
         grid.RowPostPaint += (_, e) =>
         {
             if (e.RowIndex < 0 || !grid.Rows[e.RowIndex].Selected) return;
             var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
             var bounds = e.RowBounds;
 
-            // 좌측 주황 바
+            // 좌측 주황 악센트 바
             using var barBrush = new SolidBrush(ColorPalette.Accent);
             g.FillRectangle(barBrush, bounds.X, bounds.Y + 4, 3, bounds.Height - 8);
 
-            // 테두리
+            // 테두리 (격자선 위에 그려짐, 격자선 자체는 보존)
             using var borderPen = new Pen(Color.FromArgb(150, ColorPalette.Accent), 1.5f);
             g.DrawRectangle(borderPen, bounds.X + 1, bounds.Y, bounds.Width - 3, bounds.Height - 1);
-        };
-
-        // 선택 변경 시 이전 행 repaint
-        var prevRow = -1;
-        grid.SelectionChanged += (_, _) =>
-        {
-            if (prevRow >= 0 && prevRow < grid.RowCount)
-                grid.InvalidateRow(prevRow);
-            prevRow = grid.CurrentRow?.Index ?? -1;
         };
     }
 
