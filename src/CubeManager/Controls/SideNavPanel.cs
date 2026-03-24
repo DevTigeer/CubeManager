@@ -115,14 +115,22 @@ public class SideNavPanel : Panel
 
     private void DrawLogo(Graphics g)
     {
-        using var logoBrush = new SolidBrush(ColorPalette.Primary);
-        using var smallFont = new Font("맑은 고딕", 10f, FontStyle.Bold);
+        // 로고 아이콘 (인디고 원형 배경 + 흰 텍스트)
+        var iconBg = new Rectangle(12, 12, 32, 32);
+        using var iconBgBrush = new SolidBrush(ColorPalette.Primary);
+        g.FillEllipse(iconBgBrush, iconBg);
+        using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
+        using var whiteBrush = new SolidBrush(Color.White);
+        g.DrawString("C", iconFont, whiteBrush, 20, 17);
 
-        g.DrawString("CubeManager", smallFont, logoBrush, 14, 18);
+        // 로고 텍스트
+        using var logoBrush = new SolidBrush(ColorPalette.Text);
+        using var logoFont = new Font("Segoe UI", 11f, FontStyle.Bold);
+        g.DrawString("CubeManager", logoFont, logoBrush, 48, 18);
 
         // 하단 구분선
-        using var divPen = new Pen(ColorPalette.Border, 1);
-        g.DrawLine(divPen, 0, LogoHeight - 1, Width, LogoHeight - 1);
+        using var divPen = new Pen(ColorPalette.Divider, 1);
+        g.DrawLine(divPen, 12, LogoHeight - 1, Width - 12, LogoHeight - 1);
     }
 
     private void DrawNavItem(Graphics g, int index)
