@@ -5,14 +5,11 @@ namespace CubeManager.Helpers;
 
 /// <summary>
 /// 2025 DataGridView 테마 — #2D3047 기반.
-/// 선택행: 연한 피치 배경 + 주황 테두리/바.
-/// RowPrePaint/PostPaint로 잔상 없이 처리.
+/// 선택행: RowPrePaint/PostPaint에서 직접 배경+테두리 처리 (잔상 없음).
 /// </summary>
 public static class GridTheme
 {
-    // 선택행 배경
     private static readonly Color SelectRowBg = Color.FromArgb(250, 235, 220);
-    private static readonly Color SelectRowAltBg = Color.FromArgb(245, 228, 210);
 
     public static void ApplyTheme(DataGridView grid)
     {
@@ -29,6 +26,7 @@ public static class GridTheme
         grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         grid.MultiSelect = false;
         grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        grid.DoubleBuffered(true); // 깜빡임 방지
 
         // 헤더
         grid.ColumnHeadersHeight = 40;
@@ -42,7 +40,7 @@ public static class GridTheme
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // 데이터 행 — Selection 색상은 RowPrePaint에서 직접 처리
+        // 데이터 행 — SelectionBackColor를 일반과 동일하게 (자체 처리)
         grid.RowTemplate.Height = 44;
         grid.DefaultCellStyle = new DataGridViewCellStyle
         {
@@ -50,28 +48,24 @@ public static class GridTheme
             ForeColor = ColorPalette.TableText,
             Font = DesignTokens.FontBody,
             Padding = new Padding(12, 4, 12, 4),
-            SelectionBackColor = SelectRowBg,
+            SelectionBackColor = ColorPalette.TableBg,
             SelectionForeColor = ColorPalette.TableText
         };
 
-        // 교차행
         grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
         {
             BackColor = ColorPalette.RowAlt,
             ForeColor = ColorPalette.TableText,
-            SelectionBackColor = SelectRowAltBg,
+            SelectionBackColor = ColorPalette.RowAlt,
             SelectionForeColor = ColorPalette.TableText
         };
 
-        // 1) 헤더 CellPainting: 선택행이 바로 아래일 때 헤더 텍스트 대비 보장
+        // 헤더 OwnerDraw (항상 밝은 텍스트 보장)
         grid.CellPainting += (_, e) =>
         {
-            if (e.RowIndex != -1) return; // 헤더만
-            if (e.ColumnIndex < 0) return;
-
+            if (e.RowIndex != -1 || e.ColumnIndex < 0) return;
             e.PaintBackground(e.ClipBounds, false);
 
-            // 헤더 텍스트: 항상 어두운 배경 위 밝은 글씨
             using var brush = new SolidBrush(ColorPalette.TableHeaderText);
             using var font = DesignTokens.FontTabMenu;
             var textRect = new Rectangle(
@@ -91,23 +85,22 @@ public static class GridTheme
             e.Handled = true;
         };
 
-        // 2) 선택 변경 시 이전+현재 행 모두 repaint (잔상 완전 제거)
-        var prevSelectedRow = -1;
-        grid.SelectionChanged += (_, _) =>
+        // RowPrePaint: 선택행 배경을 직접 칠함 (잔상 근본 해결)
+        grid.RowPrePaint += (_, e) =>
         {
-            if (prevSelectedRow >= 0 && prevSelectedRow < grid.RowCount)
+            if (e.RowIndex < 0) return;
+            var row = grid.Rows[e.RowIndex];
+
+            if (row.Selected)
             {
-                grid.InvalidateRow(prevSelectedRow);
+                // 선택행: 피치 배경으로 전체 행 덮기
+                using var brush = new SolidBrush(SelectRowBg);
+                e.Graphics.FillRectangle(brush, e.RowBounds);
+                e.PaintParts &= ~DataGridViewPaintParts.Background; // 기본 배경 그리기 스킵
             }
-            var newRow = grid.CurrentRow?.Index ?? -1;
-            if (newRow >= 0 && newRow < grid.RowCount)
-            {
-                grid.InvalidateRow(newRow);
-            }
-            prevSelectedRow = newRow;
         };
 
-        // 3) 선택행: 좌측 주황 바 + 테두리 (PostPaint)
+        // RowPostPaint: 선택행 테두리 + 악센트 바
         grid.RowPostPaint += (_, e) =>
         {
             if (e.RowIndex < 0 || !grid.Rows[e.RowIndex].Selected) return;
@@ -115,18 +108,25 @@ public static class GridTheme
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var bounds = e.RowBounds;
 
-            // 좌측 주황 악센트 바
+            // 좌측 주황 바
             using var barBrush = new SolidBrush(ColorPalette.Accent);
             g.FillRectangle(barBrush, bounds.X, bounds.Y + 4, 3, bounds.Height - 8);
 
             // 테두리
             using var borderPen = new Pen(Color.FromArgb(150, ColorPalette.Accent), 1.5f);
-            var borderRect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 3, bounds.Height - 1);
-            g.DrawRectangle(borderPen, borderRect);
+            g.DrawRectangle(borderPen, bounds.X + 1, bounds.Y, bounds.Width - 3, bounds.Height - 1);
+        };
+
+        // 선택 변경 시 이전 행 repaint
+        var prevRow = -1;
+        grid.SelectionChanged += (_, _) =>
+        {
+            if (prevRow >= 0 && prevRow < grid.RowCount)
+                grid.InvalidateRow(prevRow);
+            prevRow = grid.CurrentRow?.Index ?? -1;
         };
     }
 
-    /// <summary>금액 컬럼 — Bold, 오른쪽 정렬</summary>
     public static DataGridViewCellStyle AmountStyle => new()
     {
         Alignment = DataGridViewContentAlignment.MiddleRight,
@@ -142,5 +142,17 @@ public static class GridTheme
     public static void MarkManualEdit(DataGridViewCell cell)
     {
         cell.Style.BackColor = ColorPalette.ManualEdit;
+    }
+}
+
+/// <summary>DataGridView DoubleBuffered 확장</summary>
+internal static class DataGridViewExtensions
+{
+    public static void DoubleBuffered(this DataGridView dgv, bool setting)
+    {
+        var type = dgv.GetType();
+        var prop = type.GetProperty("DoubleBuffered",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        prop?.SetValue(dgv, setting);
     }
 }
