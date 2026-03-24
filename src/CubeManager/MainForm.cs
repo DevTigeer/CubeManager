@@ -33,8 +33,9 @@ public class MainForm : Form
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
-        BackColor = ColorPalette.Background;
-        Font = new Font("맑은 고딕", 10f);
+        BackColor = ColorPalette.Surface;
+        ForeColor = ColorPalette.Text;
+        Font = new Font("Segoe UI", 10f);
 
         // === 레이아웃 구조 ===
         // StatusBar (하단)

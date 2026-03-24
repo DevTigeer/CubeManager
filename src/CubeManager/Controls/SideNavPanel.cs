@@ -49,7 +49,7 @@ public class SideNavPanel : Panel
                  ControlStyles.OptimizedDoubleBuffer, true);
         Width = NavWidth;
         Dock = DockStyle.Left;
-        BackColor = ColorPalette.Surface;
+        BackColor = ColorPalette.Background;  // 가장 어두운 배경
         Cursor = Cursors.Hand;
     }
 
@@ -96,8 +96,8 @@ public class SideNavPanel : Panel
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        // 배경
-        g.Clear(ColorPalette.Surface);
+        // 배경 (가장 진한 영역)
+        g.Clear(ColorPalette.Background);
 
         // 우측 border
         using var borderPen = new Pen(ColorPalette.Border, 1);

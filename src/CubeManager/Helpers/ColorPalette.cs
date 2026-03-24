@@ -3,171 +3,136 @@ using System.Drawing;
 namespace CubeManager.Helpers;
 
 /// <summary>
-/// CubeManager 전역 색상 시스템 — 2025 Monochrome + Point Color.
+/// CubeManager 2025 Design System — Dark Tone Monochrome.
 ///
-/// 디자인 원칙:
-/// 1. 기본 UI는 무채색(그레이/블랙/화이트)만 사용
-/// 2. 활성 상태(선택/포커스)에만 Accent Blue로 가시성 강조
-/// 3. 상태 표시(성공/위험)에만 초록/빨강 대비색
-/// 4. 뉴모피즘: 밝은+어두운 그림자 쌍으로 입체감
-/// 5. 글래스모피즘 근사: 반투명 배경 + 흰 테두리
+/// 원칙:
+/// 1. 배경: 진한 그레이(#1E1E1E~#2D2D2D) 계층으로 영역 구분
+/// 2. 텍스트: 흰색/밝은 회색 (#F5F5F5, #B0B0B0)
+/// 3. 포인트: 파란색(활성), 초록(성공), 빨강(위험)만
+/// 4. 뉴모피즘: 밝은/어두운 그림자 쌍으로 입체감
+/// 5. 글래스: 반투명 + 밝은 테두리로 깊이감
 /// </summary>
 public static class ColorPalette
 {
     public static bool IsDark { get; set; } = false;
 
     // ═══════════════════════════════════════════
-    // Accent (활성 상태에만 사용 — 파란색 계열)
+    // Accent (활성 상태에만)
     // ═══════════════════════════════════════════
-    public static Color Primary => IsDark ? FromHex("#60A5FA") : FromHex("#2563EB");
-    public static Color Primary50 => IsDark ? FromHex("#1E293B") : FromHex("#EFF6FF");
-    public static Color Primary100 => IsDark ? FromHex("#1E3A5F") : FromHex("#DBEAFE");
-    public static Color Primary700 => IsDark ? FromHex("#93C5FD") : FromHex("#1D4ED8");
-    public static Color Primary900 => IsDark ? FromHex("#0F172A") : FromHex("#1E3A8A");
-
-    // ═══════════════════════════════════════════
-    // Semantic — 포인트 컬러 (상태 표시에만)
-    // ═══════════════════════════════════════════
-    public static Color Success => IsDark ? FromHex("#4ADE80") : FromHex("#16A34A");
-    public static Color SuccessLight => IsDark ? FromHex("#14532D") : FromHex("#F0FDF4");
-
-    public static Color Warning => IsDark ? FromHex("#FBBF24") : FromHex("#D97706");
-    public static Color WarningLight => IsDark ? FromHex("#422006") : FromHex("#FFFBEB");
-
-    public static Color Danger => IsDark ? FromHex("#F87171") : FromHex("#DC2626");
-    public static Color DangerLight => IsDark ? FromHex("#450A0A") : FromHex("#FEF2F2");
-
-    public static Color Info => IsDark ? FromHex("#60A5FA") : FromHex("#2563EB");
-    public static Color InfoLight => IsDark ? FromHex("#1E3A5F") : FromHex("#EFF6FF");
+    public static Color Primary => FromHex("#3B82F6");          // Blue 500
+    public static Color Primary50 => FromHex("#1E293B");        // Slate 800 (tint)
+    public static Color Primary100 => FromHex("#1E3A5F");       // Dark blue bg
+    public static Color Primary700 => FromHex("#2563EB");       // Blue 600
+    public static Color Primary900 => FromHex("#1E3A8A");       // Blue 900
 
     // ═══════════════════════════════════════════
-    // Surface / Background — 무채색 (따뜻한 그레이)
+    // Semantic — 포인트 (상태 표시에만)
     // ═══════════════════════════════════════════
-    public static Color Background => IsDark ? FromHex("#121212") : FromHex("#F5F5F5");
-    public static Color Surface => IsDark ? FromHex("#1E1E1E") : FromHex("#FFFFFF");
-    public static Color Card => IsDark ? FromHex("#2A2A2A") : FromHex("#FFFFFF");
-    public static Color Border => IsDark ? FromHex("#333333") : FromHex("#E0E0E0");
-    public static Color Divider => IsDark ? FromHex("#2A2A2A") : FromHex("#F0F0F0");
-    public static Color ManualEdit => IsDark ? FromHex("#5C4800") : FromHex("#FEF9C3");
+    public static Color Success => FromHex("#22C55E");          // Green 500
+    public static Color SuccessLight => FromHex("#14532D");     // Green 900
+    public static Color Warning => FromHex("#F59E0B");          // Amber 500
+    public static Color WarningLight => FromHex("#422006");     // Amber 950
+    public static Color Danger => FromHex("#EF4444");           // Red 500
+    public static Color DangerLight => FromHex("#450A0A");      // Red 950
+    public static Color Info => FromHex("#3B82F6");             // = Primary
+    public static Color InfoLight => FromHex("#1E3A5F");
 
-    // Grid / Table 전용
-    public static Color HeaderBg => IsDark ? FromHex("#1A1A1A") : FromHex("#FAFAFA");
-    public static Color RowAlt => IsDark ? FromHex("#222222") : FromHex("#FAFAFA");
-    public static Color HoverBg => IsDark ? FromHex("#2A2A2A") : FromHex("#F5F5F5");
-    public static Color SelectedBg => IsDark ? FromHex("#1E3A5F") : FromHex("#EFF6FF");
+    // ═══════════════════════════════════════════
+    // Surface / Background — 진한 그레이 계층
+    // ═══════════════════════════════════════════
+    public static Color Background => FromHex("#121212");       // 가장 어두운 배경
+    public static Color Surface => FromHex("#1E1E1E");          // 메인 패널 배경
+    public static Color Card => FromHex("#262626");             // 카드/섹션 배경
+    public static Color Border => FromHex("#333333");           // 구분선
+    public static Color Divider => FromHex("#2A2A2A");          // 미세 구분
+    public static Color ManualEdit => FromHex("#5C4800");       // 수기 편집
+
+    // Grid / Table — 어두운 배경 + 밝은 텍스트
+    public static Color HeaderBg => FromHex("#1A1A1A");         // 테이블 헤더
+    public static Color RowAlt => FromHex("#222222");           // 교차행
+    public static Color HoverBg => FromHex("#2D2D2D");          // 행 호버
+    public static Color SelectedBg => FromHex("#1E3A5F");       // 선택행 (파란 tint)
 
     // 뉴모피즘 그림자 쌍
-    public static Color NeuLight => IsDark
-        ? Color.FromArgb(12, 255, 255, 255)   // 밝은 그림자 (다크)
-        : Color.FromArgb(255, 255, 255, 255);  // 밝은 그림자 (라이트)
-    public static Color NeuDark => IsDark
-        ? Color.FromArgb(40, 0, 0, 0)          // 어두운 그림자 (다크)
-        : Color.FromArgb(20, 0, 0, 0);         // 어두운 그림자 (라이트)
+    public static Color NeuLight => Color.FromArgb(15, 255, 255, 255);  // 밝은 그림자
+    public static Color NeuDark => Color.FromArgb(60, 0, 0, 0);        // 어두운 그림자
 
     // 글래스모피즘 근사
-    public static Color GlassBg => IsDark
-        ? Color.FromArgb(30, 255, 255, 255)    // 반투명 백 (다크)
-        : Color.FromArgb(180, 255, 255, 255);  // 반투명 백 (라이트)
-    public static Color GlassBorder => IsDark
-        ? Color.FromArgb(40, 255, 255, 255)    // 반투명 테두리 (다크)
-        : Color.FromArgb(60, 255, 255, 255);   // 반투명 테두리 (라이트)
+    public static Color GlassBg => Color.FromArgb(40, 255, 255, 255);
+    public static Color GlassBorder => Color.FromArgb(50, 255, 255, 255);
 
     // 깊이감
-    public static Color ShadowLight => IsDark
-        ? Color.FromArgb(30, 0, 0, 0)
-        : Color.FromArgb(12, 0, 0, 0);
-    public static Color CardHover => IsDark ? FromHex("#333333") : FromHex("#F5F5F5");
-    public static Color SubtleBg => IsDark ? FromHex("#1A1A1A") : FromHex("#F5F5F5");
-    public static Color EditorBg => IsDark ? FromHex("#1A1A1A") : FromHex("#FAFAFA");
+    public static Color ShadowLight => Color.FromArgb(40, 0, 0, 0);
+    public static Color CardHover => FromHex("#2D2D2D");
+    public static Color SubtleBg => FromHex("#1A1A1A");
+    public static Color EditorBg => FromHex("#1A1A1A");
 
     // ═══════════════════════════════════════════
-    // Text — 무채색 계층
+    // Text — 밝은 톤 계층
     // ═══════════════════════════════════════════
-    public static Color Text => IsDark ? FromHex("#F5F5F5") : FromHex("#1A1A1A");
-    public static Color TextSecondary => IsDark ? FromHex("#A0A0A0") : FromHex("#666666");
-    public static Color TextTertiary => IsDark ? FromHex("#707070") : FromHex("#999999");
+    public static Color Text => FromHex("#F5F5F5");             // 메인 텍스트 (밝은 흰)
+    public static Color TextSecondary => FromHex("#A0A0A0");    // 보조 텍스트
+    public static Color TextTertiary => FromHex("#707070");     // 힌트/캡션
     public static Color TextWhite => Color.White;
 
     // ═══════════════════════════════════════════
-    // Navigation — 무채색 기본 + 활성시만 Accent
+    // Navigation
     // ═══════════════════════════════════════════
-    public static Color NavDefault => IsDark ? FromHex("#808080") : FromHex("#999999");
-    public static Color NavHover => IsDark ? FromHex("#B0B0B0") : FromHex("#333333");
-    public static Color NavHoverBg => IsDark ? FromHex("#2A2A2A") : FromHex("#F0F0F0");
-    public static Color NavActive => IsDark ? FromHex("#60A5FA") : FromHex("#2563EB");
-    public static Color NavActiveBg => IsDark ? FromHex("#1E3A5F") : FromHex("#EFF6FF");
+    public static Color NavDefault => FromHex("#808080");       // 비활성 아이콘
+    public static Color NavHover => FromHex("#D0D0D0");         // 호버 (밝아짐)
+    public static Color NavHoverBg => FromHex("#2A2A2A");       // 호버 배경
+    public static Color NavActive => FromHex("#3B82F6");        // 활성 (파란)
+    public static Color NavActiveBg => FromHex("#1E3A5F");      // 활성 배경
 
     // ═══════════════════════════════════════════
-    // Payment Tags — 무채색 + 최소 포인트
+    // Payment Tags
     // ═══════════════════════════════════════════
-    public static (Color Bg, Color Fg) PaymentCard => IsDark
-        ? (FromHex("#1E3A5F"), FromHex("#93C5FD"))
-        : (FromHex("#EFF6FF"), FromHex("#1D4ED8"));
-    public static (Color Bg, Color Fg) PaymentCash => IsDark
-        ? (FromHex("#14532D"), FromHex("#4ADE80"))
-        : (FromHex("#F0FDF4"), FromHex("#16A34A"));
-    public static (Color Bg, Color Fg) PaymentTransfer => IsDark
-        ? (FromHex("#422006"), FromHex("#FBBF24"))
-        : (FromHex("#FFFBEB"), FromHex("#D97706"));
-    public static (Color Bg, Color Fg) PaymentExpense => IsDark
-        ? (FromHex("#450A0A"), FromHex("#F87171"))
-        : (FromHex("#FEF2F2"), FromHex("#DC2626"));
+    public static (Color Bg, Color Fg) PaymentCard =>
+        (FromHex("#1E3A5F"), FromHex("#93C5FD"));
+    public static (Color Bg, Color Fg) PaymentCash =>
+        (FromHex("#14532D"), FromHex("#4ADE80"));
+    public static (Color Bg, Color Fg) PaymentTransfer =>
+        (FromHex("#422006"), FromHex("#FBBF24"));
+    public static (Color Bg, Color Fg) PaymentExpense =>
+        (FromHex("#450A0A"), FromHex("#F87171"));
 
     // ═══════════════════════════════════════════
-    // Attendance — 포인트 컬러
+    // Attendance
     // ═══════════════════════════════════════════
-    public static Color OnTime => IsDark ? FromHex("#93C5FD") : FromHex("#1D4ED8");
-    public static Color Late => IsDark ? FromHex("#F87171") : FromHex("#DC2626");
-    public static Color MissingRecord => IsDark ? FromHex("#707070") : FromHex("#999999");
+    public static Color OnTime => FromHex("#3B82F6");
+    public static Color Late => FromHex("#EF4444");
+    public static Color MissingRecord => FromHex("#707070");
 
     // ═══════════════════════════════════════════
-    // Employee Schedule Colors — 무채색 + 미세 색감 차이
+    // Employee Schedule Colors (어두운 파스텔)
     // ═══════════════════════════════════════════
-    public static Color[] EmployeeColors => IsDark
-        ?
-        [
-            FromHex("#1E3A5F"),  // 딥 네이비
-            FromHex("#2D4A3E"),  // 딥 틸
-            FromHex("#4A2040"),  // 딥 마젠타
-            FromHex("#4A3A20"),  // 딥 앰버
-            FromHex("#352050"),  // 딥 퍼플
-            FromHex("#1A3A40"),  // 딥 사이안
-            FromHex("#4A4520"),  // 딥 올리브
-            FromHex("#3A3530"),  // 딥 토프
-        ]
-        :
-        [
-            FromHex("#BFDBFE"),  // 블루 200
-            FromHex("#BBF7D0"),  // 그린 200
-            FromHex("#FECDD3"),  // 로즈 200
-            FromHex("#FDE68A"),  // 앰버 200
-            FromHex("#DDD6FE"),  // 바이올렛 200
-            FromHex("#A5F3FC"),  // 사이안 200
-            FromHex("#FEF08A"),  // 옐로우 200
-            FromHex("#E7E5E4"),  // 스톤 200
-        ];
+    public static Color[] EmployeeColors =>
+    [
+        FromHex("#1E3A5F"),  // 딥 네이비
+        FromHex("#14532D"),  // 딥 에메랄드
+        FromHex("#4C0519"),  // 딥 로즈
+        FromHex("#78350F"),  // 딥 앰버
+        FromHex("#3B0764"),  // 딥 퍼플
+        FromHex("#164E63"),  // 딥 사이안
+        FromHex("#422006"),  // 딥 브론즈
+        FromHex("#292524"),  // 딥 스톤
+    ];
 
     public static Color GetEmployeeColor(int index) =>
         EmployeeColors[index % EmployeeColors.Length];
 
     // ═══════════════════════════════════════════
-    // Summary Card Accent — 무채색 기본 + Accent 포인트
+    // Summary Card Accent
     // ═══════════════════════════════════════════
-    public static (Color Light, Color Main) AccentBlue => IsDark
-        ? (FromHex("#1E3A5F"), FromHex("#60A5FA"))
-        : (FromHex("#EFF6FF"), FromHex("#2563EB"));
-    public static (Color Light, Color Main) AccentGreen => IsDark
-        ? (FromHex("#14532D"), FromHex("#4ADE80"))
-        : (FromHex("#F0FDF4"), FromHex("#16A34A"));
-    public static (Color Light, Color Main) AccentOrange => IsDark
-        ? (FromHex("#422006"), FromHex("#FBBF24"))
-        : (FromHex("#FFFBEB"), FromHex("#D97706"));
-    public static (Color Light, Color Main) AccentRed => IsDark
-        ? (FromHex("#450A0A"), FromHex("#F87171"))
-        : (FromHex("#FEF2F2"), FromHex("#DC2626"));
+    public static (Color Light, Color Main) AccentBlue =>
+        (FromHex("#1E3A5F"), FromHex("#3B82F6"));
+    public static (Color Light, Color Main) AccentGreen =>
+        (FromHex("#14532D"), FromHex("#22C55E"));
+    public static (Color Light, Color Main) AccentOrange =>
+        (FromHex("#422006"), FromHex("#F59E0B"));
+    public static (Color Light, Color Main) AccentRed =>
+        (FromHex("#450A0A"), FromHex("#EF4444"));
 
-    // ═══════════════════════════════════════════
-    // Helper
     // ═══════════════════════════════════════════
     private static Color FromHex(string hex) => ColorTranslator.FromHtml(hex);
 }

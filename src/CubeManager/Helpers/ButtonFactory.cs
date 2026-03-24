@@ -4,80 +4,83 @@ using System.Drawing.Drawing2D;
 namespace CubeManager.Helpers;
 
 /// <summary>
-/// 디자인 시스템 기반 표준 버튼 생성 팩토리.
-/// 2025 업데이트: 둥근 모서리(6px), 호버 효과, 다크 모드 대응.
+/// 2025 Dark Tone 버튼 팩토리.
+/// 뉴모피즘 입체감 + Segoe UI 가독성 폰트 + 8px 라운드.
 /// </summary>
 public static class ButtonFactory
 {
-    private const int DefaultHeight = 34;
-    private const int MinWidth = 76;
-    private const int Radius = 6;
+    private const int DefaultHeight = 36;
+    private const int MinWidth = 80;
+    private const int Radius = 8;
 
-    /// <summary>파란 배경 주요 버튼 (강조)</summary>
+    /// <summary>파란 배경 주요 버튼 (액센트)</summary>
     public static Button CreatePrimary(string text, int width = 0)
     {
-        var btn = CreateBase(text, ColorPalette.Primary, ColorPalette.TextWhite, width);
-        btn.Font = new Font("맑은 고딕", 10f, FontStyle.Bold);
+        var btn = CreateBase(text, ColorPalette.Primary, Color.White, width);
+        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
         btn.FlatAppearance.MouseOverBackColor = ColorPalette.Primary700;
+        btn.FlatAppearance.MouseDownBackColor = ColorPalette.Primary900;
         return btn;
     }
 
-    /// <summary>테두리 보조 버튼 (무채색 기본)</summary>
+    /// <summary>보조 버튼 (어두운 배경 + 밝은 테두리)</summary>
     public static Button CreateSecondary(string text, int width = 0)
     {
-        var btn = CreateBase(text, ColorPalette.Surface, ColorPalette.Text, width);
+        var btn = CreateBase(text, ColorPalette.Card, ColorPalette.Text, width);
+        btn.Font = new Font("Segoe UI", 10f);
         btn.FlatAppearance.BorderColor = ColorPalette.Border;
         btn.FlatAppearance.BorderSize = 1;
-        btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
-        return btn;
-    }
-
-    /// <summary>위험 액션 버튼 (빨간 포인트)</summary>
-    public static Button CreateDanger(string text, int width = 0)
-    {
-        var btn = CreateBase(text, ColorPalette.Danger, ColorPalette.TextWhite, width);
-        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(
-            Math.Max(ColorPalette.Danger.R - 20, 0),
-            Math.Max(ColorPalette.Danger.G - 20, 0),
-            Math.Max(ColorPalette.Danger.B - 20, 0));
-        return btn;
-    }
-
-    /// <summary>성공/확인 버튼 (초록 포인트)</summary>
-    public static Button CreateSuccess(string text, int width = 0)
-    {
-        var btn = CreateBase(text, ColorPalette.Success, ColorPalette.TextWhite, width);
-        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(
-            Math.Max(ColorPalette.Success.R - 20, 0),
-            Math.Max(ColorPalette.Success.G - 20, 0),
-            Math.Max(ColorPalette.Success.B - 20, 0));
-        return btn;
-    }
-
-    /// <summary>투명 텍스트 버튼 (무채색 Ghost)</summary>
-    public static Button CreateGhost(string text, int width = 0)
-    {
-        var btn = CreateBase(text, Color.Transparent, ColorPalette.TextSecondary, width);
         btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
         btn.FlatAppearance.MouseDownBackColor = ColorPalette.Border;
         return btn;
     }
 
-    /// <summary>날짜 네비게이션 화살표 버튼 (◀ ▶)</summary>
-    public static Button CreateNavArrow(string arrow)
+    /// <summary>위험 버튼 (빨간 포인트)</summary>
+    public static Button CreateDanger(string text, int width = 0)
     {
-        var btn = CreateGhost(arrow, 36);
-        btn.Font = new Font("맑은 고딕", 11f);
+        var btn = CreateBase(text, ColorPalette.Danger, Color.White, width);
+        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        btn.FlatAppearance.MouseOverBackColor = DarkenColor(ColorPalette.Danger, 25);
+        btn.FlatAppearance.MouseDownBackColor = DarkenColor(ColorPalette.Danger, 50);
         return btn;
     }
 
-    /// <summary>아이콘 전용 소형 버튼 (32x32)</summary>
+    /// <summary>성공 버튼 (초록 포인트)</summary>
+    public static Button CreateSuccess(string text, int width = 0)
+    {
+        var btn = CreateBase(text, ColorPalette.Success, Color.White, width);
+        btn.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        btn.FlatAppearance.MouseOverBackColor = DarkenColor(ColorPalette.Success, 25);
+        btn.FlatAppearance.MouseDownBackColor = DarkenColor(ColorPalette.Success, 50);
+        return btn;
+    }
+
+    /// <summary>Ghost 버튼 (투명 + 밝은 텍스트)</summary>
+    public static Button CreateGhost(string text, int width = 0)
+    {
+        var btn = CreateBase(text, Color.Transparent, ColorPalette.TextSecondary, width);
+        btn.Font = new Font("Segoe UI", 10f);
+        btn.FlatAppearance.MouseOverBackColor = ColorPalette.HoverBg;
+        btn.FlatAppearance.MouseDownBackColor = ColorPalette.Border;
+        return btn;
+    }
+
+    /// <summary>날짜 네비게이션 (◀ ▶)</summary>
+    public static Button CreateNavArrow(string arrow)
+    {
+        var btn = CreateGhost(arrow, 36);
+        btn.Font = new Font("Segoe UI", 12f);
+        btn.ForeColor = ColorPalette.Text;
+        return btn;
+    }
+
+    /// <summary>아이콘 버튼 (32x32)</summary>
     public static Button CreateIcon(string icon, Color? color = null)
     {
-        var btn = CreateGhost(icon, 32);
-        btn.Height = 32;
-        btn.Font = new Font("Segoe UI Emoji", 12f);
-        if (color.HasValue) btn.ForeColor = color.Value;
+        var btn = CreateGhost(icon, 34);
+        btn.Height = 34;
+        btn.Font = new Font("Segoe UI Emoji", 13f);
+        btn.ForeColor = color ?? ColorPalette.Text;
         return btn;
     }
 
@@ -89,19 +92,19 @@ public static class ButtonFactory
             BackColor = backColor,
             ForeColor = foreColor,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("맑은 고딕", 10f),
+            Font = new Font("Segoe UI", 10f),
             Height = DefaultHeight,
-            Width = width > 0 ? width : Math.Max(MinWidth, text.Length * 13 + 32),
+            Width = width > 0 ? width : Math.Max(MinWidth, text.Length * 14 + 36),
             Cursor = Cursors.Hand,
-            Margin = new Padding(DesignTokens.SpaceXS, 0, DesignTokens.SpaceXS, 0)
+            Margin = new Padding(4, 0, 4, 0)
         };
         btn.FlatAppearance.BorderSize = 0;
 
-        // Pressed 효과: 살짝 눌림감 (1px 오프셋)
+        // 뉴모피즘 Pressed: 1px 눌림 + 배경 약간 어두워짐
         btn.MouseDown += (_, _) => btn.Padding = new Padding(0, 1, 0, 0);
         btn.MouseUp += (_, _) => btn.Padding = Padding.Empty;
 
-        // Focus 효과: Primary 테두리 (키보드 접근성)
+        // Focus: 파란 테두리 (키보드 접근성)
         btn.GotFocus += (_, _) =>
         {
             btn.FlatAppearance.BorderSize = 2;
@@ -112,13 +115,13 @@ public static class ButtonFactory
             btn.FlatAppearance.BorderSize = 0;
         };
 
-        // Disabled 상태: 투명도 낮춤
+        // Disabled: 투명도
         btn.EnabledChanged += (_, _) =>
         {
             if (!btn.Enabled)
             {
-                btn.BackColor = Color.FromArgb(100, backColor);
-                btn.ForeColor = Color.FromArgb(100, foreColor);
+                btn.BackColor = Color.FromArgb(80, backColor);
+                btn.ForeColor = Color.FromArgb(80, foreColor);
                 btn.Cursor = Cursors.Default;
             }
             else
@@ -129,17 +132,14 @@ public static class ButtonFactory
             }
         };
 
-        // 둥근 모서리 (Region 기반 — 성능 영향 0)
+        // 둥근 모서리 8px
         btn.Resize += (_, _) => ApplyRoundedRegion(btn);
         btn.HandleCreated += (_, _) => ApplyRoundedRegion(btn);
 
         return btn;
     }
 
-    /// <summary>
-    /// 비동기 작업 중 버튼 비활성화 + 텍스트 변경 (로딩 표시).
-    /// 사용법: await ButtonFactory.RunWithLoadingAsync(btn, "처리 중...", async () => { ... });
-    /// </summary>
+    /// <summary>로딩 표시 헬퍼</summary>
     public static async Task RunWithLoadingAsync(Button btn, string loadingText, Func<Task> action)
     {
         var originalText = btn.Text;
@@ -162,7 +162,7 @@ public static class ButtonFactory
     private static void ApplyRoundedRegion(Button btn)
     {
         if (btn.Width <= 0 || btn.Height <= 0) return;
-        var path = new GraphicsPath();
+        using var path = new GraphicsPath();
         var d = Radius * 2;
         var rect = new Rectangle(0, 0, btn.Width, btn.Height);
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
@@ -172,4 +172,7 @@ public static class ButtonFactory
         path.CloseFigure();
         btn.Region = new Region(path);
     }
+
+    private static Color DarkenColor(Color c, int amount) => Color.FromArgb(
+        c.A, Math.Max(c.R - amount, 0), Math.Max(c.G - amount, 0), Math.Max(c.B - amount, 0));
 }

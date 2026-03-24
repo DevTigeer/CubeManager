@@ -3,18 +3,17 @@ using System.Drawing;
 namespace CubeManager.Helpers;
 
 /// <summary>
-/// DataGridView 공통 테마.
-/// 2025 업데이트: 가독성 향상, 행 간격 최적화, 선택 행 인디케이터.
+/// 2025 Dark Tone DataGridView 테마.
+/// 어두운 배경 + 밝은 텍스트 + 뉴모피즘 선택 바.
 /// </summary>
 public static class GridTheme
 {
-    /// <summary>디자인 시스템 기반 DataGridView 테마 일괄 적용</summary>
     public static void ApplyTheme(DataGridView grid)
     {
-        // 기본 설정
+        // 기본
         grid.BorderStyle = BorderStyle.None;
         grid.BackgroundColor = ColorPalette.Surface;
-        grid.GridColor = ColorPalette.Divider;
+        grid.GridColor = ColorPalette.Border;
         grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         grid.RowHeadersVisible = false;
@@ -26,49 +25,52 @@ public static class GridTheme
         grid.MultiSelect = false;
         grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-        // 헤더 스타일 — 더 진한 배경, 약간 작은 폰트로 데이터와 구분
-        grid.ColumnHeadersHeight = 38;
+        // 헤더 — 가장 어두운 배경 + 밝은 텍스트
+        grid.ColumnHeadersHeight = 40;
         grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
         {
             BackColor = ColorPalette.HeaderBg,
             ForeColor = ColorPalette.TextSecondary,
-            Font = new Font("맑은 고딕", 9.5f, FontStyle.Bold),
-            Padding = new Padding(10, 0, 10, 0),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Padding = new Padding(12, 0, 12, 0),
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // 데이터 행 스타일 — 넉넉한 높이로 가독성 확보
-        grid.RowTemplate.Height = 42;
+        // 데이터 행 — 어두운 배경 + 밝은 텍스트
+        grid.RowTemplate.Height = 44;
         grid.DefaultCellStyle = new DataGridViewCellStyle
         {
             BackColor = ColorPalette.Surface,
             ForeColor = ColorPalette.Text,
-            Font = new Font("맑은 고딕", 10f),
-            Padding = new Padding(10, 4, 10, 4),
+            Font = new Font("Segoe UI", 10f),
+            Padding = new Padding(12, 4, 12, 4),
             SelectionBackColor = ColorPalette.SelectedBg,
-            SelectionForeColor = ColorPalette.Text
+            SelectionForeColor = Color.White
         };
 
-        // 교차 행 배경 (줄무늬)
+        // 교차행 (미세하게 다른 어두운 톤)
         grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
         {
-            BackColor = ColorPalette.RowAlt
+            BackColor = ColorPalette.RowAlt,
+            ForeColor = ColorPalette.Text,
+            SelectionBackColor = ColorPalette.SelectedBg,
+            SelectionForeColor = Color.White
         };
 
-        // 선택 행 좌측 2px Primary 바 (Fluent Design)
+        // 선택행 좌측 파란 바 (액센트 포인트)
         grid.RowPostPaint += (_, e) =>
         {
             if (e.RowIndex >= 0 && grid.Rows[e.RowIndex].Selected)
             {
                 using var brush = new SolidBrush(ColorPalette.Primary);
                 e.Graphics.FillRectangle(brush,
-                    e.RowBounds.X, e.RowBounds.Y + 4, 3, e.RowBounds.Height - 8);
+                    e.RowBounds.X, e.RowBounds.Y + 6, 3, e.RowBounds.Height - 12);
             }
         };
     }
 
-    /// <summary>금액 컬럼용 오른쪽 정렬 — Segoe UI 숫자 가독성</summary>
+    /// <summary>금액 컬럼 — 오른쪽 정렬, Segoe UI</summary>
     public static DataGridViewCellStyle AmountStyle => new()
     {
         Alignment = DataGridViewContentAlignment.MiddleRight,
@@ -76,13 +78,13 @@ public static class GridTheme
         Font = new Font("Segoe UI", 10f)
     };
 
-    /// <summary>가운데 정렬 스타일</summary>
+    /// <summary>가운데 정렬</summary>
     public static DataGridViewCellStyle CenterStyle => new()
     {
         Alignment = DataGridViewContentAlignment.MiddleCenter
     };
 
-    /// <summary>수기 수정 셀 배경</summary>
+    /// <summary>수기 편집 표시</summary>
     public static void MarkManualEdit(DataGridViewCell cell)
     {
         cell.Style.BackColor = ColorPalette.ManualEdit;

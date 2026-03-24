@@ -18,7 +18,7 @@ public class HeaderPanel : Panel
     {
         Dock = DockStyle.Top;
         Height = 50;
-        BackColor = ColorPalette.Surface;
+        BackColor = ColorPalette.Card;  // 메인보다 약간 밝은 어두운 톤
         Padding = new Padding(16, 0, 16, 0);
 
         // 하단 border 효과 (Paint에서 처리)
