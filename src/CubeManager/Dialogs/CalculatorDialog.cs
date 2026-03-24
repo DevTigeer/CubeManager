@@ -14,7 +14,7 @@ public class CalculatorDialog : Form
     {
         Text = "간이 계산기";
         Size = new Size(340, 190);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

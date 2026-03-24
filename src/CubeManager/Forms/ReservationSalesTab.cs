@@ -1068,7 +1068,7 @@ internal class WalkinDialog : Form
     {
         Text = "워크인 추가";
         Size = new Size(380, 300);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false; MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
@@ -1153,7 +1153,7 @@ internal class SaleItemDialog : Form
     {
         Text = category == "revenue" ? "매출 추가" : "지출 추가";
         Size = new Size(360, 220);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false; MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
@@ -1207,7 +1207,7 @@ internal class DeleteSaleItemDialog : Form
     {
         Text = "매출 삭제";
         Size = new Size(500, 350);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false; MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);

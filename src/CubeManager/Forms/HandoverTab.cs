@@ -502,7 +502,7 @@ internal class HandoverWriteDialog : Form
     {
         Text = "인수인계 작성";
         Size = new Size(440, 360);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

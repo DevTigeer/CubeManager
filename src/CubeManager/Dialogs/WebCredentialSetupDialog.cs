@@ -28,7 +28,7 @@ public class WebCredentialSetupDialog : Form
 
         Text = "웹 연동 설정";
         Size = new Size(420, 280);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;
         MinimizeBox = false;

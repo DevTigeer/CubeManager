@@ -1175,7 +1175,7 @@ public class AdminTab : UserControl
         {
             Text = "미끼 팝업 등록",
             Size = new Size(400, 260),
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.None,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false, MinimizeBox = false,
             Font = new Font("맑은 고딕", 10f),
@@ -1342,7 +1342,7 @@ public class AdminTab : UserControl
         {
             Text = $"체크리스트 추가 ({daysText} / {roleText})",
             Size = new Size(400, 180),
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.None,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false, MinimizeBox = false,
             Font = new Font("맑은 고딕", 10f),

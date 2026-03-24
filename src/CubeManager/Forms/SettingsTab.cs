@@ -103,7 +103,7 @@ internal class EmployeeEditDialog : Form
     {
         Text = existing == null ? "직원 추가" : "직원 수정";
         Size = new Size(360, 230);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

@@ -47,7 +47,7 @@ public class ScheduleInputDialog : Form
 
         Text = "스케줄 추가";
         Size = new Size(460, 480);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

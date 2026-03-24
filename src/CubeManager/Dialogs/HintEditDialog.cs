@@ -23,7 +23,7 @@ internal class HintEditDialog : Form
     {
         Text = existing == null ? "힌트 추가" : "힌트 수정";
         Size = new Size(480, 340);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

@@ -9,7 +9,7 @@ public static class InputDialog
         using var form = new Form
         {
             Text = title, Size = new Size(350, 150),
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.None,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false, MinimizeBox = false,
             Font = new Font("맑은 고딕", 10f)

@@ -16,7 +16,7 @@ public class MicePopupDialog : Form
     {
         Text = title;
         Size = new Size(450, 320);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;
         MinimizeBox = false;

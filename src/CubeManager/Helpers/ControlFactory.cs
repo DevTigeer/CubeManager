@@ -229,11 +229,11 @@ public static class ControlFactory
         form.BackColor = ColorPalette.Surface;
         form.ForeColor = ColorPalette.Text;
 
-        // MainForm은 이미 FormBorderStyle.None — 서브 다이얼로그만 처리
-        if (form.FormBorderStyle != FormBorderStyle.None && form.Owner != null)
+        // 서브 다이얼로그에만 커스텀 타이틀바 추가 (MainForm 제외)
+        if (form.Tag as string != "__titleBarAdded" && form.Owner != null)
         {
+            form.Tag = "__titleBarAdded";
             var title = form.Text;
-            form.FormBorderStyle = FormBorderStyle.None;
 
             // 커스텀 타이틀바 (35px)
             var titleBar = new Panel
@@ -322,9 +322,8 @@ public static class ControlFactory
             foreach (Form f in Application.OpenForms)
             {
                 if (f == mainForm) continue;
-                if (f.Tag as string != "__styled")
+                if (f.Tag as string is not ("__styled" or "__titleBarAdded"))
                 {
-                    f.Tag = "__styled";
                     ApplyModernDialog(f);
                 }
             }

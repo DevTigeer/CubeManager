@@ -15,7 +15,7 @@ public class AdminAuthDialog : Form
 
         Text = "관리자 인증";
         Size = new Size(340, 160);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

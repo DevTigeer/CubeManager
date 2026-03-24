@@ -39,7 +39,7 @@ public class CustomerCalcDialog : Form
     {
         Text = "손님 계산";
         Size = new Size(420, 520);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

@@ -17,7 +17,7 @@ internal class ThemeEditDialog : Form
     {
         Text = existing == null ? "테마 추가" : "테마 수정";
         Size = new Size(400, 200);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

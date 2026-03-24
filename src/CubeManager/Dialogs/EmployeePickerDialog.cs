@@ -14,7 +14,7 @@ public class EmployeePickerDialog : Form
     {
         Text = "직원 선택";
         Size = new Size(300, 360);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;

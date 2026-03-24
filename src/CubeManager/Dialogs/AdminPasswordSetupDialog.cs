@@ -13,7 +13,7 @@ public class AdminPasswordSetupDialog : Form
     {
         Text = "관리자 비밀번호 설정";
         Size = new Size(380, 220);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;
         MinimizeBox = false;

@@ -129,7 +129,7 @@ internal class InventoryEditDialog : Form
     public InventoryEditDialog()
     {
         Text = "물품 추가"; Size = new Size(360, 280);
-        FormBorderStyle = FormBorderStyle.FixedDialog; StartPosition = FormStartPosition.CenterParent;
+        FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false; MinimizeBox = false; Font = new Font("맑은 고딕", 10f);
 
         var y = 15;
