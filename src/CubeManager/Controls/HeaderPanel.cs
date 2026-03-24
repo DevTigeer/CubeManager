@@ -79,7 +79,44 @@ public class HeaderPanel : Panel
             Padding = new Padding(0, 16, 12, 0)
         };
 
+        // 우측: 닫기 버튼 (✕)
+        var btnClose = ButtonFactory.CreateIcon("✕");
+        btnClose.Dock = DockStyle.Right;
+        btnClose.ForeColor = ColorPalette.TextSecondary;
+        btnClose.FlatAppearance.MouseOverBackColor = ColorPalette.Danger;
+        btnClose.Margin = new Padding(0, 8, 4, 8);
+        tip.SetToolTip(btnClose, "닫기");
+        btnClose.Click += (_, _) => FindForm()?.Close();
+
+        // 우측: 최소화 버튼 (─)
+        var btnMinimize = ButtonFactory.CreateIcon("─");
+        btnMinimize.Dock = DockStyle.Right;
+        btnMinimize.Margin = new Padding(0, 8, 0, 8);
+        tip.SetToolTip(btnMinimize, "최소화");
+        btnMinimize.Click += (_, _) =>
+        {
+            var form = FindForm();
+            if (form != null) form.WindowState = FormWindowState.Minimized;
+        };
+
+        // 드래그로 창 이동 (타이틀바 대신)
+        var dragging = false;
+        var dragStart = Point.Empty;
+        MouseDown += (_, me) => { dragging = true; dragStart = me.Location; };
+        MouseMove += (_, me) =>
+        {
+            if (!dragging) return;
+            var form = FindForm();
+            if (form == null) return;
+            form.Location = new Point(
+                form.Location.X + me.X - dragStart.X,
+                form.Location.Y + me.Y - dragStart.Y);
+        };
+        MouseUp += (_, _) => dragging = false;
+
         // Dock.Right는 역순 추가: 가장 오른쪽부터
+        Controls.Add(btnClose);
+        Controls.Add(btnMinimize);
         Controls.Add(_lblTime);
         Controls.Add(btnCalc);
         Controls.Add(btnRefresh);

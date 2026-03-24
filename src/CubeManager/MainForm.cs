@@ -33,6 +33,7 @@ public class MainForm : Form
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
+        FormBorderStyle = FormBorderStyle.None;  // 기본 타이틀바 제거
         BackColor = ColorPalette.Surface;
         ForeColor = ColorPalette.Text;
         Font = DesignTokens.FontBody;
