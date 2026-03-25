@@ -230,6 +230,10 @@ public class AdminTab : UserControl
         btnDbReset.Click += BtnDbReset_Click;
         utilPanel.Controls.Add(btnDbReset);
 
+        var btnChangePw = ButtonFactory.CreateSecondary("비밀번호 변경", 120);
+        btnChangePw.Click += BtnChangePw_Click;
+        utilPanel.Controls.Add(btnChangePw);
+
         utilPanel.Controls.Add(new Label
         {
             Text = "자동 백업: 매주 월/금 오후 5시",
@@ -891,6 +895,23 @@ public class AdminTab : UserControl
         finally
         {
             if (sender is Button btn2) { btn2.Enabled = true; btn2.Text = "💾 DB 백업"; }
+        }
+    }
+
+    // ========== 비밀번호 변경 ==========
+    private async void BtnChangePw_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new AdminPasswordSetupDialog();
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            await _configRepo.SetAsync("admin_password_hash", dlg.PasswordHash);
+            ToastNotification.Show("관리자 비밀번호가 변경되었습니다.", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"변경 실패: {ex.Message}", ToastType.Error);
         }
     }
 

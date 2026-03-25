@@ -107,16 +107,20 @@ internal class EmployeeEditDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        Font = new Font("맑은 고딕", 10f);
+        BackColor = ColorPalette.Surface;
+        ForeColor = ColorPalette.Text;
+        Font = DesignTokens.FontBody;
 
         var y = 15;
-        AddField("이름:", _txtName = new TextBox(), ref y);
+        _txtName = new TextBox { ImeMode = ImeMode.Hangul };
+        AddField("이름:", _txtName, ref y);
         AddField("시급:", _numWage = new NumericUpDown
         {
             Maximum = 1_000_000, Minimum = 0, Increment = 100,
             ThousandsSeparator = true, Size = new Size(150, 25)
         }, ref y);
-        AddField("연락처:", _txtPhone = new TextBox(), ref y);
+        _txtPhone = new TextBox { ImeMode = ImeMode.Alpha };
+        AddField("연락처:", _txtPhone, ref y);
 
         y += 10;
         var btnOk = ButtonFactory.CreatePrimary(existing == null ? "추가" : "수정", 80);
@@ -140,9 +144,16 @@ internal class EmployeeEditDialog : Form
 
     private void AddField(string label, Control control, ref int y)
     {
-        Controls.Add(new Label { Text = label, Location = new Point(20, y + 2), Size = new Size(70, 22) });
+        Controls.Add(new Label
+        {
+            Text = label, Location = new Point(20, y + 2), Size = new Size(70, 22),
+            ForeColor = ColorPalette.Text, Font = DesignTokens.FontBody
+        });
         control.Location = new Point(95, y);
         if (control.Size.Width < 200) control.Size = new Size(230, 25);
+        control.BackColor = ColorPalette.Card;
+        control.ForeColor = ColorPalette.Text;
+        control.Font = DesignTokens.FontBody;
         Controls.Add(control);
         y += 38;
     }
