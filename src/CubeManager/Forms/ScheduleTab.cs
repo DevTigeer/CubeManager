@@ -14,6 +14,7 @@ public class ScheduleTab : UserControl
     private readonly IScheduleService _scheduleService;
     private readonly IEmployeeService _employeeService;
     private readonly IHolidayRepository _holidayRepo;
+    private readonly IWorkPartRepository _workPartRepo;
     private readonly TimeTablePanel _timeTable;
     private readonly Label _lblDateRange;
     private readonly Label _lblWeekSub;
@@ -21,11 +22,12 @@ public class ScheduleTab : UserControl
     private int _year, _month, _weekNum;
 
     public ScheduleTab(IScheduleService scheduleService, IEmployeeService employeeService,
-        IHolidayRepository holidayRepo)
+        IHolidayRepository holidayRepo, IWorkPartRepository workPartRepo)
     {
         _scheduleService = scheduleService;
         _employeeService = employeeService;
         _holidayRepo = holidayRepo;
+        _workPartRepo = workPartRepo;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
         Padding = new Padding(12);
@@ -236,7 +238,8 @@ public class ScheduleTab : UserControl
             return;
         }
 
-        using var dlg = new ScheduleInputDialog(employees);
+        var parts = (await _workPartRepo.GetActiveAsync()).ToList();
+        using var dlg = new ScheduleInputDialog(employees, parts);
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
         try
@@ -259,7 +262,8 @@ public class ScheduleTab : UserControl
         var employees = (await _employeeService.GetActiveAsync()).ToList();
         if (employees.Count == 0) return;
 
-        using var dlg = new ScheduleInputDialog(employees, e.Date);
+        var parts = (await _workPartRepo.GetActiveAsync()).ToList();
+        using var dlg = new ScheduleInputDialog(employees, parts, e.Date);
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
         try

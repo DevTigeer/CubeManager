@@ -251,7 +251,8 @@ public class MainForm : Form
         1 => new ScheduleTab(
                 _sp.GetRequiredService<IScheduleService>(),
                 _sp.GetRequiredService<IEmployeeService>(),
-                _sp.GetRequiredService<IHolidayRepository>()),
+                _sp.GetRequiredService<IHolidayRepository>(),
+                _sp.GetRequiredService<IWorkPartRepository>()),
         2 => new ChecklistTab(
                 _sp.GetRequiredService<IChecklistRepository>(),
                 _sp.GetRequiredService<IScheduleService>(),
@@ -280,7 +281,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IChecklistRepository>(),
                 _sp.GetRequiredService<Data.Database>(),
                 _sp.GetRequiredService<ISalaryService>(),
-                _sp.GetRequiredService<IAlertService>()),
+                _sp.GetRequiredService<IAlertService>(),
+                _sp.GetRequiredService<IWorkPartRepository>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 

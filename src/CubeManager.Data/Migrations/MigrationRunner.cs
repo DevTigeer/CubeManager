@@ -26,7 +26,8 @@ public class MigrationRunner
             new V011_ChecklistRole(),
             new V012_SaleNoteVerify(),
             new V013_HandoverTitleCheck(),
-            new V014_AlertSystem()
+            new V014_AlertSystem(),
+            new V015_WorkParts()
         ];
     }
 

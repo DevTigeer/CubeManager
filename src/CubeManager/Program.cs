@@ -109,6 +109,7 @@ static class Program
         services.AddSingleton<IMicePopupRepository, MicePopupRepository>();
         services.AddSingleton<IChecklistRepository, ChecklistRepository>();
         services.AddSingleton<IAlertLogRepository, AlertLogRepository>();
+        services.AddSingleton<IWorkPartRepository, WorkPartRepository>();
 
         // Services
         services.AddSingleton<IEmployeeService, EmployeeService>();

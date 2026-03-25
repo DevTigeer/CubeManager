@@ -10,12 +10,14 @@ namespace CubeManager.Dialogs;
 public class ScheduleInputDialog : Form
 {
     private readonly ComboBox _cmbEmployee;
+    private readonly ComboBox _cmbPart;
     private readonly ComboBox _cmbStart;
     private readonly ComboBox _cmbEnd;
     private readonly CheckBox[] _dayChecks = new CheckBox[7];
     private readonly ComboBox _cmbMonth;
     private readonly CheckBox[] _weekChecks = new CheckBox[5];
     private int _year;
+    private List<WorkPart> _parts = [];
 
     public int SelectedEmployeeId { get; private set; }
     public string StartTime => _cmbStart.Text;
@@ -40,13 +42,14 @@ public class ScheduleInputDialog : Form
         }
     }
 
-    public ScheduleInputDialog(IEnumerable<Employee> employees, DateTime? defaultDate = null)
+    public ScheduleInputDialog(IEnumerable<Employee> employees, IEnumerable<WorkPart>? workParts = null, DateTime? defaultDate = null)
     {
         var now = defaultDate ?? DateTime.Today;
         _year = now.Year;
+        _parts = workParts?.ToList() ?? [];
 
         Text = "스케줄 추가";
-        Size = new Size(460, 480);
+        Size = new Size(460, 520);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
@@ -91,7 +94,46 @@ public class ScheduleInputDialog : Form
 
         y += 40;
 
-        // ─── 섹션 2: 근무 시간 ───
+        // ─── 섹션 2: 파트 선택 (시간 자동 설정) ───
+        if (_parts.Count > 0)
+        {
+            Controls.Add(CreateSectionLabel("파트 선택", y));
+            y += 22;
+
+            _cmbPart = new ComboBox
+            {
+                Location = new Point(25, y), Size = new Size(395, 28),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = DesignTokens.FontBody
+            };
+            _cmbPart.Items.Add("(직접 입력)");
+            foreach (var part in _parts)
+                _cmbPart.Items.Add($"{part.PartName}  ({part.StartTime}~{part.EndTime})");
+            _cmbPart.SelectedIndex = 0;
+            _cmbPart.SelectedIndexChanged += (_, _) =>
+            {
+                var idx = _cmbPart.SelectedIndex - 1; // 0 = 직접 입력
+                if (idx >= 0 && idx < _parts.Count)
+                {
+                    var part = _parts[idx];
+                    // 시작 시간 설정
+                    var startIdx = _cmbStart!.Items.IndexOf(part.StartTime);
+                    if (startIdx >= 0) _cmbStart.SelectedIndex = startIdx;
+                    // 종료 시간 설정
+                    var endIdx = _cmbEnd!.Items.IndexOf(part.EndTime);
+                    if (endIdx >= 0) _cmbEnd.SelectedIndex = endIdx;
+                }
+            };
+            Controls.Add(_cmbPart);
+
+            y += 40;
+        }
+        else
+        {
+            _cmbPart = new ComboBox { Visible = false };
+        }
+
+        // ─── 섹션 3: 근무 시간 ───
         Controls.Add(CreateSectionLabel("근무 시간", y));
         y += 22;
 

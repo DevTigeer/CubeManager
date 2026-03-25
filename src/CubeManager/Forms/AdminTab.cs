@@ -44,6 +44,10 @@ public class AdminTab : UserControl
     // ===== 체크리스트 관리 탭 =====
     private readonly DataGridView _gridChecklist;
 
+    // ===== 파트 관리 탭 =====
+    private readonly IWorkPartRepository _workPartRepo;
+    private readonly DataGridView _gridParts;
+
     // ===== 출퇴근 이력 탭 =====
     private readonly DataGridView _gridAttendHistory;
     private readonly DateTimePicker _dtpAttendStart;
@@ -62,7 +66,8 @@ public class AdminTab : UserControl
     public AdminTab(IConfigRepository configRepo, ISalesService salesService,
         IAttendanceService attendanceService, IEmployeeService employeeService,
         IMicePopupRepository miceRepo, IChecklistRepository checklistRepo,
-        Data.Database database, ISalaryService salaryService, IAlertService alertService)
+        Data.Database database, ISalaryService salaryService, IAlertService alertService,
+        IWorkPartRepository workPartRepo)
     {
         _configRepo = configRepo;
         _salesService = salesService;
@@ -73,6 +78,7 @@ public class AdminTab : UserControl
         _database = database;
         _salaryService2 = salaryService;
         _alertService = alertService;
+        _workPartRepo = workPartRepo;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
 
@@ -86,6 +92,7 @@ public class AdminTab : UserControl
         _gridEmployees = new DataGridView { Dock = DockStyle.Fill };
         _gridMice = new DataGridView { Dock = DockStyle.Fill };
         _gridChecklist = new DataGridView { Dock = DockStyle.Fill };
+        _gridParts = new DataGridView { Dock = DockStyle.Fill };
         _gridAttendHistory = new DataGridView { Dock = DockStyle.Fill };
         _dtpAttendStart = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today.AddDays(-30), Size = new Size(130, 25) };
         _dtpAttendEnd = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Size = new Size(130, 25) };
@@ -198,6 +205,7 @@ public class AdminTab : UserControl
         tabControl.TabPages.Add(BuildEmployeeTab());
         tabControl.TabPages.Add(BuildMiceTab());
         tabControl.TabPages.Add(BuildChecklistTab());
+        tabControl.TabPages.Add(BuildWorkPartTab());
         tabControl.TabPages.Add(BuildAlertHistoryTab());
 
         _mainPanel.Controls.Add(tabControl);
@@ -1136,6 +1144,7 @@ public class AdminTab : UserControl
         await LoadEmployeesAsync();
         await LoadMiceAsync();
         await LoadChecklistTemplatesAsync();
+        await LoadPartsAsync();
     }
 
     private async Task LoadAttendanceStatsAsync()
@@ -1258,6 +1267,158 @@ public class AdminTab : UserControl
             _summaryCards.UpdateCard(3, $"₩{todayBalance?.ClosingBalance ?? 0:N0}");
         }
         catch { /* 무시 */ }
+    }
+
+    // ========== 파트 관리 ==========
+    private TabPage BuildWorkPartTab()
+    {
+        var page = new TabPage("파트 관리") { Padding = new Padding(10), BackColor = ColorPalette.Surface };
+
+        var toolbar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top, Height = 42,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 2, 0, 2)
+        };
+
+        var btnAdd = ButtonFactory.CreatePrimary("+ 파트 추가", 110);
+        btnAdd.Height = 32;
+        btnAdd.Click += async (_, _) =>
+        {
+            using var dlg = new Form
+            {
+                Text = "파트 추가", Size = new Size(340, 200),
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.CenterParent,
+                BackColor = ColorPalette.Surface
+            };
+            var y = 15;
+            var txtName = new TextBox { Location = new Point(90, y), Size = new Size(220, 25) };
+            dlg.Controls.Add(new Label { Text = "파트명:", Location = new Point(15, y + 2), Size = new Size(70, 22), ForeColor = ColorPalette.Text });
+            dlg.Controls.Add(txtName);
+            y += 35;
+            var cmbStart = CreatePartTimeCombo(new Point(90, y));
+            dlg.Controls.Add(new Label { Text = "출근시간:", Location = new Point(15, y + 2), Size = new Size(70, 22), ForeColor = ColorPalette.Text });
+            dlg.Controls.Add(cmbStart);
+            var cmbEnd = CreatePartTimeCombo(new Point(210, y));
+            dlg.Controls.Add(new Label { Text = "~", Location = new Point(195, y + 2), Size = new Size(15, 22), ForeColor = ColorPalette.Text });
+            dlg.Controls.Add(cmbEnd);
+            cmbEnd.SelectedIndex = Math.Min(14, cmbEnd.Items.Count - 1);
+            y += 40;
+            var btnOk = ButtonFactory.CreatePrimary("추가", 80);
+            btnOk.Location = new Point(140, y);
+            btnOk.DialogResult = DialogResult.OK;
+            var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+            btnCancel.Location = new Point(230, y);
+            btnCancel.DialogResult = DialogResult.Cancel;
+            dlg.Controls.AddRange([btnOk, btnCancel]);
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            if (string.IsNullOrWhiteSpace(txtName.Text)) return;
+
+            try
+            {
+                var maxOrder = (await _workPartRepo.GetAllAsync()).Max(p => (int?)p.SortOrder) ?? 0;
+                await _workPartRepo.InsertAsync(new WorkPart
+                {
+                    PartName = txtName.Text.Trim(),
+                    StartTime = cmbStart.Text,
+                    EndTime = cmbEnd.Text,
+                    SortOrder = maxOrder + 1
+                });
+                ToastNotification.Show("파트가 추가되었습니다.", ToastType.Success);
+                await LoadPartsAsync();
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+        toolbar.Controls.Add(btnAdd);
+
+        toolbar.Controls.Add(new Label
+        {
+            Text = "Delete 키로 삭제",
+            Font = DesignTokens.FontCaption, ForeColor = ColorPalette.TextTertiary,
+            Size = new Size(200, 32), TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(15, 0, 0, 0)
+        });
+
+        GridTheme.ApplyTheme(_gridParts);
+        _gridParts.AllowUserToAddRows = false;
+        _gridParts.Columns.AddRange(
+            new DataGridViewTextBoxColumn { Name = "PartId", Visible = false },
+            new DataGridViewTextBoxColumn { Name = "PartName", HeaderText = "파트명", FillWeight = 25 },
+            new DataGridViewTextBoxColumn { Name = "PartStart", HeaderText = "출근시간", FillWeight = 20, DefaultCellStyle = GridTheme.CenterStyle },
+            new DataGridViewTextBoxColumn { Name = "PartEnd", HeaderText = "퇴근시간", FillWeight = 20, DefaultCellStyle = GridTheme.CenterStyle },
+            new DataGridViewTextBoxColumn { Name = "PartOrder", HeaderText = "순서", FillWeight = 10, DefaultCellStyle = GridTheme.CenterStyle },
+            new DataGridViewCheckBoxColumn { Name = "PartActive", HeaderText = "활성", FillWeight = 10 }
+        );
+
+        _gridParts.CellContentClick += async (_, e) =>
+        {
+            if (e.RowIndex < 0 || _gridParts.Columns[e.ColumnIndex].Name != "PartActive") return;
+            var id = (int)_gridParts.Rows[e.RowIndex].Cells["PartId"].Value;
+            var current = (bool)_gridParts.Rows[e.RowIndex].Cells["PartActive"].Value;
+            try
+            {
+                var all = (await _workPartRepo.GetAllAsync()).ToList();
+                var part = all.FirstOrDefault(p => p.Id == id);
+                if (part != null)
+                {
+                    part.IsActive = !current;
+                    await _workPartRepo.UpdateAsync(part);
+                    await LoadPartsAsync();
+                }
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+
+        _gridParts.KeyDown += async (_, e) =>
+        {
+            if (e.KeyCode != Keys.Delete || _gridParts.CurrentRow == null) return;
+            var id = (int)_gridParts.CurrentRow.Cells["PartId"].Value;
+            var name = _gridParts.CurrentRow.Cells["PartName"].Value?.ToString();
+            if (MessageBox.Show($"'{name}' 파트를 삭제하시겠습니까?", "확인",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            try
+            {
+                await _workPartRepo.DeleteAsync(id);
+                ToastNotification.Show("삭제 완료.", ToastType.Success);
+                await LoadPartsAsync();
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+
+        page.Controls.Add(_gridParts);
+        page.Controls.Add(toolbar);
+        return page;
+    }
+
+    private static ComboBox CreatePartTimeCombo(Point location)
+    {
+        var cmb = new ComboBox
+        {
+            Location = location, Size = new Size(100, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = DesignTokens.FontBody
+        };
+        for (var h = 10; h <= 26; h++)
+            for (var m = 0; m < 60; m += 30)
+                cmb.Items.Add($"{h:00}:{m:00}");
+        cmb.SelectedIndex = 0;
+        return cmb;
+    }
+
+    private async Task LoadPartsAsync()
+    {
+        try
+        {
+            var parts = (await _workPartRepo.GetAllAsync()).ToList();
+            _gridParts.Rows.Clear();
+            foreach (var p in parts)
+                _gridParts.Rows.Add(p.Id, p.PartName, p.StartTime, p.EndTime, p.SortOrder, p.IsActive);
+        }
+        catch (Exception ex) { ToastNotification.Show($"파트 로드 실패: {ex.Message}", ToastType.Error); }
     }
 
     // ========== 알람(미끼) 관리 ==========
