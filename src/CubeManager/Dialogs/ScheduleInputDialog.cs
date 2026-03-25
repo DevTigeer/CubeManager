@@ -10,7 +10,7 @@ namespace CubeManager.Dialogs;
 public class ScheduleInputDialog : Form
 {
     private readonly ComboBox _cmbEmployee;
-    private readonly ComboBox _cmbPart;
+    private CheckBox[] _partChecks = [];
     private readonly ComboBox _cmbStart;
     private readonly ComboBox _cmbEnd;
     private readonly CheckBox[] _dayChecks = new CheckBox[7];
@@ -22,6 +22,12 @@ public class ScheduleInputDialog : Form
     public int SelectedEmployeeId { get; private set; }
     public string StartTime => _cmbStart.Text;
     public string EndTime => _cmbEnd.Text;
+
+    /// <summary>선택된 파트 목록 (여러 개 가능). 없으면 StartTime/EndTime 사용.</summary>
+    public WorkPart[] SelectedParts => _partChecks
+        .Where(c => c.Checked)
+        .Select(c => (WorkPart)c.Tag!)
+        .ToArray();
     public DayOfWeek[] SelectedDays => _dayChecks
         .Where(c => c.Checked)
         .Select(c => (DayOfWeek)c.Tag!)
@@ -94,43 +100,62 @@ public class ScheduleInputDialog : Form
 
         y += 40;
 
-        // ─── 섹션 2: 파트 선택 (시간 자동 설정) ───
+        // ─── 섹션 2: 파트 선택 (체크박스, 복수 선택 가능) ───
         if (_parts.Count > 0)
         {
-            Controls.Add(CreateSectionLabel("파트 선택", y));
+            Controls.Add(CreateSectionLabel("파트 선택 (복수 가능)", y));
             y += 22;
 
-            _cmbPart = new ComboBox
+            Controls.Add(new Label
             {
-                Location = new Point(25, y), Size = new Size(395, 28),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = DesignTokens.FontBody
-            };
-            _cmbPart.Items.Add("(직접 입력)");
-            foreach (var part in _parts)
-                _cmbPart.Items.Add($"{part.PartName}  ({part.StartTime}~{part.EndTime})");
-            _cmbPart.SelectedIndex = 0;
-            _cmbPart.SelectedIndexChanged += (_, _) =>
-            {
-                var idx = _cmbPart.SelectedIndex - 1; // 0 = 직접 입력
-                if (idx >= 0 && idx < _parts.Count)
-                {
-                    var part = _parts[idx];
-                    // 시작 시간 설정
-                    var startIdx = _cmbStart!.Items.IndexOf(part.StartTime);
-                    if (startIdx >= 0) _cmbStart.SelectedIndex = startIdx;
-                    // 종료 시간 설정
-                    var endIdx = _cmbEnd!.Items.IndexOf(part.EndTime);
-                    if (endIdx >= 0) _cmbEnd.SelectedIndex = endIdx;
-                }
-            };
-            Controls.Add(_cmbPart);
+                Text = "파트", Location = new Point(25, y + 3), Size = new Size(35, 20),
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold), ForeColor = ColorPalette.TextSecondary
+            });
 
-            y += 40;
-        }
-        else
-        {
-            _cmbPart = new ComboBox { Visible = false };
+            _partChecks = new CheckBox[_parts.Count];
+            var partBtnWidth = Math.Min(90, (395 - 40) / _parts.Count);
+            for (var i = 0; i < _parts.Count; i++)
+            {
+                var part = _parts[i];
+                _partChecks[i] = new CheckBox
+                {
+                    Text = part.PartName,
+                    Location = new Point(68 + i * (partBtnWidth + 4), y),
+                    Size = new Size(partBtnWidth, 26),
+                    Tag = part,
+                    Checked = false,
+                    Appearance = Appearance.Button,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                    BackColor = ColorPalette.Surface,
+                    ForeColor = ColorPalette.TextTertiary
+                };
+                _partChecks[i].FlatAppearance.BorderSize = 1;
+                _partChecks[i].FlatAppearance.BorderColor = ColorPalette.Border;
+                _partChecks[i].FlatAppearance.CheckedBackColor = ColorPalette.NavActiveBg;
+
+                var chk = _partChecks[i];
+                var p = part;
+                chk.CheckedChanged += (_, _) =>
+                {
+                    chk.BackColor = chk.Checked ? ColorPalette.NavActiveBg : ColorPalette.Surface;
+                    chk.ForeColor = chk.Checked ? ColorPalette.Primary : ColorPalette.TextTertiary;
+                    chk.FlatAppearance.BorderColor = chk.Checked ? ColorPalette.Primary : ColorPalette.Border;
+
+                    // 마지막 체크된 파트의 시간으로 자동 설정
+                    if (chk.Checked)
+                    {
+                        var startIdx = _cmbStart!.Items.IndexOf(p.StartTime);
+                        if (startIdx >= 0) _cmbStart.SelectedIndex = startIdx;
+                        var endIdx = _cmbEnd!.Items.IndexOf(p.EndTime);
+                        if (endIdx >= 0) _cmbEnd.SelectedIndex = endIdx;
+                    }
+                };
+                Controls.Add(_partChecks[i]);
+            }
+
+            y += 38;
         }
 
         // ─── 섹션 3: 근무 시간 ───

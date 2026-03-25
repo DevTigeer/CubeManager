@@ -244,10 +244,7 @@ public class ScheduleTab : UserControl
 
         try
         {
-            await _scheduleService.AddScheduleAsync(
-                dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
-                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
-                dlg.SelectedWeekNums);
+            await AddScheduleFromDialog(dlg);
             ToastNotification.Show("스케줄이 등록되었습니다.", ToastType.Success);
             await LoadWeekAsync();
         }
@@ -268,15 +265,38 @@ public class ScheduleTab : UserControl
 
         try
         {
-            await _scheduleService.AddScheduleAsync(
-                dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
-                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
-                dlg.SelectedWeekNums);
+            await AddScheduleFromDialog(dlg);
             await LoadWeekAsync();
         }
         catch (Exception ex)
         {
             ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    /// <summary>다이얼로그 결과로 스케줄 추가. 파트 여러 개 선택 시 각각 추가.</summary>
+    private async Task AddScheduleFromDialog(ScheduleInputDialog dlg)
+    {
+        var selectedParts = dlg.SelectedParts;
+
+        if (selectedParts.Length > 0)
+        {
+            // 파트별로 각각 스케줄 추가
+            foreach (var part in selectedParts)
+            {
+                await _scheduleService.AddScheduleAsync(
+                    dlg.SelectedEmployeeId, part.StartTime, part.EndTime,
+                    dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
+                    dlg.SelectedWeekNums);
+            }
+        }
+        else
+        {
+            // 파트 미선택 → 직접 입력된 시간 사용
+            await _scheduleService.AddScheduleAsync(
+                dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
+                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
+                dlg.SelectedWeekNums);
         }
     }
 
