@@ -274,30 +274,14 @@ public class ScheduleTab : UserControl
         }
     }
 
-    /// <summary>다이얼로그 결과로 스케줄 추가. 파트 여러 개 선택 시 각각 추가.</summary>
+    /// <summary>다이얼로그 결과로 스케줄 추가. 시간은 항상 StartTime~EndTime (파트 범위 병합됨).</summary>
     private async Task AddScheduleFromDialog(ScheduleInputDialog dlg)
     {
-        var selectedParts = dlg.SelectedParts;
-
-        if (selectedParts.Length > 0)
-        {
-            // 파트별로 각각 스케줄 추가
-            foreach (var part in selectedParts)
-            {
-                await _scheduleService.AddScheduleAsync(
-                    dlg.SelectedEmployeeId, part.StartTime, part.EndTime,
-                    dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
-                    dlg.SelectedWeekNums);
-            }
-        }
-        else
-        {
-            // 파트 미선택 → 직접 입력된 시간 사용
-            await _scheduleService.AddScheduleAsync(
-                dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
-                dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
-                dlg.SelectedWeekNums);
-        }
+        // 파트 복수 선택 시 전체 범위가 이미 StartTime/EndTime에 반영됨
+        await _scheduleService.AddScheduleAsync(
+            dlg.SelectedEmployeeId, dlg.StartTime, dlg.EndTime,
+            dlg.SelectedDays, dlg.SelectedYear, dlg.SelectedMonth,
+            dlg.SelectedWeekNums);
     }
 
     private async void TimeTable_BlockClicked(object? sender, ScheduleBlockClickEventArgs e)

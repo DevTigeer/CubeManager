@@ -143,14 +143,8 @@ public class ScheduleInputDialog : Form
                     chk.ForeColor = chk.Checked ? ColorPalette.Primary : ColorPalette.TextTertiary;
                     chk.FlatAppearance.BorderColor = chk.Checked ? ColorPalette.Primary : ColorPalette.Border;
 
-                    // 마지막 체크된 파트의 시간으로 자동 설정
-                    if (chk.Checked)
-                    {
-                        var startIdx = _cmbStart!.Items.IndexOf(p.StartTime);
-                        if (startIdx >= 0) _cmbStart.SelectedIndex = startIdx;
-                        var endIdx = _cmbEnd!.Items.IndexOf(p.EndTime);
-                        if (endIdx >= 0) _cmbEnd.SelectedIndex = endIdx;
-                    }
+                    // 체크된 파트들의 전체 범위: 가장 이른 출근 ~ 가장 늦은 퇴근
+                    UpdateTimeFromParts();
                 };
                 Controls.Add(_partChecks[i]);
             }
@@ -363,6 +357,35 @@ public class ScheduleInputDialog : Form
             _weekChecks[i].Enabled = (i + 1) <= totalWeeks;
             if (!_weekChecks[i].Enabled) _weekChecks[i].Checked = false;
         }
+    }
+
+    /// <summary>체크된 파트들의 전체 시간 범위를 시간 콤보에 반영</summary>
+    private void UpdateTimeFromParts()
+    {
+        var checkedParts = _partChecks
+            .Where(c => c.Checked)
+            .Select(c => (WorkPart)c.Tag!)
+            .ToList();
+
+        if (checkedParts.Count == 0) return;
+
+        // 가장 이른 출근
+        var earliest = checkedParts
+            .Select(p => p.StartTime)
+            .OrderBy(t => t)
+            .First();
+
+        // 가장 늦은 퇴근
+        var latest = checkedParts
+            .Select(p => p.EndTime)
+            .OrderByDescending(t => t)
+            .First();
+
+        var startIdx = _cmbStart.Items.IndexOf(earliest);
+        if (startIdx >= 0) _cmbStart.SelectedIndex = startIdx;
+
+        var endIdx = _cmbEnd.Items.IndexOf(latest);
+        if (endIdx >= 0) _cmbEnd.SelectedIndex = endIdx;
     }
 
     private static ComboBox CreateTimeCombo(Point location)
