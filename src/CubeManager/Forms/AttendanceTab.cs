@@ -24,84 +24,111 @@ public class AttendanceTab : UserControl
         _scheduleService = scheduleService;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
-        Padding = new Padding(15);
+        Padding = new Padding(20);
 
-        // Header
-        var header = new Label
+        // ─── 상단: 출퇴근 버튼 영역 (중앙 배치) ───
+        var topPanel = new Panel { Dock = DockStyle.Top, Height = 160, Padding = new Padding(0) };
+
+        // 중앙 정렬을 위한 내부 패널
+        var centerPanel = new Panel
         {
-            Text = $"출/퇴근 관리     {DateTime.Today:yyyy-MM-dd (ddd)}",
-            Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
+            Size = new Size(360, 140),
+            Anchor = AnchorStyles.Top
+        };
+
+        // 현재 시각 (대형, 중앙)
+        _lblClock = new Label
+        {
+            Location = new Point(0, 0), Size = new Size(360, 45),
+            Font = new Font("Segoe UI", 28f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
-            Dock = DockStyle.Top, Height = 40
+            TextAlign = ContentAlignment.MiddleCenter,
+            Text = DateTime.Now.ToString("HH:mm:ss")
         };
 
-        // === 오늘 근무 현황 ===
-        var leftPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 10, 10, 0) };
-
-        var lblToday = new Label
+        // 날짜
+        var lblDate = new Label
         {
-            Text = "오늘 근무 현황",
-            Font = new Font("맑은 고딕", 12f, FontStyle.Bold),
-            Dock = DockStyle.Top, Height = 30
+            Location = new Point(0, 45), Size = new Size(360, 22),
+            Font = DesignTokens.FontBody,
+            ForeColor = ColorPalette.TextSecondary,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Text = DateTime.Today.ToString("yyyy년 MM월 dd일 (ddd)")
         };
 
-        _gridToday = CreateGrid();
-        _gridToday.Columns.AddRange(
-            Col("이름", 80), Col("예정출근", 70), Col("예정퇴근", 70),
-            Col("실제출근", 100), Col("실제퇴근", 100));
-        _gridToday.Dock = DockStyle.Top;
-        _gridToday.Height = 200;
-
-        // 출퇴근 버튼 영역
-        var btnPanel = new Panel { Dock = DockStyle.Top, Height = 130, Padding = new Padding(0, 10, 0, 0) };
-
-        var lblEmp = new Label { Text = "직원:", Location = new Point(10, 12), Size = new Size(40, 22) };
+        // 직원 선택
         _cmbEmployee = new ComboBox
         {
-            Location = new Point(55, 10), Size = new Size(180, 25),
+            Location = new Point(50, 78), Size = new Size(260, 28),
             DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = DesignTokens.FontBody,
             DisplayMember = "Name"
         };
 
-        _lblClock = new Label
-        {
-            Location = new Point(10, 90), Size = new Size(230, 25),
-            Font = new Font("맑은 고딕", 12f),
-            ForeColor = ColorPalette.TextSecondary,
-            Text = DateTime.Now.ToString("현재: HH:mm:ss")
-        };
-
-        _btnClockIn = ButtonFactory.CreatePrimary("출  근");
-        _btnClockIn.Location = new Point(10, 48);
-        _btnClockIn.Size = new Size(110, 38);
-        _btnClockIn.Font = new Font("맑은 고딕", 13f, FontStyle.Bold);
+        // 출근/퇴근 버튼
+        _btnClockIn = ButtonFactory.CreatePrimary("출  근", 150);
+        _btnClockIn.Location = new Point(20, 114);
+        _btnClockIn.Size = new Size(150, 40);
+        _btnClockIn.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockIn.Click += BtnClockIn_Click;
 
-        _btnClockOut = ButtonFactory.CreateDanger("퇴  근");
-        _btnClockOut.Location = new Point(130, 48);
-        _btnClockOut.Size = new Size(110, 38);
-        _btnClockOut.Font = new Font("맑은 고딕", 13f, FontStyle.Bold);
+        _btnClockOut = ButtonFactory.CreateDanger("퇴  근", 150);
+        _btnClockOut.Location = new Point(190, 114);
+        _btnClockOut.Size = new Size(150, 40);
+        _btnClockOut.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockOut.Click += BtnClockOut_Click;
 
-        // 키보드 지원: ComboBox에서 Enter→출근, Shift+Enter→퇴근
+        // 키보드 지원
         _cmbEmployee.KeyDown += (_, e) =>
         {
             if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; BtnClockIn_Click(null, EventArgs.Empty); }
             else if (e.KeyCode == Keys.Enter && e.Shift) { e.SuppressKeyPress = true; BtnClockOut_Click(null, EventArgs.Empty); }
         };
 
-        btnPanel.Controls.AddRange([lblEmp, _cmbEmployee, _btnClockIn, _btnClockOut, _lblClock]);
+        centerPanel.Controls.AddRange([_lblClock, lblDate, _cmbEmployee, _btnClockIn, _btnClockOut]);
 
-        leftPanel.Controls.Add(btnPanel);
-        leftPanel.Controls.Add(_gridToday);
-        leftPanel.Controls.Add(lblToday);
+        // centerPanel을 topPanel 중앙에 배치
+        topPanel.Resize += (_, _) =>
+        {
+            centerPanel.Location = new Point(
+                Math.Max(0, (topPanel.Width - centerPanel.Width) / 2), 5);
+        };
+        topPanel.Controls.Add(centerPanel);
 
-        Controls.Add(leftPanel);
-        Controls.Add(header);
+        // ─── 구분선 ───
+        var divider = new Panel
+        {
+            Dock = DockStyle.Top, Height = 1,
+            BackColor = ColorPalette.Border,
+            Margin = new Padding(0, 5, 0, 5)
+        };
+
+        // ─── 표 헤더 ───
+        var lblGridTitle = new Label
+        {
+            Text = "오늘 근무 현황",
+            Font = DesignTokens.FontSectionTitle,
+            ForeColor = ColorPalette.TextSecondary,
+            Dock = DockStyle.Top, Height = 32,
+            Padding = new Padding(0, 8, 0, 0)
+        };
+
+        // ─── 표 (Fill로 나머지 공간 전부 사용) ───
+        _gridToday = CreateGrid();
+        _gridToday.Columns.AddRange(
+            Col("이름", 100), Col("예정출근", 80), Col("예정퇴근", 80),
+            Col("실제출근", 110), Col("실제퇴근", 110), Col("상태", 80));
+        _gridToday.Dock = DockStyle.Fill;
+
+        // Dock 역순 추가 (Fill 마지막)
+        Controls.Add(_gridToday);     // Fill (나머지 전부)
+        Controls.Add(lblGridTitle);   // Top
+        Controls.Add(divider);        // Top
+        Controls.Add(topPanel);       // Top
 
         // 시계 타이머
         var timer = new System.Windows.Forms.Timer { Interval = 1000 };
-        timer.Tick += (_, _) => _lblClock.Text = DateTime.Now.ToString("현재: HH:mm:ss");
+        timer.Tick += (_, _) => _lblClock.Text = DateTime.Now.ToString("HH:mm:ss");
         timer.Start();
 
         _ = InitAsync();
@@ -109,9 +136,22 @@ public class AttendanceTab : UserControl
 
     private async Task InitAsync()
     {
+        // 오늘 스케줄이 있는 직원 우선 + 그 외 활성 직원
         var employees = (await _employeeService.GetActiveAsync()).ToList();
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        var schedules = (await _scheduleService.GetByDateAsync(today)).ToList();
+
+        // 스케줄 있는 직원 ID
+        var scheduledIds = schedules.Select(s => s.EmployeeId).ToHashSet();
+
+        // 콤보: 스케줄 있는 직원 우선
+        var sorted = employees
+            .OrderByDescending(e => scheduledIds.Contains(e.Id))
+            .ThenBy(e => e.Name)
+            .ToList();
+
         _cmbEmployee.Items.Clear();
-        foreach (var emp in employees) _cmbEmployee.Items.Add(emp);
+        foreach (var emp in sorted) _cmbEmployee.Items.Add(emp);
         if (_cmbEmployee.Items.Count > 0) _cmbEmployee.SelectedIndex = 0;
 
         await LoadTodayAsync();
@@ -126,8 +166,18 @@ public class AttendanceTab : UserControl
             var schedules = (await _scheduleService.GetByDateAsync(today)).ToList();
             var records = (await _attendanceService.GetTodayStatusAsync()).ToList();
 
+            var scheduledIds = schedules.Select(s => s.EmployeeId).ToHashSet();
+            var clockedInIds = records.Select(r => r.EmployeeId).ToHashSet();
+
+            // 오늘 출근해야 하는 사람 + 스케줄 없지만 출근한 사람
+            var showEmployees = employees
+                .Where(e => scheduledIds.Contains(e.Id) || clockedInIds.Contains(e.Id))
+                .OrderByDescending(e => scheduledIds.Contains(e.Id))
+                .ThenBy(e => e.Name)
+                .ToList();
+
             _gridToday.Rows.Clear();
-            foreach (var emp in employees)
+            foreach (var emp in showEmployees)
             {
                 var s = schedules.FirstOrDefault(x => x.EmployeeId == emp.Id);
                 var att = records.FirstOrDefault(r => r.EmployeeId == emp.Id);
@@ -137,6 +187,15 @@ public class AttendanceTab : UserControl
                 row.Cells[0].Value = emp.Name;
                 row.Cells[1].Value = s?.StartTime ?? "-";
                 row.Cells[2].Value = s?.EndTime ?? "-";
+
+                // 스케줄 없이 출근한 직원 표시
+                if (!scheduledIds.Contains(emp.Id))
+                {
+                    row.Cells[1].Value = "(비예정)";
+                    row.Cells[2].Value = "(비예정)";
+                    row.Cells[1].Style.ForeColor = ColorPalette.TextTertiary;
+                    row.Cells[2].Style.ForeColor = ColorPalette.TextTertiary;
+                }
 
                 if (att?.ClockIn != null)
                 {
@@ -155,8 +214,24 @@ public class AttendanceTab : UserControl
                         ? ColorPalette.OnTime : ColorPalette.Late;
                 }
                 else row.Cells[4].Value = "-";
-            }
 
+                // 상태 표시
+                var status = att switch
+                {
+                    null => "미출근",
+                    { ClockOut: not null } => "퇴근",
+                    { ClockIn: not null } => "근무중",
+                    _ => "-"
+                };
+                row.Cells[5].Value = status;
+                row.Cells[5].Style.ForeColor = status switch
+                {
+                    "근무중" => ColorPalette.Success,
+                    "퇴근" => ColorPalette.TextTertiary,
+                    "미출근" => ColorPalette.Danger,
+                    _ => ColorPalette.TableText
+                };
+            }
         }
         catch (Exception ex)
         {
