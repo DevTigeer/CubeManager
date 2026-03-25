@@ -226,6 +226,10 @@ public class AdminTab : UserControl
         btnBackup.Click += BtnBackup_Click;
         utilPanel.Controls.Add(btnBackup);
 
+        var btnDbReset = ButtonFactory.CreateDanger("⚠ DB 초기화", 120);
+        btnDbReset.Click += BtnDbReset_Click;
+        utilPanel.Controls.Add(btnDbReset);
+
         utilPanel.Controls.Add(new Label
         {
             Text = "자동 백업: 매주 월/금 오후 5시",
@@ -887,6 +891,93 @@ public class AdminTab : UserControl
         finally
         {
             if (sender is Button btn2) { btn2.Enabled = true; btn2.Text = "💾 DB 백업"; }
+        }
+    }
+
+    // ========== DB 초기화 ==========
+    private void BtnDbReset_Click(object? sender, EventArgs e)
+    {
+        // 1단계: 비밀번호 확인
+        using var pwDialog = new Form
+        {
+            Text = "DB 초기화 인증",
+            Size = new Size(340, 160),
+            FormBorderStyle = FormBorderStyle.None,
+            StartPosition = FormStartPosition.CenterParent,
+            BackColor = ColorPalette.Surface
+        };
+
+        var lblMsg = new Label
+        {
+            Text = "DB 초기화 비밀번호를 입력하세요:",
+            Location = new Point(20, 15), Size = new Size(280, 22),
+            Font = DesignTokens.FontBody, ForeColor = ColorPalette.Text
+        };
+        var txtPw = new TextBox
+        {
+            Location = new Point(20, 45), Size = new Size(280, 28),
+            UseSystemPasswordChar = true, Font = DesignTokens.FontBody
+        };
+        var btnOk = ButtonFactory.CreateDanger("확인", 80);
+        btnOk.Location = new Point(120, 85);
+        btnOk.DialogResult = DialogResult.OK;
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(210, 85);
+        btnCancel.DialogResult = DialogResult.Cancel;
+
+        pwDialog.Controls.AddRange([lblMsg, txtPw, btnOk, btnCancel]);
+        pwDialog.AcceptButton = btnOk;
+        pwDialog.CancelButton = btnCancel;
+
+        if (pwDialog.ShowDialog(this) != DialogResult.OK) return;
+
+        // 비밀번호 검증
+        if (txtPw.Text != "rlawoqja")
+        {
+            ToastNotification.Show("비밀번호가 일치하지 않습니다.", ToastType.Error);
+            return;
+        }
+
+        // 2단계: 최종 확인 팝업
+        var confirm = MessageBox.Show(
+            "⚠ 경고: 모든 데이터가 삭제됩니다.\n\n" +
+            "직원, 예약, 매출, 스케줄, 급여, 출퇴근,\n" +
+            "인수인계, 체크리스트 등 모든 데이터가 영구 삭제됩니다.\n\n" +
+            "정말 초기화하시겠습니까?",
+            "DB 초기화 최종 확인",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if (confirm != DialogResult.Yes) return;
+
+        // 3단계: DB 파일 삭제 후 앱 재시작
+        try
+        {
+            var dbPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "CubeManager", "cubemanager.db");
+
+            if (File.Exists(dbPath))
+            {
+                // DB 연결 해제를 위해 앱 재시작 필요
+                File.Delete(dbPath);
+
+                // WAL/SHM 파일도 삭제
+                var walPath = dbPath + "-wal";
+                var shmPath = dbPath + "-shm";
+                if (File.Exists(walPath)) File.Delete(walPath);
+                if (File.Exists(shmPath)) File.Delete(shmPath);
+            }
+
+            ToastNotification.Show("DB 초기화 완료. 앱을 재시작합니다.", ToastType.Success);
+
+            // 앱 재시작
+            Application.Restart();
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"초기화 실패: {ex.Message}\n앱을 수동으로 종료 후 재시작하세요.", ToastType.Error);
         }
     }
 
