@@ -950,34 +950,39 @@ public class AdminTab : UserControl
 
         if (confirm != DialogResult.Yes) return;
 
-        // 3단계: DB 파일 삭제 후 앱 재시작
+        // 3단계: PowerShell로 앱 종료 → DB 삭제 → 재시작
         try
         {
-            var dbPath = Path.Combine(
+            var appDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "CubeManager", "cubemanager.db");
+                "CubeManager");
+            var dbPath = Path.Combine(appDir, "cubemanager.db");
+            var exePath = Application.ExecutablePath;
 
-            if (File.Exists(dbPath))
+            // PowerShell 스크립트: 현재 프로세스 종료 대기 → DB 삭제 → 앱 재시작
+            var pid = Environment.ProcessId;
+            var script = "Start-Sleep -Milliseconds 500; " +
+                $"try {{ Wait-Process -Id {pid} -Timeout 10 -ErrorAction SilentlyContinue }} catch {{}}; " +
+                $"Remove-Item '{dbPath}' -Force -ErrorAction SilentlyContinue; " +
+                $"Remove-Item '{dbPath}-wal' -Force -ErrorAction SilentlyContinue; " +
+                $"Remove-Item '{dbPath}-shm' -Force -ErrorAction SilentlyContinue; " +
+                $"Start-Process '{exePath}'";
+
+            var psi = new System.Diagnostics.ProcessStartInfo
             {
-                // DB 연결 해제를 위해 앱 재시작 필요
-                File.Delete(dbPath);
+                FileName = "powershell",
+                Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{script}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            System.Diagnostics.Process.Start(psi);
 
-                // WAL/SHM 파일도 삭제
-                var walPath = dbPath + "-wal";
-                var shmPath = dbPath + "-shm";
-                if (File.Exists(walPath)) File.Delete(walPath);
-                if (File.Exists(shmPath)) File.Delete(shmPath);
-            }
-
-            ToastNotification.Show("DB 초기화 완료. 앱을 재시작합니다.", ToastType.Success);
-
-            // 앱 재시작
-            Application.Restart();
+            // 앱 종료
             Environment.Exit(0);
         }
         catch (Exception ex)
         {
-            ToastNotification.Show($"초기화 실패: {ex.Message}\n앱을 수동으로 종료 후 재시작하세요.", ToastType.Error);
+            ToastNotification.Show($"초기화 실패: {ex.Message}", ToastType.Error);
         }
     }
 
