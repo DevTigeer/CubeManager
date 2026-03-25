@@ -1373,6 +1373,29 @@ public class AdminTab : UserControl
             catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
         };
 
+        // 셀 직접 수정 시 DB 저장
+        _gridParts.CellValueChanged += async (_, e) =>
+        {
+            if (e.RowIndex < 0) return;
+            var colName = _gridParts.Columns[e.ColumnIndex].Name;
+            if (colName is "PartActive") return; // 활성은 CellContentClick에서 처리
+            var row = _gridParts.Rows[e.RowIndex];
+            var id = (int)row.Cells["PartId"].Value;
+            try
+            {
+                var part = (await _workPartRepo.GetAllAsync()).FirstOrDefault(p => p.Id == id);
+                if (part == null) return;
+                part.PartName = row.Cells["PartName"].Value?.ToString() ?? part.PartName;
+                part.StartTime = row.Cells["PartStart"].Value?.ToString() ?? part.StartTime;
+                part.EndTime = row.Cells["PartEnd"].Value?.ToString() ?? part.EndTime;
+                if (int.TryParse(row.Cells["PartOrder"].Value?.ToString(), out var order))
+                    part.SortOrder = order;
+                await _workPartRepo.UpdateAsync(part);
+                ToastNotification.Show("파트 정보 저장됨.", ToastType.Success);
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+
         _gridParts.KeyDown += async (_, e) =>
         {
             if (e.KeyCode != Keys.Delete || _gridParts.CurrentRow == null) return;
