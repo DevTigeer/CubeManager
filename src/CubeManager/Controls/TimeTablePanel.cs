@@ -199,7 +199,7 @@ public class TimeTablePanel : Panel
             var dayX = TimeColWidth + dayGroup.Key * cellW;
             var totalW = cellW - CardGap * 2;
 
-            // 각 블록을 풀폭으로 겹쳐 그리기 (alpha 40% → 겹칠수록 진해짐)
+            // 각 블록을 풀폭으로 겹쳐 그리기 — 4면 컬러바 테두리
             foreach (var block in dayBlocks)
             {
                 var empColor = GetEmployeeColor(block.sched.EmployeeId);
@@ -207,19 +207,13 @@ public class TimeTablePanel : Panel
                 var blockH = (block.endSlot - block.startSlot) * cellH - 2;
                 var rect = new Rectangle(dayX + CardGap, blockY, totalW, Math.Max(blockH, cellH));
 
-                // 반투명 배경 (alpha 50 — 겹침 시 100, 150으로 진해짐)
+                // 반투명 배경 (alpha 50 — 겹침 시 진해짐)
                 using var blockPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
                 using var blockFill = new SolidBrush(Color.FromArgb(50, empColor));
                 g.FillPath(blockFill, blockPath);
 
-                // 좌측 컬러바 (불투명 — 직원 식별용)
-                var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
-                using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
-                using var barBrush = new SolidBrush(empColor);
-                g.FillPath(barBrush, barPath);
-
-                // 테두리 (연한)
-                using var borderPen = new Pen(Color.FromArgb(80, empColor), 0.5f);
+                // 4면 컬러바 테두리 (불투명, 3px)
+                using var borderPen = new Pen(empColor, 3f);
                 g.DrawPath(borderPen, blockPath);
             }
 
