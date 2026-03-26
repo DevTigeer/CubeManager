@@ -169,8 +169,7 @@ public class TimeTablePanel : Panel
             }
         }
 
-        // ──── 7. 스케줄 블록 (방안C: 시간대별 구간 분리) ────
-        // 겹치지 않는 구간 = 풀폭, 겹치는 구간만 N등분
+        // ──── 7. 스케줄 블록 (방안B: 풀폭 1칸 + 좌측 멀티 컬러바 + 이름 나열) ────
         var grouped = _schedules.GroupBy(s => new { s.EmployeeId, s.WorkDate });
         var blockList = new List<(int dayIdx, int startSlot, int endSlot, Schedule sched)>();
 
@@ -189,87 +188,85 @@ public class TimeTablePanel : Panel
             blockList.Add((dayIdx, startSlot, endSlot, sched));
         }
 
+        // 날짜별로 그룹핑 후, 전체 시간 범위를 합쳐서 1개 블록으로 렌더링
         var dayGroups = blockList.GroupBy(b => b.dayIdx);
         foreach (var dayGroup in dayGroups)
         {
             var dayBlocks = dayGroup.OrderBy(b => b.startSlot).ThenBy(b => b.sched.EmployeeId).ToList();
+            if (dayBlocks.Count == 0) continue;
+
             var dayX = TimeColWidth + dayGroup.Key * cellW;
             var totalW = cellW - CardGap * 2;
 
-            // 슬롯별로 해당 시점에 활성인 블록 수를 계산
-            // 각 블록을 "구간(segment)"으로 분할: 겹침 수가 바뀌는 지점마다 끊음
-            foreach (var block in dayBlocks)
+            // 각 블록을 개별적으로 풀폭 렌더링 (겹침 시 투명하게 겹쳐짐)
+            // 먼저: 겹치는 블록들의 전체 범위로 하나의 "합산 블록" 배경 그리기
+            var minSlot = dayBlocks.Min(b => b.startSlot);
+            var maxSlot = dayBlocks.Max(b => b.endSlot);
+            var mergedY = HeaderHeight + minSlot * cellH + 1;
+            var mergedH = (maxSlot - minSlot) * cellH - 2;
+            var mergedRect = new Rectangle(dayX + CardGap, mergedY, totalW, Math.Max(mergedH, cellH));
+
+            // 합산 배경 (연한 회색 — 블록 영역 표시)
+            using var mergedPath = RoundedCard.CreateRoundedPath(mergedRect, CardRadius);
+            using var mergedFill = new SolidBrush(Color.FromArgb(30, 255, 255, 255));
+            g.FillPath(mergedFill, mergedPath);
+            using var mergedBorder = new Pen(Color.FromArgb(60, ColorPalette.Border), 0.5f);
+            g.DrawPath(mergedBorder, mergedPath);
+
+            // 좌측 멀티 컬러바: 직원별 컬러바를 세로로 나란히
+            var barWidth = Math.Min(AccentBarWidth, (totalW - 4) / Math.Max(dayBlocks.Count, 1));
+            for (var bi = 0; bi < dayBlocks.Count; bi++)
             {
+                var block = dayBlocks[bi];
+                var empColor = GetEmployeeColor(block.sched.EmployeeId);
+                var bY = HeaderHeight + block.startSlot * cellH + 2;
+                var bH = (block.endSlot - block.startSlot) * cellH - 4;
+                var bX = mergedRect.X + bi * (barWidth + 1);
+
+                var barRect = new Rectangle(bX, bY, barWidth, Math.Max(bH, cellH / 2));
+                using var barPath = CreateLeftRoundedPath(barRect, 3);
+                using var barBrush = new SolidBrush(DarkenColor(empColor, 30));
+                g.FillPath(barBrush, barPath);
+            }
+
+            // 이름 나열 (컬러바 오른쪽, 세로로 직원명 표시)
+            var nameX = mergedRect.X + dayBlocks.Count * (barWidth + 1) + 4;
+            var nameW = mergedRect.Right - nameX - 2;
+            var nameLineH = Math.Max(16, mergedRect.Height / Math.Max(dayBlocks.Count, 1));
+
+            for (var bi = 0; bi < dayBlocks.Count; bi++)
+            {
+                var block = dayBlocks[bi];
                 var empColor = GetEmployeeColor(block.sched.EmployeeId);
                 var name = block.sched.EmployeeName ?? $"ID:{block.sched.EmployeeId}";
+                var nameY = mergedRect.Y + bi * nameLineH;
 
-                // 이 블록의 전체 범위에서 슬롯별 겹침 수 + 인덱스 계산
-                var segStart = block.startSlot;
-                while (segStart < block.endSlot)
+                // 이름 텍스트 (직원 색상으로)
+                using var nameClr = new SolidBrush(DarkenColor(empColor, 20));
+                var nameFont = nameW >= 50 ? cardNameFont : cardSmallFont;
+                g.DrawString(name, nameFont, nameClr,
+                    new RectangleF(nameX, nameY, nameW, nameLineH),
+                    new StringFormat
+                    {
+                        Alignment = StringAlignment.Near,
+                        LineAlignment = StringAlignment.Center,
+                        Trimming = StringTrimming.EllipsisCharacter,
+                        FormatFlags = StringFormatFlags.NoWrap
+                    });
+
+                // 시간 표시 (공간이 충분하면)
+                if (nameW >= 80 && nameLineH >= 28)
                 {
-                    // 현재 슬롯의 겹침 계산
-                    var activeAtSlot = dayBlocks
-                        .Where(b => b.startSlot <= segStart && b.endSlot > segStart)
-                        .OrderBy(b => b.sched.EmployeeId)
-                        .ToList();
-                    var overlapCount = activeAtSlot.Count;
-                    var overlapIndex = activeAtSlot.FindIndex(b =>
-                        b.sched.EmployeeId == block.sched.EmployeeId &&
-                        b.sched.WorkDate == block.sched.WorkDate);
-                    if (overlapIndex < 0) overlapIndex = 0;
-
-                    // 이 겹침 상태가 유지되는 끝 슬롯 찾기
-                    var segEnd = segStart + 1;
-                    while (segEnd < block.endSlot)
-                    {
-                        var nextActive = dayBlocks
-                            .Where(b => b.startSlot <= segEnd && b.endSlot > segEnd)
-                            .Count();
-                        if (nextActive != overlapCount) break;
-                        segEnd++;
-                    }
-
-                    // 구간 렌더링
-                    var segW = overlapCount == 1 ? totalW : (totalW - (overlapCount - 1) * CardGap) / overlapCount;
-                    var segX = dayX + CardGap + (overlapCount == 1 ? 0 : overlapIndex * (segW + CardGap));
-                    var segY = HeaderHeight + segStart * cellH + 1;
-                    var segH = (segEnd - segStart) * cellH - 2;
-
-                    var rect = new Rectangle(segX, segY, Math.Max(segW, 16), Math.Max(segH, cellH / 2));
-
-                    // 카드 배경
-                    using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                    using var cardFill = new SolidBrush(Color.FromArgb(180, empColor));
-                    g.FillPath(cardFill, cardPath);
-
-                    // 테두리
-                    using var cardBorder = new Pen(Color.FromArgb(200, DarkenColor(empColor, 40)), 1f);
-                    g.DrawPath(cardBorder, cardPath);
-
-                    // 좌측 컬러바
-                    var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
-                    using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
-                    using var barBrush = new SolidBrush(DarkenColor(empColor, 60));
-                    g.FillPath(barBrush, barPath);
-
-                    // 이름 표시 (구간이 충분히 클 때만)
-                    if (segH >= cellH * 2)
-                    {
-                        var nameFont = segW >= 50 ? cardNameFont : cardSmallFont;
-                        using var nameClr = new SolidBrush(Color.White);
-                        var innerX = rect.X + AccentBarWidth + 2;
-                        var innerW = rect.Width - AccentBarWidth - 4;
-                        g.DrawString(name, nameFont, nameClr,
-                            new RectangleF(innerX, rect.Y + 2, innerW, rect.Height - 4),
-                            new StringFormat
-                            {
-                                Alignment = StringAlignment.Center,
-                                LineAlignment = StringAlignment.Center,
-                                Trimming = StringTrimming.EllipsisCharacter
-                            });
-                    }
-
-                    segStart = segEnd;
+                    var timeText = $"{block.sched.StartTime}~{block.sched.EndTime}";
+                    using var timeClr = new SolidBrush(Color.FromArgb(150, DarkenColor(empColor, 20)));
+                    g.DrawString(timeText, cardSmallFont, timeClr,
+                        new RectangleF(nameX, nameY + nameLineH * 0.55f, nameW, nameLineH * 0.45f),
+                        new StringFormat
+                        {
+                            Alignment = StringAlignment.Near,
+                            LineAlignment = StringAlignment.Near,
+                            Trimming = StringTrimming.EllipsisCharacter
+                        });
                 }
             }
         }
