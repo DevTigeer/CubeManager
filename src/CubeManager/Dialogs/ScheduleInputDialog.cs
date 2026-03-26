@@ -55,7 +55,7 @@ public class ScheduleInputDialog : Form
         _parts = workParts?.ToList() ?? [];
 
         Text = "스케줄 추가";
-        Size = new Size(460, 520);
+        Size = new Size(530, 540);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
@@ -69,7 +69,7 @@ public class ScheduleInputDialog : Form
         Controls.Add(new Label
         {
             Text = "📋 스케줄 추가",
-            Location = new Point(20, y), Size = new Size(400, 28),
+            Location = new Point(20, y), Size = new Size(470, 28),
             Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
             ForeColor = ColorPalette.Primary
         });
@@ -78,7 +78,7 @@ public class ScheduleInputDialog : Form
         // 구분선
         Controls.Add(new Panel
         {
-            Location = new Point(20, y), Size = new Size(400, 1),
+            Location = new Point(20, y), Size = new Size(470, 1),
             BackColor = ColorPalette.Border
         });
         y += 12;
@@ -88,7 +88,7 @@ public class ScheduleInputDialog : Form
         y += 22;
         _cmbEmployee = new ComboBox
         {
-            Location = new Point(25, y), Size = new Size(395, 28),
+            Location = new Point(25, y), Size = new Size(465, 28),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("맑은 고딕", 10.5f)
         };
@@ -303,7 +303,7 @@ public class ScheduleInputDialog : Form
         // 구분선
         Controls.Add(new Panel
         {
-            Location = new Point(20, y - 6), Size = new Size(400, 1),
+            Location = new Point(20, y - 6), Size = new Size(470, 1),
             BackColor = ColorPalette.Border
         });
 
