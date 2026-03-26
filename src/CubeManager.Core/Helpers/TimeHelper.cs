@@ -45,14 +45,19 @@ public static class TimeHelper
         return ((monday - firstMonday).Days / 7) + 1;
     }
 
-    /// <summary>해당 월의 N주차 날짜 범위 (월~일 전체, 월경계 넘김 허용)</summary>
+    /// <summary>해당 월의 N주차 날짜 범위 (월~일, 수요일 기준 월 판정, 월경계 넘김 허용)</summary>
     public static (DateTime start, DateTime end) GetWeekRange(int year, int month, int weekNum)
     {
-        var firstDay = new DateTime(year, month, 1);
+        var firstOfMonth = new DateTime(year, month, 1);
 
-        var firstMonday = firstDay;
+        // 1일이 속한 주의 월요일 찾기
+        var firstMonday = firstOfMonth;
         while (firstMonday.DayOfWeek != DayOfWeek.Monday)
             firstMonday = firstMonday.AddDays(-1);
+
+        // 수요일 기준: 첫 주의 수요일이 해당 월이 아니면 다음 주가 1주차
+        if (firstMonday.AddDays(2).Month != month)
+            firstMonday = firstMonday.AddDays(7);
 
         var weekStart = firstMonday.AddDays((weekNum - 1) * 7);
         var weekEnd = weekStart.AddDays(6);

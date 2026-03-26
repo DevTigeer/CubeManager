@@ -26,32 +26,40 @@ public class ScheduleService : IScheduleService
     public async Task AddScheduleAsync(int employeeId, string startTime, string endTime,
         DayOfWeek[] days, int year, int month, int[]? weekNums = null)
     {
-        var daysInMonth = DateTime.DaysInMonth(year, month);
         var schedules = new List<Schedule>();
 
-        for (var d = 1; d <= daysInMonth; d++)
+        // 주차별 실제 날짜 범위를 계산하여 월 경계를 넘는 날짜도 포함
+        // ex) 4월 1주차 화요일 = 3/31 (수요일 기준으로 4월에 속하는 주)
+        var totalWeeks = TimeHelper.GetTotalWeeks(year, month);
+        var targetWeeks = weekNums is { Length: > 0 }
+            ? weekNums
+            : Enumerable.Range(1, totalWeeks).ToArray();
+
+        var addedDates = new HashSet<string>(); // 중복 방지
+
+        foreach (var weekNum in targetWeeks)
         {
-            var date = new DateTime(year, month, d);
-            if (!days.Contains(date.DayOfWeek)) continue;
+            var (weekStart, weekEnd) = TimeHelper.GetWeekRange(year, month, weekNum);
 
-            // 주차 필터: weekNums가 지정되면 해당 주차만
-            if (weekNums is { Length: > 0 })
+            // 주의 월~일 전체를 순회 (월 경계 넘김 허용)
+            for (var date = weekStart; date <= weekEnd; date = date.AddDays(1))
             {
-                var weekOfMonth = TimeHelper.GetWeekOfMonth(date);
-                if (!weekNums.Contains(weekOfMonth)) continue;
+                if (!days.Contains(date.DayOfWeek)) continue;
+
+                var dateStr = date.ToString("yyyy-MM-dd");
+                if (!addedDates.Add(dateStr)) continue; // 이미 추가된 날짜 스킵
+
+                var isHoliday = await _holidayRepo.IsWeekdayHolidayAsync(dateStr);
+
+                schedules.Add(new Schedule
+                {
+                    EmployeeId = employeeId,
+                    WorkDate = dateStr,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    IsHoliday = isHoliday
+                });
             }
-
-            var dateStr = date.ToString("yyyy-MM-dd");
-            var isHoliday = await _holidayRepo.IsWeekdayHolidayAsync(dateStr);
-
-            schedules.Add(new Schedule
-            {
-                EmployeeId = employeeId,
-                WorkDate = dateStr,
-                StartTime = startTime,
-                EndTime = endTime,
-                IsHoliday = isHoliday
-            });
         }
 
         if (schedules.Count > 0)
