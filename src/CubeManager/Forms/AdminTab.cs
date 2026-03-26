@@ -372,8 +372,87 @@ public class AdminTab : UserControl
         bottomSplit.Panel1.Controls.Add(attendPanel);
         bottomSplit.Panel2.Controls.Add(salesPanel);
 
+        // ─── 급여 설정 패널 ───
+        var salarySettingsPanel = new Panel
+        {
+            Dock = DockStyle.Top, Height = 80,
+            Padding = new Padding(10, 0, 10, 5)
+        };
+        var salaryTitle = new Label
+        {
+            Text = "급여 설정",
+            Dock = DockStyle.Top, Height = 24,
+            Font = DesignTokens.FontSectionTitle,
+            ForeColor = ColorPalette.TextSecondary
+        };
+        var salaryFlow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            Padding = new Padding(0, 4, 0, 0)
+        };
+
+        salaryFlow.Controls.Add(new Label { Text = "식비:", Size = new Size(40, 28), TextAlign = ContentAlignment.MiddleRight, Font = nf, ForeColor = ColorPalette.Text });
+        var numMeal = new NumericUpDown { Minimum = 0, Maximum = 50000, Value = 7000, Increment = 1000, ThousandsSeparator = true, Size = new Size(100, 28), Font = nf };
+        salaryFlow.Controls.Add(numMeal);
+        salaryFlow.Controls.Add(new Label { Text = "원/일", Size = new Size(40, 28), TextAlign = ContentAlignment.MiddleLeft, Font = nf, ForeColor = ColorPalette.TextTertiary });
+
+        salaryFlow.Controls.Add(new Label { Text = "택시:", Size = new Size(45, 28), TextAlign = ContentAlignment.MiddleRight, Font = nf, ForeColor = ColorPalette.Text, Margin = new Padding(10, 0, 0, 0) });
+        var numTaxi = new NumericUpDown { Minimum = 0, Maximum = 50000, Value = 10000, Increment = 1000, ThousandsSeparator = true, Size = new Size(100, 28), Font = nf };
+        salaryFlow.Controls.Add(numTaxi);
+        salaryFlow.Controls.Add(new Label { Text = "원/일", Size = new Size(40, 28), TextAlign = ContentAlignment.MiddleLeft, Font = nf, ForeColor = ColorPalette.TextTertiary });
+
+        salaryFlow.Controls.Add(new Label { Text = "식비기준:", Size = new Size(65, 28), TextAlign = ContentAlignment.MiddleRight, Font = nf, ForeColor = ColorPalette.Text, Margin = new Padding(10, 0, 0, 0) });
+        var numMealMinH = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 6, Size = new Size(55, 28), Font = nf };
+        salaryFlow.Controls.Add(numMealMinH);
+        salaryFlow.Controls.Add(new Label { Text = "시간 이상", Size = new Size(65, 28), TextAlign = ContentAlignment.MiddleLeft, Font = nf, ForeColor = ColorPalette.TextTertiary });
+
+        salaryFlow.Controls.Add(new Label { Text = "택시기준:", Size = new Size(65, 28), TextAlign = ContentAlignment.MiddleRight, Font = nf, ForeColor = ColorPalette.Text, Margin = new Padding(10, 0, 0, 0) });
+        var txtTaxiCutoff = new TextBox { Text = "23:30", Size = new Size(60, 28), Font = nf, TextAlign = HorizontalAlignment.Center };
+        salaryFlow.Controls.Add(txtTaxiCutoff);
+        salaryFlow.Controls.Add(new Label { Text = "이후", Size = new Size(35, 28), TextAlign = ContentAlignment.MiddleLeft, Font = nf, ForeColor = ColorPalette.TextTertiary });
+
+        var btnSaveSalary = ButtonFactory.CreatePrimary("저장", 70);
+        btnSaveSalary.Height = 28;
+        btnSaveSalary.Margin = new Padding(15, 0, 0, 0);
+        btnSaveSalary.Click += async (_, _) =>
+        {
+            try
+            {
+                await _configRepo.SetAsync("default_meal_allowance", ((int)numMeal.Value).ToString());
+                await _configRepo.SetAsync("taxi_allowance", ((int)numTaxi.Value).ToString());
+                await _configRepo.SetAsync("meal_min_hours", ((int)numMealMinH.Value).ToString());
+                await _configRepo.SetAsync("taxi_cutoff_time", txtTaxiCutoff.Text.Trim());
+                ToastNotification.Show("급여 설정이 저장되었습니다.", ToastType.Success);
+            }
+            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+        };
+        salaryFlow.Controls.Add(btnSaveSalary);
+
+        salarySettingsPanel.Controls.Add(salaryFlow);
+        salarySettingsPanel.Controls.Add(salaryTitle);
+
+        // 설정값 로드
+        salarySettingsPanel.VisibleChanged += async (_, _) =>
+        {
+            if (!salarySettingsPanel.Visible) return;
+            try
+            {
+                var meal = await _configRepo.GetIntAsync("default_meal_allowance", 7000);
+                var taxi = await _configRepo.GetIntAsync("taxi_allowance", 10000);
+                var mealH = await _configRepo.GetIntAsync("meal_min_hours", 6);
+                var cutoff = await _configRepo.GetAsync("taxi_cutoff_time") ?? "23:30";
+                numMeal.Value = Math.Clamp(meal, 0, 50000);
+                numTaxi.Value = Math.Clamp(taxi, 0, 50000);
+                numMealMinH.Value = Math.Clamp(mealH, 1, 12);
+                txtTaxiCutoff.Text = cutoff;
+            }
+            catch { /* 기본값 사용 */ }
+        };
+
         // 역순 조립
         page.Controls.Add(bottomSplit);
+        page.Controls.Add(salarySettingsPanel);
         page.Controls.Add(cashPanel);
         page.Controls.Add(utilPanel);
         page.Controls.Add(_summaryCards);
