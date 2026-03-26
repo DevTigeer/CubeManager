@@ -33,7 +33,7 @@ public class SalaryService : ISalaryService
         var month = int.Parse(parts[1]);
 
         var employees = await _employeeRepo.GetActiveAsync();
-        var mealUnit = await _configRepo.GetIntAsync("default_meal_allowance", 5000);
+        var mealUnit = await _configRepo.GetIntAsync("default_meal_allowance", 7000);
         var taxiUnit = await _configRepo.GetIntAsync("taxi_allowance", 10000);
         var mealMinH = await _configRepo.GetIntAsync("meal_min_hours", 6);
         var holidayBonus = await _configRepo.GetIntAsync("holiday_bonus_per_hour", 3000);
