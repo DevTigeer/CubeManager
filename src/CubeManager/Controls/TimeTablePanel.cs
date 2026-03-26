@@ -203,7 +203,7 @@ public class TimeTablePanel : Panel
             var boundaries = new SortedSet<int>();
             foreach (var b in dayBlocks) { boundaries.Add(b.startSlot); boundaries.Add(b.endSlot); }
             var boundaryList = boundaries.ToList();
-            var segColors = ColorPalette.EmployeeColors;
+            var multiSegIdx = 0; // 2명+ 구간 전용 인덱스
 
             for (var si = 0; si < boundaryList.Count - 1; si++)
             {
@@ -214,27 +214,44 @@ public class TimeTablePanel : Panel
                     .ToList();
                 if (activeInSeg.Count == 0) continue;
 
-                var segColor = segColors[si % segColors.Length];
+                // 1명 = 개인색, 2명+ = 구간 전용색 (직원색과 별도)
+                Color segColor;
+                if (activeInSeg.Count == 1)
+                {
+                    segColor = GetEmployeeColor(activeInSeg[0].sched.EmployeeId);
+                }
+                else
+                {
+                    segColor = ColorPalette.GetSegmentColor(multiSegIdx);
+                    multiSegIdx++;
+                }
+
                 var segY = HeaderHeight + segStart * cellH;
                 var segH = (segEnd - segStart) * cellH;
                 var segRect = new Rectangle(dayX + CardGap, segY + 1, totalW, segH - 2);
 
-                // ── 배경 tint (구간 색 alpha 25) ──
-                using var tintBrush = new SolidBrush(Color.FromArgb(25, segColor));
+                // ── 배경 tint ──
+                using var tintBrush = new SolidBrush(Color.FromArgb(activeInSeg.Count == 1 ? 20 : 30, segColor));
                 using var segPath = RoundedCard.CreateRoundedPath(segRect, 4);
                 g.FillPath(tintBrush, segPath);
 
-                // ── 좌측 멀티 컬러바 (직원별 고유 색) ──
+                // ── 좌측 컬러바 ──
                 var barW = Math.Max(3, AccentBarWidth);
-                for (var bi = 0; bi < activeInSeg.Count; bi++)
+                if (activeInSeg.Count == 1)
                 {
-                    var empColor = GetEmployeeColor(activeInSeg[bi].sched.EmployeeId);
-                    var bx = segRect.X + bi * (barW + 1);
-                    if (bx + barW > segRect.Right - 10) break; // 넘치면 중단
-                    var br = new Rectangle(bx, segRect.Y, barW, segRect.Height);
-                    using var bp = CreateLeftRoundedPath(br, bi == 0 ? 4 : 1);
-                    using var bb = new SolidBrush(empColor);
-                    g.FillPath(bb, bp);
+                    // 1명: 개인색 1개 바
+                    var barRect = new Rectangle(segRect.X, segRect.Y, barW, segRect.Height);
+                    using var barPath = CreateLeftRoundedPath(barRect, 4);
+                    using var barBrush = new SolidBrush(segColor);
+                    g.FillPath(barBrush, barPath);
+                }
+                else
+                {
+                    // 2명+: 구간색 1개 바 (모든 사람을 대표)
+                    var barRect = new Rectangle(segRect.X, segRect.Y, barW + 2, segRect.Height);
+                    using var barPath = CreateLeftRoundedPath(barRect, 4);
+                    using var barBrush = new SolidBrush(segColor);
+                    g.FillPath(barBrush, barPath);
                 }
 
                 // ── 경계선 + 시간 라벨 (첫 구간 제외, 구간 변경 시점에만) ──
@@ -263,11 +280,11 @@ public class TimeTablePanel : Panel
                     }
                 }
 
-                // ── 이름 표시 (구간 통일 색) ──
+                // ── 이름 표시 (구간 통일 색: 1명=개인색, 2명+=구간색) ──
                 var textColor = DarkenColor(segColor, 30);
-                var barsWidth = activeInSeg.Count * (barW + 1);
-                var nameX = dayX + CardGap + barsWidth + 4;
-                var nameW = totalW - barsWidth - 8;
+                var actualBarW = activeInSeg.Count == 1 ? barW : barW + 2;
+                var nameX = dayX + CardGap + actualBarW + 6;
+                var nameW = totalW - actualBarW - 10;
                 var minLineH = 16;
 
                 if (activeInSeg.Count * minLineH > segH - 4)

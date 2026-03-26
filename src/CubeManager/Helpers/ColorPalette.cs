@@ -145,6 +145,21 @@ public static class ColorPalette
     public static Color GetEmployeeColor(int index) =>
         EmployeeColors[index % EmployeeColors.Length];
 
+    // 구간 전용 색상 (직원색과 겹치지 않는 별도 팔레트)
+    // 2명+ 겹침 구간에서 컬러바/배경/이름에 사용
+    public static Color[] SegmentColors =>
+    [
+        FromHex("#8B5CF6"),  // 바이올렛
+        FromHex("#F97316"),  // 주황 (보색 계열)
+        FromHex("#06B6D4"),  // 시안
+        FromHex("#EC4899"),  // 핑크
+        FromHex("#84CC16"),  // 라임
+        FromHex("#A78BFA"),  // 연보라
+    ];
+
+    public static Color GetSegmentColor(int index) =>
+        SegmentColors[index % SegmentColors.Length];
+
     // ═══════════════════════════════════════════
     // Summary Card Accent
     // ═══════════════════════════════════════════
