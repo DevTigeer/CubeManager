@@ -223,32 +223,48 @@ public class TimeTablePanel : Panel
                 g.DrawPath(borderPen, blockPath);
             }
 
-            // 이름 표시: 블록 위에 이름을 세로로 나열 (가장 긴 블록 기준)
-            var longestBlock = dayBlocks.OrderByDescending(b => b.endSlot - b.startSlot).First();
-            var nameAreaY = HeaderHeight + longestBlock.startSlot * cellH + 4;
-            var nameAreaH = (longestBlock.endSlot - longestBlock.startSlot) * cellH - 8;
-            var nameLineH = Math.Max(18, nameAreaH / Math.Max(dayBlocks.Count, 1));
+            // 이름 표시: 구간별 — 겹침 구성이 바뀔 때마다 이름을 다시 표시
+            // 1) 겹침이 변하는 시점(경계) 수집
+            var minSlot = dayBlocks.Min(b => b.startSlot);
+            var maxSlot = dayBlocks.Max(b => b.endSlot);
+            var boundaries = new SortedSet<int>();
+            foreach (var b in dayBlocks) { boundaries.Add(b.startSlot); boundaries.Add(b.endSlot); }
 
-            for (var bi = 0; bi < dayBlocks.Count; bi++)
+            // 2) 각 구간에서 활성 직원 목록 → 이름 표시
+            var boundaryList = boundaries.ToList();
+            for (var si = 0; si < boundaryList.Count - 1; si++)
             {
-                var block = dayBlocks[bi];
-                var empColor = GetEmployeeColor(block.sched.EmployeeId);
-                var name = block.sched.EmployeeName ?? $"ID:{block.sched.EmployeeId}";
-                var nameY = nameAreaY + bi * nameLineH;
+                var segStart = boundaryList[si];
+                var segEnd = boundaryList[si + 1];
+                var activeInSeg = dayBlocks
+                    .Where(b => b.startSlot <= segStart && b.endSlot > segStart)
+                    .ToList();
+                if (activeInSeg.Count == 0) continue;
+
+                var segY = HeaderHeight + segStart * cellH + 2;
+                var segH = (segEnd - segStart) * cellH - 4;
                 var nameX = dayX + CardGap + AccentBarWidth + 4;
                 var nameW = totalW - AccentBarWidth - 8;
+                var lineH = Math.Max(14, segH / Math.Max(activeInSeg.Count, 1));
 
-                // 이름 (흰색, 볼드 — 반투명 배경 위에서 잘 보임)
-                using var nameClr = new SolidBrush(DarkenColor(empColor, 60));
-                g.DrawString(name, cardNameFont, nameClr,
-                    new RectangleF(nameX, nameY, nameW, nameLineH),
-                    new StringFormat
-                    {
-                        Alignment = StringAlignment.Near,
-                        LineAlignment = StringAlignment.Center,
-                        Trimming = StringTrimming.EllipsisCharacter,
-                        FormatFlags = StringFormatFlags.NoWrap
-                    });
+                for (var ni = 0; ni < activeInSeg.Count; ni++)
+                {
+                    var active = activeInSeg[ni];
+                    var empColor = GetEmployeeColor(active.sched.EmployeeId);
+                    var name = active.sched.EmployeeName ?? $"ID:{active.sched.EmployeeId}";
+                    var nameY = segY + ni * lineH;
+
+                    using var nameClr = new SolidBrush(DarkenColor(empColor, 60));
+                    g.DrawString(name, cardNameFont, nameClr,
+                        new RectangleF(nameX, nameY, nameW, lineH),
+                        new StringFormat
+                        {
+                            Alignment = StringAlignment.Near,
+                            LineAlignment = StringAlignment.Center,
+                            Trimming = StringTrimming.EllipsisCharacter,
+                            FormatFlags = StringFormatFlags.NoWrap
+                        });
+                }
             }
         }
 
