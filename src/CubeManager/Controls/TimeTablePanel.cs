@@ -169,7 +169,8 @@ public class TimeTablePanel : Panel
             }
         }
 
-        // ──── 7. 스케줄 블록 ────
+        // ──── 7. 스케줄 블록 (방안C: 시간대별 구간 분리) ────
+        // 겹치지 않는 구간 = 풀폭, 겹치는 구간만 N등분
         var grouped = _schedules.GroupBy(s => new { s.EmployeeId, s.WorkDate });
         var blockList = new List<(int dayIdx, int startSlot, int endSlot, Schedule sched)>();
 
@@ -191,65 +192,85 @@ public class TimeTablePanel : Panel
         var dayGroups = blockList.GroupBy(b => b.dayIdx);
         foreach (var dayGroup in dayGroups)
         {
-            var dayBlocks = dayGroup.OrderBy(b => b.startSlot).ToList();
+            var dayBlocks = dayGroup.OrderBy(b => b.startSlot).ThenBy(b => b.sched.EmployeeId).ToList();
+            var dayX = TimeColWidth + dayGroup.Key * cellW;
+            var totalW = cellW - CardGap * 2;
 
-            for (var i = 0; i < dayBlocks.Count; i++)
+            // 슬롯별로 해당 시점에 활성인 블록 수를 계산
+            // 각 블록을 "구간(segment)"으로 분할: 겹침 수가 바뀌는 지점마다 끊음
+            foreach (var block in dayBlocks)
             {
-                var current = dayBlocks[i];
-                var overlapping = dayBlocks
-                    .Where(other => other.startSlot < current.endSlot && other.endSlot > current.startSlot)
-                    .OrderBy(o => o.startSlot).ThenBy(o => o.sched.EmployeeId)
-                    .ToList();
+                var empColor = GetEmployeeColor(block.sched.EmployeeId);
+                var name = block.sched.EmployeeName ?? $"ID:{block.sched.EmployeeId}";
 
-                var overlapCount = overlapping.Count;
-                var overlapIndex = overlapping.FindIndex(o =>
-                    o.sched.EmployeeId == current.sched.EmployeeId &&
-                    o.sched.WorkDate == current.sched.WorkDate);
-                if (overlapIndex < 0) overlapIndex = 0;
+                // 이 블록의 전체 범위에서 슬롯별 겹침 수 + 인덱스 계산
+                var segStart = block.startSlot;
+                while (segStart < block.endSlot)
+                {
+                    // 현재 슬롯의 겹침 계산
+                    var activeAtSlot = dayBlocks
+                        .Where(b => b.startSlot <= segStart && b.endSlot > segStart)
+                        .OrderBy(b => b.sched.EmployeeId)
+                        .ToList();
+                    var overlapCount = activeAtSlot.Count;
+                    var overlapIndex = activeAtSlot.FindIndex(b =>
+                        b.sched.EmployeeId == block.sched.EmployeeId &&
+                        b.sched.WorkDate == block.sched.WorkDate);
+                    if (overlapIndex < 0) overlapIndex = 0;
 
-                var dayX = TimeColWidth + current.dayIdx * cellW;
-                var totalW = cellW - CardGap * 2;
-                var gapTotal = (overlapCount - 1) * CardGap;
-                var blockW = (totalW - gapTotal) / overlapCount;
-                var x = dayX + CardGap + overlapIndex * (blockW + CardGap);
-                var y = HeaderHeight + current.startSlot * cellH + 2;
-                var h = (current.endSlot - current.startSlot) * cellH - 4;
-
-                var empColor = GetEmployeeColor(current.sched.EmployeeId);
-                var rect = new Rectangle(x, y, Math.Max(blockW, 20), Math.Max(h, cellH));
-
-                // ── 카드 배경: 직원 색상 그대로 (중채도 파스텔) ──
-                using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                using var cardFill = new SolidBrush(Color.FromArgb(180, empColor));
-                g.FillPath(cardFill, cardPath);
-
-                // 카드 테두리: 약간 어둡게
-                using var cardBorder = new Pen(Color.FromArgb(200, DarkenColor(empColor, 40)), 1f);
-                g.DrawPath(cardBorder, cardPath);
-
-                // 좌측 컬러바: 진한 버전
-                var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
-                using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
-                using var barBrush = new SolidBrush(DarkenColor(empColor, 60));
-                g.FillPath(barBrush, barPath);
-
-                // ── 이름: 흰색 텍스트 (중채도 배경 위 고대비) ──
-                var name = current.sched.EmployeeName ?? $"ID:{current.sched.EmployeeId}";
-                var innerX = rect.X + AccentBarWidth + 2;
-                var innerW = rect.Width - AccentBarWidth - 4;
-                var innerH = rect.Height - 4;
-
-                var nameFont = blockW >= 50 ? cardNameFont : cardSmallFont;
-                using var nameClr = new SolidBrush(Color.White);
-
-                var textRect = new RectangleF(innerX, rect.Y + 2, innerW, innerH);
-                g.DrawString(name, nameFont, nameClr, textRect,
-                    new StringFormat
+                    // 이 겹침 상태가 유지되는 끝 슬롯 찾기
+                    var segEnd = segStart + 1;
+                    while (segEnd < block.endSlot)
                     {
-                        Alignment = StringAlignment.Center,
-                        LineAlignment = StringAlignment.Center,
-                        Trimming = StringTrimming.EllipsisCharacter
-                    });
+                        var nextActive = dayBlocks
+                            .Where(b => b.startSlot <= segEnd && b.endSlot > segEnd)
+                            .Count();
+                        if (nextActive != overlapCount) break;
+                        segEnd++;
+                    }
+
+                    // 구간 렌더링
+                    var segW = overlapCount == 1 ? totalW : (totalW - (overlapCount - 1) * CardGap) / overlapCount;
+                    var segX = dayX + CardGap + (overlapCount == 1 ? 0 : overlapIndex * (segW + CardGap));
+                    var segY = HeaderHeight + segStart * cellH + 1;
+                    var segH = (segEnd - segStart) * cellH - 2;
+
+                    var rect = new Rectangle(segX, segY, Math.Max(segW, 16), Math.Max(segH, cellH / 2));
+
+                    // 카드 배경
+                    using var cardPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
+                    using var cardFill = new SolidBrush(Color.FromArgb(180, empColor));
+                    g.FillPath(cardFill, cardPath);
+
+                    // 테두리
+                    using var cardBorder = new Pen(Color.FromArgb(200, DarkenColor(empColor, 40)), 1f);
+                    g.DrawPath(cardBorder, cardPath);
+
+                    // 좌측 컬러바
+                    var barRect = new Rectangle(rect.X, rect.Y, AccentBarWidth, rect.Height);
+                    using var barPath = CreateLeftRoundedPath(barRect, CardRadius);
+                    using var barBrush = new SolidBrush(DarkenColor(empColor, 60));
+                    g.FillPath(barBrush, barPath);
+
+                    // 이름 표시 (구간이 충분히 클 때만)
+                    if (segH >= cellH * 2)
+                    {
+                        var nameFont = segW >= 50 ? cardNameFont : cardSmallFont;
+                        using var nameClr = new SolidBrush(Color.White);
+                        var innerX = rect.X + AccentBarWidth + 2;
+                        var innerW = rect.Width - AccentBarWidth - 4;
+                        g.DrawString(name, nameFont, nameClr,
+                            new RectangleF(innerX, rect.Y + 2, innerW, rect.Height - 4),
+                            new StringFormat
+                            {
+                                Alignment = StringAlignment.Center,
+                                LineAlignment = StringAlignment.Center,
+                                Trimming = StringTrimming.EllipsisCharacter
+                            });
+                    }
+
+                    segStart = segEnd;
+                }
             }
         }
 
