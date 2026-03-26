@@ -77,6 +77,15 @@ public class ScheduleService : IScheduleService
         return await _scheduleRepo.UpdateAsync(existing);
     }
 
+    public async Task<bool> ChangeEmployeeAsync(int scheduleId, int newEmployeeId)
+    {
+        var existing = await _scheduleRepo.GetByIdAsync(scheduleId);
+        if (existing == null) return false;
+
+        existing.EmployeeId = newEmployeeId;
+        return await _scheduleRepo.UpdateAsync(existing);
+    }
+
     public Task<bool> DeleteScheduleAsync(int id) =>
         _scheduleRepo.DeleteAsync(id);
 

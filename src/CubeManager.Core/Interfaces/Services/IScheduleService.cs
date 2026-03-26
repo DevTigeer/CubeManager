@@ -14,6 +14,9 @@ public interface IScheduleService
     /// <summary>단일 스케줄 수정</summary>
     Task<bool> UpdateScheduleAsync(int id, string startTime, string endTime);
 
+    /// <summary>스케줄 직원 변경</summary>
+    Task<bool> ChangeEmployeeAsync(int scheduleId, int newEmployeeId);
+
     /// <summary>스케줄 삭제</summary>
     Task<bool> DeleteScheduleAsync(int id);
 

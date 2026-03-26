@@ -27,6 +27,7 @@ public class TimeTablePanel : Panel
     private int _nextColorIndex;
 
     public event EventHandler<ScheduleBlockClickEventArgs>? BlockClicked;
+    public event EventHandler<ScheduleBlockClickEventArgs>? BlockEditRequested;
     public event EventHandler<EmptyCellClickEventArgs>? EmptyCellDoubleClicked;
 
     public TimeTablePanel()
@@ -376,6 +377,39 @@ public class TimeTablePanel : Panel
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
         return path;
+    }
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        base.OnMouseClick(e);
+        if (e.Button != MouseButtons.Right) return;
+
+        var (dayIdx, slotIdx) = HitTest(e.Location);
+        if (dayIdx < 0 || slotIdx < 0) return;
+
+        var date = _weekStart.AddDays(dayIdx);
+        var hit = _schedules.FirstOrDefault(s =>
+            s.WorkDate == date.ToString("yyyy-MM-dd") &&
+            Array.IndexOf(TimeHelper.TimeSlots, s.StartTime) <= slotIdx &&
+            Array.IndexOf(TimeHelper.TimeSlots, s.EndTime) > slotIdx);
+
+        if (hit == null) return;
+
+        var menu = new ContextMenuStrip();
+        menu.BackColor = ColorPalette.Card;
+        menu.ForeColor = ColorPalette.Text;
+        menu.Font = DesignTokens.FontBody;
+
+        var editItem = new ToolStripMenuItem("직원 변경");
+        editItem.Click += (_, _) => BlockEditRequested?.Invoke(this, new ScheduleBlockClickEventArgs(hit));
+        menu.Items.Add(editItem);
+
+        var deleteItem = new ToolStripMenuItem("삭제");
+        deleteItem.ForeColor = ColorPalette.Danger;
+        deleteItem.Click += (_, _) => BlockClicked?.Invoke(this, new ScheduleBlockClickEventArgs(hit));
+        menu.Items.Add(deleteItem);
+
+        menu.Show(this, e.Location);
     }
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)

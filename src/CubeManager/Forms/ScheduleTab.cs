@@ -88,6 +88,7 @@ public class ScheduleTab : UserControl
         _timeTable = new TimeTablePanel { Dock = DockStyle.Fill };
         _timeTable.EmptyCellDoubleClicked += TimeTable_EmptyCellDoubleClicked;
         _timeTable.BlockClicked += TimeTable_BlockClicked;
+        _timeTable.BlockEditRequested += TimeTable_BlockEditRequested;
 
         Controls.Add(_timeTable);
         Controls.Add(_summaryPanel);
@@ -295,6 +296,67 @@ public class ScheduleTab : UserControl
         await _scheduleService.DeleteScheduleAsync(e.Schedule.Id);
         ToastNotification.Show("스케줄이 삭제되었습니다.", ToastType.Success);
         await LoadWeekAsync();
+    }
+
+    private async void TimeTable_BlockEditRequested(object? sender, ScheduleBlockClickEventArgs e)
+    {
+        var employees = (await _employeeService.GetActiveAsync()).ToList();
+        if (employees.Count == 0) return;
+
+        // 직원 선택 다이얼로그
+        using var dlg = new Form
+        {
+            Text = "직원 변경",
+            Size = new Size(300, 160),
+            FormBorderStyle = FormBorderStyle.None,
+            StartPosition = FormStartPosition.CenterParent,
+            BackColor = ColorPalette.Surface
+        };
+
+        var lbl = new Label
+        {
+            Text = $"{e.Schedule.EmployeeName} ({e.Schedule.StartTime}~{e.Schedule.EndTime}) → 변경할 직원:",
+            Location = new Point(15, 12), Size = new Size(260, 36),
+            Font = DesignTokens.FontBody, ForeColor = ColorPalette.Text
+        };
+
+        var cmb = new ComboBox
+        {
+            Location = new Point(15, 52), Size = new Size(260, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = DesignTokens.FontBody
+        };
+        foreach (var emp in employees) cmb.Items.Add(emp);
+        cmb.DisplayMember = "Name";
+        // 현재 직원 선택
+        var currentIdx = employees.FindIndex(emp => emp.Id == e.Schedule.EmployeeId);
+        if (currentIdx >= 0) cmb.SelectedIndex = currentIdx;
+
+        var btnOk = ButtonFactory.CreatePrimary("변경", 80);
+        btnOk.Location = new Point(110, 95);
+        btnOk.DialogResult = DialogResult.OK;
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(200, 95);
+        btnCancel.DialogResult = DialogResult.Cancel;
+
+        dlg.Controls.AddRange([lbl, cmb, btnOk, btnCancel]);
+        dlg.AcceptButton = btnOk;
+        dlg.CancelButton = btnCancel;
+
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        if (cmb.SelectedItem is not Employee selected) return;
+        if (selected.Id == e.Schedule.EmployeeId) return; // 같은 직원이면 무시
+
+        try
+        {
+            await _scheduleService.ChangeEmployeeAsync(e.Schedule.Id, selected.Id);
+            ToastNotification.Show($"직원이 {selected.Name}(으)로 변경되었습니다.", ToastType.Success);
+            await LoadWeekAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"변경 실패: {ex.Message}", ToastType.Error);
+        }
     }
 
     /// <summary>외부에서 호출하여 데이터 새로고침</summary>
