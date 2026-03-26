@@ -10,6 +10,7 @@ public class SalaryTab : UserControl
     private readonly ISalaryService _salaryService;
     private readonly DataGridView _grid;
     private readonly Label _lblMonth;
+    private readonly SummaryCardRow _cards;
     private int _year, _month;
 
     public SalaryTab(ISalaryService salaryService)
@@ -90,14 +91,14 @@ public class SalaryTab : UserControl
             new DataGridViewTextBoxColumn { HeaderText = "택시", FillWeight = 8, DefaultCellStyle = new() { ForeColor = ColorPalette.TextTertiary, Alignment = DataGridViewContentAlignment.MiddleRight } });
 
         // Summary Cards
-        var cards = new SummaryCardRow();
-        cards.AddCard("총 급여", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
-        cards.AddCard("대상 인원", "0명", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
-        cards.AddCard("공휴일수당", "₩0", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
-        cards.AddCard("식비+택시", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
+        _cards = new SummaryCardRow();
+        _cards.AddCard("총 급여", "₩0", ColorPalette.AccentBlue.Main, ColorPalette.AccentBlue.Light);
+        _cards.AddCard("대상 인원", "0명", ColorPalette.AccentGreen.Main, ColorPalette.AccentGreen.Light);
+        _cards.AddCard("공휴일수당", "₩0", ColorPalette.AccentOrange.Main, ColorPalette.AccentOrange.Light);
+        _cards.AddCard("식비+택시", "₩0", ColorPalette.AccentRed.Main, ColorPalette.AccentRed.Light);
 
         Controls.Add(_grid);
-        Controls.Add(cards);
+        Controls.Add(_cards);
         Controls.Add(topBar);
 
         _ = LoadAsync();
@@ -139,6 +140,17 @@ public class SalaryTab : UserControl
                         cell.Style.BackColor = ColorPalette.ManualEdit;
                 }
             }
+
+            // 요약 카드 업데이트
+            var totalGross = records.Sum(r => r.GrossSalary);
+            var totalHoliday = records.Sum(r => r.HolidayBonus);
+            var totalMealTaxi = records.Sum(r => r.MealAllowance + r.TaxiAllowance);
+            var headcount = records.Count;
+
+            _cards.UpdateCard(0, $"₩{totalGross:N0}");
+            _cards.UpdateCard(1, $"{headcount}명");
+            _cards.UpdateCard(2, $"₩{totalHoliday:N0}");
+            _cards.UpdateCard(3, $"₩{totalMealTaxi:N0}");
 
             if (records.Count == 0)
                 ToastNotification.Show("급여 데이터가 없습니다. '재계산' 버튼을 눌러주세요.", ToastType.Warning);
