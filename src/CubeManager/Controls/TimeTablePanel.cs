@@ -189,7 +189,7 @@ public class TimeTablePanel : Panel
             blockList.Add((dayIdx, startSlot, endSlot, sched));
         }
 
-        // 날짜별 그룹 → 각 블록을 풀폭 반투명으로 렌더링
+        // 날짜별 → 구간별 렌더링 (좌측 바 + 배경 tint + 경계선 + 이름)
         var dayGroups = blockList.GroupBy(b => b.dayIdx);
         foreach (var dayGroup in dayGroups)
         {
@@ -199,34 +199,12 @@ public class TimeTablePanel : Panel
             var dayX = TimeColWidth + dayGroup.Key * cellW;
             var totalW = cellW - CardGap * 2;
 
-            // 각 블록을 풀폭으로 겹쳐 그리기 — 4면 컬러바 테두리
-            foreach (var block in dayBlocks)
-            {
-                var empColor = GetEmployeeColor(block.sched.EmployeeId);
-                var blockY = HeaderHeight + block.startSlot * cellH + 1;
-                var blockH = (block.endSlot - block.startSlot) * cellH - 2;
-                var rect = new Rectangle(dayX + CardGap, blockY, totalW, Math.Max(blockH, cellH));
-
-                // 반투명 배경 (alpha 50 — 겹침 시 진해짐)
-                using var blockPath = RoundedCard.CreateRoundedPath(rect, CardRadius);
-                using var blockFill = new SolidBrush(Color.FromArgb(50, empColor));
-                g.FillPath(blockFill, blockPath);
-
-                // 4면 컬러바 테두리 (불투명, 3px)
-                using var borderPen = new Pen(empColor, 3f);
-                g.DrawPath(borderPen, blockPath);
-            }
-
-            // 이름 표시: 구간별 — 겹침 구성이 바뀔 때마다 이름을 다시 표시
-            // 1) 겹침이 변하는 시점(경계) 수집
-            var minSlot = dayBlocks.Min(b => b.startSlot);
-            var maxSlot = dayBlocks.Max(b => b.endSlot);
+            // 경계 수집
             var boundaries = new SortedSet<int>();
             foreach (var b in dayBlocks) { boundaries.Add(b.startSlot); boundaries.Add(b.endSlot); }
-
-            // 2) 각 구간에서 활성 직원 목록 → 구간별 통일 색상으로 이름 표시
             var boundaryList = boundaries.ToList();
             var segColors = ColorPalette.EmployeeColors;
+
             for (var si = 0; si < boundaryList.Count - 1; si++)
             {
                 var segStart = boundaryList[si];
@@ -236,34 +214,75 @@ public class TimeTablePanel : Panel
                     .ToList();
                 if (activeInSeg.Count == 0) continue;
 
-                // 구간별 통일 색상 (구간 인덱스로 순환)
-                var segColor = DarkenColor(segColors[si % segColors.Length], 40);
+                var segColor = segColors[si % segColors.Length];
+                var segY = HeaderHeight + segStart * cellH;
+                var segH = (segEnd - segStart) * cellH;
+                var segRect = new Rectangle(dayX + CardGap, segY + 1, totalW, segH - 2);
 
-                var segY = HeaderHeight + segStart * cellH + 2;
-                var segH = (segEnd - segStart) * cellH - 4;
-                var nameX = dayX + CardGap + 6;
-                var nameW = totalW - 12;
+                // ── 배경 tint (구간 색 alpha 25) ──
+                using var tintBrush = new SolidBrush(Color.FromArgb(25, segColor));
+                using var segPath = RoundedCard.CreateRoundedPath(segRect, 4);
+                g.FillPath(tintBrush, segPath);
+
+                // ── 좌측 컬러바 (4px, 구간 색) ──
+                var barRect = new Rectangle(segRect.X, segRect.Y, AccentBarWidth, segRect.Height);
+                using var barPath = CreateLeftRoundedPath(barRect, 4);
+                using var barBrush = new SolidBrush(segColor);
+                g.FillPath(barBrush, barPath);
+
+                // ── 경계선 + 시간 라벨 (첫 구간 제외, 구간 변경 시점에만) ──
+                if (si > 0)
+                {
+                    // 구분선
+                    using var boundaryPen = new Pen(Color.FromArgb(80, segColor), 1f);
+                    boundaryPen.DashStyle = DashStyle.Dash;
+                    g.DrawLine(boundaryPen, segRect.X + AccentBarWidth + 2, segY, segRect.Right, segY);
+
+                    // 시간 라벨 (구간 시작 시간)
+                    if (segStart >= 0 && segStart < slots.Length)
+                    {
+                        var timeLabel = slots[segStart];
+                        using var timeBg = new SolidBrush(segColor);
+                        using var timeFg = new SolidBrush(Color.White);
+                        var labelSize = g.MeasureString(timeLabel, timeAxisFont);
+                        var labelW = labelSize.Width + 6;
+                        var labelH = labelSize.Height + 2;
+                        var labelX = segRect.Right - labelW - 2;
+                        var labelY2 = segY - labelH / 2;
+                        var labelRect = new RectangleF(labelX, labelY2, labelW, labelH);
+                        using var labelPath = RoundedCard.CreateRoundedPath(Rectangle.Round(labelRect), 3);
+                        g.FillPath(timeBg, labelPath);
+                        g.DrawString(timeLabel, timeAxisFont, timeFg, labelX + 3, labelY2 + 1);
+                    }
+                }
+
+                // ── 이름 표시 (구간 통일 색) ──
+                var textColor = DarkenColor(segColor, 30);
+                var nameX = dayX + CardGap + AccentBarWidth + 6;
+                var nameW = totalW - AccentBarWidth - 12;
                 var minLineH = 16;
 
-                // 공간이 좁으면 → 쉼표 한줄 (구간 통일 색)
-                if (activeInSeg.Count * minLineH > segH)
+                if (activeInSeg.Count * minLineH > segH - 4)
                 {
+                    // 한줄 합침
                     var joined = string.Join(", ",
                         activeInSeg.Select(a => a.sched.EmployeeName ?? $"ID:{a.sched.EmployeeId}"));
-                    using var clr = new SolidBrush(segColor);
+                    using var clr = new SolidBrush(textColor);
                     var textY = segY + (segH - cardSmallFont.Height) / 2f;
-                    g.DrawString(joined, cardSmallFont, clr, nameX, textY);
+                    g.DrawString(joined, cardSmallFont, clr,
+                        new RectangleF(nameX, textY, nameW, cardSmallFont.Height + 2),
+                        new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
                 }
                 else
                 {
-                    // 공간 충분 → 각 이름 별도 줄 (구간 통일 색)
-                    var lineH = segH / activeInSeg.Count;
+                    // 각 이름 별도 줄
+                    var lineH = (segH - 4) / activeInSeg.Count;
                     for (var ni = 0; ni < activeInSeg.Count; ni++)
                     {
                         var name = activeInSeg[ni].sched.EmployeeName ?? $"ID:{activeInSeg[ni].sched.EmployeeId}";
-                        var nameY = segY + ni * lineH;
+                        var nameY = segY + 2 + ni * lineH;
 
-                        using var nameClr = new SolidBrush(segColor);
+                        using var nameClr = new SolidBrush(textColor);
                         g.DrawString(name, cardNameFont, nameClr,
                             new RectangleF(nameX, nameY, nameW, lineH),
                             new StringFormat
