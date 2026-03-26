@@ -224,8 +224,9 @@ public class TimeTablePanel : Panel
             var boundaries = new SortedSet<int>();
             foreach (var b in dayBlocks) { boundaries.Add(b.startSlot); boundaries.Add(b.endSlot); }
 
-            // 2) 각 구간에서 활성 직원 목록 → 이름 표시
+            // 2) 각 구간에서 활성 직원 목록 → 구간별 통일 색상으로 이름 표시
             var boundaryList = boundaries.ToList();
+            var segColors = ColorPalette.EmployeeColors;
             for (var si = 0; si < boundaryList.Count - 1; si++)
             {
                 var segStart = boundaryList[si];
@@ -235,43 +236,34 @@ public class TimeTablePanel : Panel
                     .ToList();
                 if (activeInSeg.Count == 0) continue;
 
+                // 구간별 통일 색상 (구간 인덱스로 순환)
+                var segColor = DarkenColor(segColors[si % segColors.Length], 40);
+
                 var segY = HeaderHeight + segStart * cellH + 2;
                 var segH = (segEnd - segStart) * cellH - 4;
                 var nameX = dayX + CardGap + 6;
                 var nameW = totalW - 12;
-                var minLineH = 16; // 이름 1줄 최소 높이
+                var minLineH = 16;
 
-                // 공간이 좁으면 (이름 수 × 최소높이 > 구간 높이) → 쉼표 한줄로 합침
+                // 공간이 좁으면 → 쉼표 한줄 (구간 통일 색)
                 if (activeInSeg.Count * minLineH > segH)
                 {
-                    // 한줄 합침: "kimjaja, baro"
-                    var joinedName = string.Join(", ",
+                    var joined = string.Join(", ",
                         activeInSeg.Select(a => a.sched.EmployeeName ?? $"ID:{a.sched.EmployeeId}"));
-                    // 첫 번째 직원 색상 사용
-                    var firstColor = GetEmployeeColor(activeInSeg[0].sched.EmployeeId);
-                    using var joinClr = new SolidBrush(DarkenColor(firstColor, 60));
-                    g.DrawString(joinedName, cardSmallFont, joinClr,
-                        new RectangleF(nameX, segY, nameW, segH),
-                        new StringFormat
-                        {
-                            Alignment = StringAlignment.Near,
-                            LineAlignment = StringAlignment.Center,
-                            Trimming = StringTrimming.EllipsisCharacter,
-                            FormatFlags = StringFormatFlags.NoWrap
-                        });
+                    using var clr = new SolidBrush(segColor);
+                    var textY = segY + (segH - cardSmallFont.Height) / 2f;
+                    g.DrawString(joined, cardSmallFont, clr, nameX, textY);
                 }
                 else
                 {
-                    // 공간 충분 → 각 이름 별도 줄
+                    // 공간 충분 → 각 이름 별도 줄 (구간 통일 색)
                     var lineH = segH / activeInSeg.Count;
                     for (var ni = 0; ni < activeInSeg.Count; ni++)
                     {
-                        var active = activeInSeg[ni];
-                        var empColor = GetEmployeeColor(active.sched.EmployeeId);
-                        var name = active.sched.EmployeeName ?? $"ID:{active.sched.EmployeeId}";
+                        var name = activeInSeg[ni].sched.EmployeeName ?? $"ID:{activeInSeg[ni].sched.EmployeeId}";
                         var nameY = segY + ni * lineH;
 
-                        using var nameClr = new SolidBrush(DarkenColor(empColor, 60));
+                        using var nameClr = new SolidBrush(segColor);
                         g.DrawString(name, cardNameFont, nameClr,
                             new RectangleF(nameX, nameY, nameW, lineH),
                             new StringFormat
