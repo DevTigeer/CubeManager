@@ -85,7 +85,7 @@ public class ScheduleRepository : IScheduleRepository
     {
         using var conn = _db.CreateConnection();
         var rows = await conn.ExecuteAsync(
-            "UPDATE schedules SET start_time = @StartTime, end_time = @EndTime, " +
+            "UPDATE schedules SET employee_id = @EmployeeId, start_time = @StartTime, end_time = @EndTime, " +
             "is_holiday = @IsHoliday, note = @Note, updated_at = datetime('now','localtime') " +
             "WHERE id = @Id", schedule);
         return rows > 0;
