@@ -287,20 +287,30 @@ public class TimeTablePanel : Panel
                 var nameW = totalW - actualBarW - 10;
                 var minLineH = 16;
 
-                if (activeInSeg.Count * minLineH > segH - 4)
+                if (activeInSeg.Count >= 2)
                 {
-                    // 한줄 합침
+                    // 2명+: 항상 한줄 합침 ("kimjaja, baro")
                     var joined = string.Join(", ",
                         activeInSeg.Select(a => a.sched.EmployeeName ?? $"ID:{a.sched.EmployeeId}"));
                     using var clr = new SolidBrush(textColor);
+                    var textY = segY + (segH - cardNameFont.Height) / 2f;
+                    g.DrawString(joined, cardNameFont, clr,
+                        new RectangleF(nameX, textY, nameW, cardNameFont.Height + 2),
+                        new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
+                }
+                else if (activeInSeg.Count * minLineH > segH - 4)
+                {
+                    // 1명이지만 공간 부족 시 작은 폰트
+                    var name = activeInSeg[0].sched.EmployeeName ?? $"ID:{activeInSeg[0].sched.EmployeeId}";
+                    using var clr = new SolidBrush(textColor);
                     var textY = segY + (segH - cardSmallFont.Height) / 2f;
-                    g.DrawString(joined, cardSmallFont, clr,
+                    g.DrawString(name, cardSmallFont, clr,
                         new RectangleF(nameX, textY, nameW, cardSmallFont.Height + 2),
                         new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap });
                 }
                 else
                 {
-                    // 각 이름 별도 줄
+                    // 1명: 충분한 공간
                     var lineH = (segH - 4) / activeInSeg.Count;
                     for (var ni = 0; ni < activeInSeg.Count; ni++)
                     {
