@@ -86,19 +86,19 @@ public class FreePassTab : UserControl
 
         var nf = new Font("맑은 고딕", 10f);
 
-        inputFlow.Controls.Add(MakeLabel("이름:", 40, nf));
+        inputFlow.Controls.Add(MakeLabel("이름:", 50, nf));
         _txtName = new TextBox { Size = new Size(90, 25), Font = nf };
         inputFlow.Controls.Add(_txtName);
 
-        inputFlow.Controls.Add(MakeLabel("인원:", 40, nf, 8));
+        inputFlow.Controls.Add(MakeLabel("인원:", 50, nf, 6));
         _numCount = new NumericUpDown { Minimum = 1, Maximum = 20, Value = 2, Size = new Size(55, 25), Font = nf };
         inputFlow.Controls.Add(_numCount);
 
-        inputFlow.Controls.Add(MakeLabel("전화:", 40, nf, 8));
+        inputFlow.Controls.Add(MakeLabel("전화:", 50, nf, 6));
         _txtPhone = new TextBox { Size = new Size(120, 25), Font = nf, PlaceholderText = "010-0000-0000" };
         inputFlow.Controls.Add(_txtPhone);
 
-        inputFlow.Controls.Add(MakeLabel("사유:", 40, nf, 8));
+        inputFlow.Controls.Add(MakeLabel("사유:", 50, nf, 6));
         _cmbReason = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
@@ -108,7 +108,7 @@ public class FreePassTab : UserControl
         _cmbReason.SelectedIndex = 0;
         inputFlow.Controls.Add(_cmbReason);
 
-        inputFlow.Controls.Add(MakeLabel("비고:", 40, nf, 8));
+        inputFlow.Controls.Add(MakeLabel("비고:", 50, nf, 6));
         _txtNote = new TextBox { Size = new Size(120, 25), Font = nf };
         inputFlow.Controls.Add(_txtNote);
 

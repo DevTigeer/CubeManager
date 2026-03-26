@@ -301,9 +301,14 @@ public class AdminTab : UserControl
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 500,
             SplitterWidth = 2,
             BackColor = ColorPalette.Divider
+        };
+        // 5:5 비율
+        bottomSplit.SizeChanged += (_, _) =>
+        {
+            if (bottomSplit.Width > 0)
+                bottomSplit.SplitterDistance = bottomSplit.Width / 2;
         };
         bottomSplit.Panel1.BackColor = ColorPalette.Surface;
         bottomSplit.Panel2.BackColor = ColorPalette.Surface;
@@ -635,7 +640,7 @@ public class AdminTab : UserControl
         // ─── 하단: HR 자동 알림 설정 ───
         var alertSettingsPanel = new Panel
         {
-            Dock = DockStyle.Bottom, Height = 200,
+            Dock = DockStyle.Bottom, Height = 260,
             BackColor = ColorPalette.Surface,
             Padding = new Padding(12, 8, 12, 8)
         };
