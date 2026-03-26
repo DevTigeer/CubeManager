@@ -237,20 +237,21 @@ public class TimeTablePanel : Panel
 
                 var segY = HeaderHeight + segStart * cellH + 2;
                 var segH = (segEnd - segStart) * cellH - 4;
-                var nameX = dayX + CardGap + AccentBarWidth + 4;
-                var nameW = totalW - AccentBarWidth - 8;
-                var lineH = Math.Max(14, segH / Math.Max(activeInSeg.Count, 1));
+                var nameX = dayX + CardGap + 6;
+                var nameW = totalW - 12;
+                var minLineH = 16; // 이름 1줄 최소 높이
 
-                for (var ni = 0; ni < activeInSeg.Count; ni++)
+                // 공간이 좁으면 (이름 수 × 최소높이 > 구간 높이) → 쉼표 한줄로 합침
+                if (activeInSeg.Count * minLineH > segH)
                 {
-                    var active = activeInSeg[ni];
-                    var empColor = GetEmployeeColor(active.sched.EmployeeId);
-                    var name = active.sched.EmployeeName ?? $"ID:{active.sched.EmployeeId}";
-                    var nameY = segY + ni * lineH;
-
-                    using var nameClr = new SolidBrush(DarkenColor(empColor, 60));
-                    g.DrawString(name, cardNameFont, nameClr,
-                        new RectangleF(nameX, nameY, nameW, lineH),
+                    // 한줄 합침: "kimjaja, baro"
+                    var joinedName = string.Join(", ",
+                        activeInSeg.Select(a => a.sched.EmployeeName ?? $"ID:{a.sched.EmployeeId}"));
+                    // 첫 번째 직원 색상 사용
+                    var firstColor = GetEmployeeColor(activeInSeg[0].sched.EmployeeId);
+                    using var joinClr = new SolidBrush(DarkenColor(firstColor, 60));
+                    g.DrawString(joinedName, cardSmallFont, joinClr,
+                        new RectangleF(nameX, segY, nameW, segH),
                         new StringFormat
                         {
                             Alignment = StringAlignment.Near,
@@ -258,6 +259,29 @@ public class TimeTablePanel : Panel
                             Trimming = StringTrimming.EllipsisCharacter,
                             FormatFlags = StringFormatFlags.NoWrap
                         });
+                }
+                else
+                {
+                    // 공간 충분 → 각 이름 별도 줄
+                    var lineH = segH / activeInSeg.Count;
+                    for (var ni = 0; ni < activeInSeg.Count; ni++)
+                    {
+                        var active = activeInSeg[ni];
+                        var empColor = GetEmployeeColor(active.sched.EmployeeId);
+                        var name = active.sched.EmployeeName ?? $"ID:{active.sched.EmployeeId}";
+                        var nameY = segY + ni * lineH;
+
+                        using var nameClr = new SolidBrush(DarkenColor(empColor, 60));
+                        g.DrawString(name, cardNameFont, nameClr,
+                            new RectangleF(nameX, nameY, nameW, lineH),
+                            new StringFormat
+                            {
+                                Alignment = StringAlignment.Near,
+                                LineAlignment = StringAlignment.Center,
+                                Trimming = StringTrimming.EllipsisCharacter,
+                                FormatFlags = StringFormatFlags.NoWrap
+                            });
+                    }
                 }
             }
         }
