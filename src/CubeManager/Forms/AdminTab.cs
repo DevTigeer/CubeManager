@@ -921,7 +921,8 @@ public class AdminTab : UserControl
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Size = new Size(90, 28), Font = nf,
-            Margin = new Padding(15, 0, 0, 0)
+            Margin = new Padding(15, 0, 0, 0),
+            BackColor = ColorPalette.Card, ForeColor = ColorPalette.Text
         };
         cmbRole.Items.AddRange(new object[] { "전체", "오픈", "마감", "1미들", "2미들" });
         cmbRole.SelectedIndex = 0;
@@ -1771,7 +1772,8 @@ public class AdminTab : UserControl
         var cmbRole = new ComboBox
         {
             Location = new Point(60, y), Size = new Size(120, 28),
-            DropDownStyle = ComboBoxStyle.DropDownList, Font = DesignTokens.FontBody
+            DropDownStyle = ComboBoxStyle.DropDownList, Font = DesignTokens.FontBody,
+            BackColor = ColorPalette.Card, ForeColor = ColorPalette.Text
         };
         cmbRole.Items.AddRange(new object[] { "오픈", "마감", "1미들", "2미들", "전체" });
         var roleMap = new Dictionary<string, int>
