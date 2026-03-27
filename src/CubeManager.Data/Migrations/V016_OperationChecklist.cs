@@ -85,6 +85,14 @@ public class V016_OperationChecklist : IMigration
 
         // 목요일 마감: 잔돈 교체
         Insert(conn, tx, 4, "close", "잔돈교체 (천원 : 50장 이상 / 만원 10장 이상)", ref order);
+
+        // ═══════════════════════════════════════
+        // 금요일 마감
+        // ═══════════════════════════════════════
+        Insert(conn, tx, 5, "close", "비품재고파악 및 부족분 확인 후 단톡에 고지", ref order);
+        Insert(conn, tx, 5, "close", "장기밀매 물통 비우기 및 페트병 물받기", ref order);
+        Insert(conn, tx, 5, "close", "스피커의 케이블정상작동 유무 파악 및 보조배터리 작동유무 파악", ref order);
+        Insert(conn, tx, 5, "close", "건전지 부족시 사오기", ref order);
     }
 
     private static void Insert(IDbConnection conn, IDbTransaction tx,
