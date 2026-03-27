@@ -16,13 +16,11 @@ public class V017_ChecklistDayMapping : IMigration
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 template_id INTEGER NOT NULL,
                 day_of_week INTEGER NOT NULL,
-                FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE CASCADE,
                 UNIQUE(template_id, day_of_week)
             )
         """, transaction: tx);
 
-        // 2) 기존 데이터에서 고유 (task_text, role) 조합 추출 → 새 마스터 행 생성
-        //    그리고 각 (task_text, role, day_of_week) → template_days에 매핑
+        // 2) 기존 데이터 읽기
         var existing = conn.Query<(int Id, int DayOfWeek, string TaskText, int SortOrder, int IsActive, string Role)>(
             "SELECT id AS Id, day_of_week AS DayOfWeek, task_text AS TaskText, " +
             "sort_order AS SortOrder, is_active AS IsActive, role AS Role " +
@@ -36,10 +34,11 @@ public class V017_ChecklistDayMapping : IMigration
             .GroupBy(e => new { e.TaskText, e.Role })
             .ToList();
 
-        // 기존 데이터 모두 삭제
+        // 3) records 먼저 삭제 (FK 참조하므로), 그 다음 templates 삭제
+        conn.Execute("DELETE FROM checklist_records", transaction: tx);
         conn.Execute("DELETE FROM checklist_templates", transaction: tx);
 
-        // 고유 task만 INSERT + days 매핑
+        // 4) 고유 task만 INSERT + days 매핑
         var order = 1;
         foreach (var group in groups)
         {
@@ -51,7 +50,6 @@ public class V017_ChecklistDayMapping : IMigration
                 tx);
             var newId = conn.ExecuteScalar<int>("SELECT last_insert_rowid()", transaction: tx);
 
-            // 요일 매핑
             foreach (var item in group)
             {
                 conn.Execute(
