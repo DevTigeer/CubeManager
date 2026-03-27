@@ -93,6 +93,19 @@ public class V016_OperationChecklist : IMigration
         Insert(conn, tx, 5, "close", "장기밀매 물통 비우기 및 페트병 물받기", ref order);
         Insert(conn, tx, 5, "close", "스피커의 케이블정상작동 유무 파악 및 보조배터리 작동유무 파악", ref order);
         Insert(conn, tx, 5, "close", "건전지 부족시 사오기", ref order);
+
+        // ═══════════════════════════════════════
+        // 일요일
+        // ═══════════════════════════════════════
+        // 5:30~7:00 미들
+        Insert(conn, tx, 0, "middle1", "손님 퇴장 후 10분안에 미들과 인터폰 점검", ref order);
+
+        // 일요일 마감: 테마별 장치 점검
+        Insert(conn, tx, 0, "close", "타워링: 캐비넷 버튼 잘되는지 + 라디오 소리 잘들리는지 + 버튼누르는곳 달랑거리면 나사풀고 다시 조이기", ref order);
+        Insert(conn, tx, 0, "close", "장기밀매: xray기계 안떨어졌는지, 컵 잘작동하는지, 선빠지지않았는지 확인", ref order);
+        Insert(conn, tx, 0, "close", "타이타닉: 2층올라가는 이엠락 빠지려고하는지, 선빠지려는지 확인", ref order);
+        Insert(conn, tx, 0, "close", "신데: 땔감확인", ref order);
+        Insert(conn, tx, 0, "close", "집착: 두번째방천장 경첩 빠지려는지확인", ref order);
     }
 
     private static void Insert(IDbConnection conn, IDbTransaction tx,

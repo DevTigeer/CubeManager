@@ -30,7 +30,8 @@ public class MigrationRunner
             new V015_WorkParts(),
             new V016_OperationChecklist(),
             new V017_ChecklistDayMapping(),
-            new V018_FridayCloseChecklist()
+            new V018_FridayCloseChecklist(),
+            new V019_SundayChecklist()
         ];
     }
 
