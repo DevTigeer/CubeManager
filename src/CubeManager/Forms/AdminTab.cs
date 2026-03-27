@@ -1651,8 +1651,8 @@ public class AdminTab : UserControl
                 .Where(c => c.Checked && c.Tag is int)
                 .Select(c =>
                 {
-                    var uiIndex = (int)c.Tag!; // 0=월,1=화,...6=일
-                    return uiIndex < 6 ? uiIndex + 1 : 0; // DB: 0=일,1=월,...6=토
+                    var uiIndex = (int)c.Tag!;
+                    return uiIndex < 6 ? uiIndex + 1 : 0;
                 })
                 .ToHashSet();
 
@@ -1662,30 +1662,36 @@ public class AdminTab : UserControl
                 return;
             }
 
+            // V017: 전체 템플릿 + 각 템플릿의 요일 매핑 조회
             var allTemplates = (await _checklistRepo.GetAllTemplatesAsync()).ToList();
-            var filtered = allTemplates
-                .Where(t => selectedDays.Contains(t.DayOfWeek))
-                .OrderBy(t => t.DayOfWeek)
-                .ThenBy(t => t.Role)
-                .ThenBy(t => t.SortOrder)
-                .ToList();
-
             var dayLabels = new[] { "일", "월", "화", "수", "목", "금", "토" };
 
             _gridChecklist.Rows.Clear();
 
-            foreach (var t in filtered)
+            foreach (var t in allTemplates.OrderBy(t => t.Role).ThenBy(t => t.SortOrder))
             {
+                // 이 템플릿의 요일 매핑 조회
+                var days = (await _checklistRepo.GetDaysForTemplateAsync(t.Id)).ToHashSet();
+
+                // 선택한 요일과 교집합이 없으면 스킵
+                if (days.Count > 0 && !days.Overlaps(selectedDays)) continue;
+                // days가 비어있으면 기존 day_of_week 컬럼으로 폴백
+                if (days.Count == 0 && !selectedDays.Contains(t.DayOfWeek)) continue;
+
+                // 요일 표시: 매핑된 요일을 쉼표로
+                var dayText = days.Count > 0
+                    ? string.Join(",", days.OrderBy(d => d == 0 ? 7 : d).Select(d => dayLabels[d]))
+                    : dayLabels[t.DayOfWeek];
+
                 var idx = _gridChecklist.Rows.Add();
                 var row = _gridChecklist.Rows[idx];
                 row.Cells["ClId"].Value = t.Id;
-                row.Cells["ClDay"].Value = t.DayOfWeek >= 0 && t.DayOfWeek <= 6 ? dayLabels[t.DayOfWeek] : "?";
+                row.Cells["ClDay"].Value = dayText;
                 row.Cells["ClRole"].Value = RoleNames.GetValueOrDefault(t.Role, t.Role);
                 row.Cells["ClTask"].Value = t.TaskText;
                 row.Cells["ClOrder"].Value = t.SortOrder;
                 row.Cells["ClActive"].Value = t.IsActive ? "활성" : "비활성";
 
-                // 역할별 색상
                 var roleColor = t.Role switch
                 {
                     "open" => ColorPalette.AccentBlue.Light,
@@ -1765,21 +1771,21 @@ public class AdminTab : UserControl
 
         try
         {
-            // 선택된 모든 요일에 대해 템플릿 생성
-            foreach (var uiDay in selectedDays)
+            // V017: 1개 템플릿 생성 + 선택 요일 매핑
+            var allTemplates = (await _checklistRepo.GetAllTemplatesAsync()).ToList();
+            var template = new ChecklistTemplate
             {
-                var dbDay = uiDay < 6 ? uiDay + 1 : 0; // 월=1,...토=6,일=0
-                var existing = (await _checklistRepo.GetTemplatesByDayAsync(dbDay)).ToList();
-                var template = new ChecklistTemplate
-                {
-                    DayOfWeek = dbDay,
-                    Role = selectedRole,
-                    TaskText = taskText,
-                    SortOrder = existing.Count + 1,
-                    IsActive = true
-                };
-                await _checklistRepo.InsertTemplateAsync(template);
-            }
+                DayOfWeek = 0, // 더 이상 사용 안 함 (매핑 테이블로 이관)
+                Role = selectedRole,
+                TaskText = taskText,
+                SortOrder = allTemplates.Count + 1,
+                IsActive = true
+            };
+            var newId = await _checklistRepo.InsertTemplateAsync(template);
+
+            // 요일 매핑
+            var dbDays = selectedDays.Select(uiDay => uiDay < 6 ? uiDay + 1 : 0);
+            await _checklistRepo.SetDaysForTemplateAsync(newId, dbDays);
 
             ToastNotification.Show("체크리스트 항목이 추가되었습니다.", ToastType.Success);
             await LoadChecklistTemplatesAsync();

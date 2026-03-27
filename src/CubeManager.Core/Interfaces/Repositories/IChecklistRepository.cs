@@ -11,6 +11,10 @@ public interface IChecklistRepository
     Task UpdateTemplateAsync(ChecklistTemplate template);
     Task DeleteTemplateAsync(int id);
 
+    // Template-Day 매핑 (V017+)
+    Task<IEnumerable<int>> GetDaysForTemplateAsync(int templateId);
+    Task SetDaysForTemplateAsync(int templateId, IEnumerable<int> days);
+
     // Records (체크 기록)
     Task<IEnumerable<ChecklistRecord>> GetRecordsForDateAsync(string date);
     Task UpsertRecordAsync(int templateId, string date, bool isChecked, string? checkedBy);

@@ -28,7 +28,8 @@ public class MigrationRunner
             new V013_HandoverTitleCheck(),
             new V014_AlertSystem(),
             new V015_WorkParts(),
-            new V016_OperationChecklist()
+            new V016_OperationChecklist(),
+            new V017_ChecklistDayMapping()
         ];
     }
 
