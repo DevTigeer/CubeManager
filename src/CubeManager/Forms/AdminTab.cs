@@ -940,28 +940,46 @@ public class AdminTab : UserControl
         _gridChecklist.ReadOnly = true;
         _gridChecklist.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "ClId", Visible = false },
-            new DataGridViewTextBoxColumn { Name = "ClDay", HeaderText = "요일", FillWeight = 10, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "ClRole", HeaderText = "역할", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "ClTask", HeaderText = "할일", FillWeight = 45 },
-            new DataGridViewTextBoxColumn { Name = "ClOrder", HeaderText = "순서", FillWeight = 8, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewTextBoxColumn { Name = "ClActive", HeaderText = "활성", FillWeight = 10, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            new DataGridViewButtonColumn { Name = "ClDelete", HeaderText = "삭제", FillWeight = 10, Text = "삭제", UseColumnTextForButtonValue = true }
+            new DataGridViewTextBoxColumn { Name = "ClDay", HeaderText = "요일", FillWeight = 12, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClRole", HeaderText = "역할", FillWeight = 10, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClTask", HeaderText = "할일", FillWeight = 43 },
+            new DataGridViewTextBoxColumn { Name = "ClOrder", HeaderText = "순서", FillWeight = 6, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewTextBoxColumn { Name = "ClActive", HeaderText = "활성", FillWeight = 7, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } },
+            new DataGridViewButtonColumn { Name = "ClEdit", HeaderText = "수정", FillWeight = 8, Text = "수정", UseColumnTextForButtonValue = true },
+            new DataGridViewButtonColumn { Name = "ClDelete", HeaderText = "삭제", FillWeight = 8, Text = "삭제", UseColumnTextForButtonValue = true }
         );
 
         _gridChecklist.CellContentClick += async (_, e) =>
         {
-            if (e.RowIndex < 0 || _gridChecklist.Columns[e.ColumnIndex].Name != "ClDelete") return;
+            if (e.RowIndex < 0) return;
+            var colName = _gridChecklist.Columns[e.ColumnIndex].Name;
             var id = (int)_gridChecklist.Rows[e.RowIndex].Cells["ClId"].Value;
-            var task = _gridChecklist.Rows[e.RowIndex].Cells["ClTask"].Value?.ToString();
-            if (MessageBox.Show($"'{task}' 항목을 삭제하시겠습니까?", "확인",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            try
+
+            if (colName == "ClEdit")
             {
-                await _checklistRepo.DeleteTemplateAsync(id);
-                ToastNotification.Show("삭제 완료.", ToastType.Success);
-                await LoadChecklistTemplatesAsync();
+                await OpenChecklistEditDialog(id);
             }
-            catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+            else if (colName == "ClDelete")
+            {
+                var task = _gridChecklist.Rows[e.RowIndex].Cells["ClTask"].Value?.ToString();
+                if (MessageBox.Show($"'{task}' 항목을 삭제하시겠습니까?", "확인",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                try
+                {
+                    await _checklistRepo.DeleteTemplateAsync(id);
+                    ToastNotification.Show("삭제 완료.", ToastType.Success);
+                    await LoadChecklistTemplatesAsync();
+                }
+                catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+            }
+        };
+
+        // 더블클릭으로도 수정
+        _gridChecklist.CellDoubleClick += async (_, e) =>
+        {
+            if (e.RowIndex < 0) return;
+            var id = (int)_gridChecklist.Rows[e.RowIndex].Cells["ClId"].Value;
+            await OpenChecklistEditDialog(id);
         };
 
         page.Controls.Add(_gridChecklist);
@@ -1708,6 +1726,143 @@ public class AdminTab : UserControl
         {
             ToastNotification.Show($"체크리스트 로드 실패: {ex.Message}", ToastType.Error);
         }
+    }
+
+    /// <summary>체크리스트 수정 다이얼로그 (내용 + 요일 체크박스 + 역할)</summary>
+    private async Task OpenChecklistEditDialog(int templateId)
+    {
+        var allTemplates = (await _checklistRepo.GetAllTemplatesAsync()).ToList();
+        var template = allTemplates.FirstOrDefault(t => t.Id == templateId);
+        if (template == null) return;
+
+        var currentDays = (await _checklistRepo.GetDaysForTemplateAsync(templateId)).ToHashSet();
+
+        using var dlg = new Form
+        {
+            Text = "체크리스트 수정",
+            Size = new Size(420, 300),
+            FormBorderStyle = FormBorderStyle.None,
+            StartPosition = FormStartPosition.CenterParent,
+            BackColor = ColorPalette.Surface
+        };
+
+        var y = 15;
+
+        // 할일 텍스트
+        dlg.Controls.Add(new Label
+        {
+            Text = "할일:", Location = new Point(15, y + 2), Size = new Size(40, 22),
+            ForeColor = ColorPalette.Text, Font = DesignTokens.FontBody
+        });
+        var txtTask = new TextBox
+        {
+            Location = new Point(60, y), Size = new Size(340, 28),
+            Text = template.TaskText, Font = DesignTokens.FontBody
+        };
+        dlg.Controls.Add(txtTask);
+        y += 40;
+
+        // 역할 선택
+        dlg.Controls.Add(new Label
+        {
+            Text = "역할:", Location = new Point(15, y + 2), Size = new Size(40, 22),
+            ForeColor = ColorPalette.Text, Font = DesignTokens.FontBody
+        });
+        var cmbRole = new ComboBox
+        {
+            Location = new Point(60, y), Size = new Size(120, 28),
+            DropDownStyle = ComboBoxStyle.DropDownList, Font = DesignTokens.FontBody
+        };
+        cmbRole.Items.AddRange(new object[] { "오픈", "마감", "1미들", "2미들", "전체" });
+        var roleMap = new Dictionary<string, int>
+        {
+            ["open"] = 0, ["close"] = 1, ["middle1"] = 2, ["middle2"] = 3, ["all"] = 4
+        };
+        var roleKeys = new[] { "open", "close", "middle1", "middle2", "all" };
+        cmbRole.SelectedIndex = roleMap.GetValueOrDefault(template.Role, 4);
+        dlg.Controls.Add(cmbRole);
+        y += 40;
+
+        // 요일 체크박스 (월~일)
+        dlg.Controls.Add(new Label
+        {
+            Text = "요일:", Location = new Point(15, y + 2), Size = new Size(40, 22),
+            ForeColor = ColorPalette.Text, Font = DesignTokens.FontBody
+        });
+        var dayNames = new[] { "월", "화", "수", "목", "금", "토", "일" };
+        var dayDbValues = new[] { 1, 2, 3, 4, 5, 6, 0 }; // 월=1,...토=6,일=0
+        var dayChecks = new CheckBox[7];
+        for (var i = 0; i < 7; i++)
+        {
+            dayChecks[i] = new CheckBox
+            {
+                Text = dayNames[i],
+                Location = new Point(60 + i * 48, y),
+                Size = new Size(44, 26),
+                Checked = currentDays.Contains(dayDbValues[i]),
+                Appearance = Appearance.Button,
+                TextAlign = ContentAlignment.MiddleCenter,
+                FlatStyle = FlatStyle.Flat,
+                Font = DesignTokens.FontCaption
+            };
+            dayChecks[i].FlatAppearance.BorderSize = 1;
+            dayChecks[i].FlatAppearance.BorderColor = ColorPalette.Border;
+            dayChecks[i].FlatAppearance.CheckedBackColor = ColorPalette.NavActiveBg;
+            var chk = dayChecks[i];
+            chk.BackColor = chk.Checked ? ColorPalette.NavActiveBg : ColorPalette.Card;
+            chk.ForeColor = chk.Checked ? ColorPalette.Primary : ColorPalette.TextSecondary;
+            chk.CheckedChanged += (_, _) =>
+            {
+                chk.BackColor = chk.Checked ? ColorPalette.NavActiveBg : ColorPalette.Card;
+                chk.ForeColor = chk.Checked ? ColorPalette.Primary : ColorPalette.TextSecondary;
+                chk.FlatAppearance.BorderColor = chk.Checked ? ColorPalette.Primary : ColorPalette.Border;
+            };
+            dlg.Controls.Add(dayChecks[i]);
+        }
+        y += 40;
+
+        // 활성 체크
+        var chkActive = new CheckBox
+        {
+            Text = "활성", Location = new Point(60, y),
+            Size = new Size(80, 26), Checked = template.IsActive,
+            Font = DesignTokens.FontBody, ForeColor = ColorPalette.Text
+        };
+        dlg.Controls.Add(chkActive);
+        y += 40;
+
+        // 버튼
+        var btnSave = ButtonFactory.CreatePrimary("저장", 80);
+        btnSave.Location = new Point(200, y);
+        btnSave.DialogResult = DialogResult.OK;
+        var btnCancel = ButtonFactory.CreateGhost("취소", 80);
+        btnCancel.Location = new Point(290, y);
+        btnCancel.DialogResult = DialogResult.Cancel;
+        dlg.Controls.AddRange([btnSave, btnCancel]);
+        dlg.AcceptButton = btnSave;
+        dlg.CancelButton = btnCancel;
+
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        if (string.IsNullOrWhiteSpace(txtTask.Text)) return;
+
+        try
+        {
+            // 템플릿 업데이트
+            template.TaskText = txtTask.Text.Trim();
+            template.Role = roleKeys[cmbRole.SelectedIndex];
+            template.IsActive = chkActive.Checked;
+            await _checklistRepo.UpdateTemplateAsync(template);
+
+            // 요일 매핑 업데이트
+            var newDays = new List<int>();
+            for (var i = 0; i < 7; i++)
+                if (dayChecks[i].Checked) newDays.Add(dayDbValues[i]);
+            await _checklistRepo.SetDaysForTemplateAsync(templateId, newDays);
+
+            ToastNotification.Show("체크리스트가 수정되었습니다.", ToastType.Success);
+            await LoadChecklistTemplatesAsync();
+        }
+        catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
     }
 
     private async void BtnAddChecklist_Click(object? sender, EventArgs e)
