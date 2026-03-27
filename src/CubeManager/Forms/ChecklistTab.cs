@@ -267,9 +267,10 @@ public class ChecklistTab : UserControl
             Text = record.TaskText ?? "",
             Font = record.IsChecked ? StrikeFont : TaskBoldFont,
             ForeColor = record.IsChecked ? ColorPalette.TextTertiary : ColorPalette.Text,
-            Location = new Point(40, 10),
-            Size = new Size(400, 24),
-            TextAlign = ContentAlignment.MiddleLeft
+            Location = new Point(40, 2),
+            Size = new Size(panel.Width - 250, 40),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            AutoEllipsis = true
         };
         panel.Controls.Add(lblTask);
 
