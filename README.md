@@ -1,90 +1,101 @@
-# CubeManager - HR 자동화 및 업무 자동화 시스템
+# CubeManager
 
-## 프로젝트 개요
+**Cube Escape 방탈출 업장 HR 자동화 + 업무 자동화 Windows 데스크톱 앱**
 
-CubeManager는 **Cube Escape** 업장의 HR 관리 및 업무 자동화를 위한 Windows 데스크톱 애플리케이션입니다.
-예약 관리, 매출 관리, 직원 스케줄, 급여 산정, 근태 관리 등을 하나의 프로그램에서 통합 관리합니다.
+---
+
+## 빠른 시작 (다른 PC에서 실행)
+
+### 사전 요구사항
+- Windows 10/11
+- [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) 설치
+
+### 실행 방법
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/DevTigeer/CubeManager.git
+cd CubeManager
+
+# 2. 빌드
+dotnet build src/CubeManager.sln -c Release
+
+# 3. 실행
+dotnet run --project src/CubeManager -c Release
+```
+
+### EXE로 배포 (단일 실행파일)
+
+```bash
+# Framework-dependent (경량, .NET Runtime 필요)
+dotnet publish src/CubeManager/CubeManager.csproj -c Release -r win-x64 --no-self-contained -o publish
+
+# Self-contained (독립 실행, .NET Runtime 불필요, ~80MB)
+dotnet publish src/CubeManager/CubeManager.csproj -c Release -r win-x64 --self-contained -o publish-standalone
+```
+
+생성된 `publish/CubeManager.exe` 또는 `publish-standalone/CubeManager.exe`를 실행합니다.
+
+---
 
 ## 핵심 기능
 
 | # | 기능 | 설명 |
 |---|------|------|
-| 1 | **예약/매출 관리** | 웹 예약 테이블 연동, 일 매출 집계, 결제수단별 분류 |
-| 2 | **근무 스케줄** | 월간/주간 타임테이블, 직원별 근무시간 배정 |
-| 3 | **급여 관리** | 주차별 근무시간 집계, 공휴일 수당, 3.3% 세금 계산 |
-| 4 | **식비/택시비** | 6시간 이상 근무 시 식비, 23:30 이후 퇴근 시 택시비 자동 집계 |
-| 5 | **업무자료** | Markdown 파일 기반 문서 관리 (검색/수정/삭제/삽입) |
-| 6 | **인수인계** | 근무자별 인수인계 작성, 댓글/대댓글 커뮤니티 형식 |
-| 7 | **물품 관리** | 비품 재고 현황 (보유량/현재량/부족량) 관리 |
-| 8 | **출/퇴근** | 실시간 출퇴근 기록, 스케줄 대비 지각/조퇴 색상 표시 |
+| 1 | **예약/매출** | 웹 예약 연동 + 일 매출 집계 + 카드/현금/계좌 분류 + 손님 금액계산기 |
+| 2 | **스케줄** | 주간 타임테이블 + 파트별(오픈/마감/미들) 자동 시간 설정 |
+| 3 | **체크리스트** | 요일별 오픈/마감 업무 자동 배정 + 완료율 추적 + HR 알림 |
+| 4 | **출퇴근** | 실시간 기록 + 스케줄 대비 지각/조퇴 감지 |
+| 5 | **인수인계** | 날짜별 인수인계 + 다음근무자 확인 체크 + 댓글 |
+| 6 | **무료이용권** | A2000~ 자동 번호 발급 + 사유 태그 + 사용 체크 |
+| 7 | **물품** | 비품 재고 현황 (보유량/현재량/부족량) |
+| 8 | **업무자료** | 디렉토리 구조 문서 관리 |
+| 9 | **테마힌트** | 테마별 힌트 관리 + CSV 내보내기 |
+| 10 | **급여** | 주차별 시간 + 공휴일수당 + 식비/택시비 자동 계산 |
+| 11 | **관리자** | 대시보드 + 직원관리 + 파트관리 + 알람 + 체크리스트 관리 + 출퇴근 이력 + 설정 |
 
 ## 기술 스택
 
-- **플랫폼**: Windows Desktop
-- **프레임워크**: WinForms + .NET 8 + AntdUI (저사양 최적화)
-- **언어**: C#
-- **데이터베이스**: SQLite (로컬)
-- **웹 연동**: HTTP Client (예약 데이터 스크래핑)
-- **문서**: Markdown 렌더러 내장
+| 항목 | 기술 |
+|------|------|
+| 프레임워크 | WinForms + .NET 8 (C# 12) |
+| DB | SQLite (WAL 모드) + Dapper |
+| 웹 스크래핑 | HttpClient + AngleSharp |
+| 보안 | BCrypt (비밀번호) + DPAPI (자격증명) |
+| 로깅 | Serilog + File Sink (7일 롤링) |
+| 디자인 | #2D3047 기반 다크 톤 + 뉴모피즘/글래스 근사 |
 
-## 디렉토리 구조
+## 디자인 색상 가이드
 
 ```
-Cube/
-├── CLAUDE.md                          # AI 에이전트 컨텍스트 (기술스택, 규칙 요약)
-├── README.md                          # 프로젝트 개요
-├── docs/
-│   ├── architecture/
-│   │   ├── system-architecture.md     # 시스템 아키텍처
-│   │   ├── database-schema.md         # DB 스키마 (13개 테이블)
-│   │   ├── low-spec-review.md         # 저사양 환경 검토
-│   │   └── decision-review.md         # 기술 선택 재검토
-│   ├── features/                      # 기능 명세 (01~08)
-│   ├── screens/
-│   │   └── ui-specification.md        # 화면 와이어프레임
-│   ├── policies/                      # 개발 정책
-│   │   ├── coding-conventions.md      # 코딩 컨벤션
-│   │   ├── db-policy.md               # DB 정책
-│   │   ├── security-policy.md         # 보안 정책
-│   │   ├── ui-policy.md               # UI 정책
-│   │   ├── naming-conventions.md      # 네이밍 규칙
-│   │   └── git-policy.md              # Git 정책
-│   ├── development-guide.md           # Step-by-Step 개발 가이드
-│   └── roadmap.md                     # Phase 개요
-└── src/ (솔루션)
-    ├── CubeManager/                   # WinForms UI 앱
-    ├── CubeManager.Core/              # 비즈니스 로직
-    ├── CubeManager.Data/              # 데이터 접근
-    └── CubeManager.Tests/             # 테스트
+주색:   #2D3047 (깊은 네이비 그레이)
+보색:   #F18A3D (따뜻한 주황 — CTA/강조)
+중성:   #F0F0F0 (밝은 회색 — 표/카드 배경)
+삼분색: #47A8D7 (청록 — 활성), #D747A8 (자홍 — 특수)
+유사색: #1E2335 (어두운), #3F425D (밝은)
 ```
 
-## 명세 문서 목록
+## 프로젝트 구조
 
-- [시스템 아키텍처](docs/architecture/system-architecture.md)
-- [저사양 환경 검토](docs/architecture/low-spec-review.md)
-- [기술 선택 재검토](docs/architecture/decision-review.md)
-- [DB 스키마](docs/architecture/database-schema.md)
-- [예약/매출 관리](docs/features/01-reservation-sales.md)
-- [근무 스케줄](docs/features/02-work-schedule.md)
-- [급여 관리](docs/features/03-salary.md)
-- [식비/택시비](docs/features/04-meal-taxi.md)
-- [업무자료](docs/features/05-work-documents.md)
-- [인수인계](docs/features/06-handover.md)
-- [물품 관리](docs/features/07-inventory.md)
-- [출/퇴근](docs/features/08-attendance.md)
-- [화면 명세](docs/screens/ui-specification.md)
-- [개발 가이드 (Step-by-Step)](docs/development-guide.md)
-- [개발 로드맵 (Phase 개요)](docs/roadmap.md)
+```
+src/
+├── CubeManager/           # WinForms UI 앱 (.exe)
+│   ├── Controls/          # 커스텀 GDI+ 컨트롤 (타임테이블, 사이드바, 카드)
+│   ├── Dialogs/           # 다이얼로그 (스케줄추가, 계산기, 인증)
+│   ├── Forms/             # 탭 UI (11개)
+│   └── Helpers/           # ColorPalette, ButtonFactory, GridTheme, DesignTokens
+├── CubeManager.Core/      # 비즈니스 로직 (모델, 서비스, 인터페이스)
+└── CubeManager.Data/      # 데이터 접근 (SQLite, Dapper, 마이그레이션 V001~V019)
+```
 
-### 정책 문서
+## 문서
 
-- [코딩 컨벤션](docs/policies/coding-conventions.md)
-- [DB 정책](docs/policies/db-policy.md)
-- [보안 정책](docs/policies/security-policy.md)
-- [UI 정책](docs/policies/ui-policy.md)
-- [네이밍 규칙](docs/policies/naming-conventions.md)
-- [Git 정책](docs/policies/git-policy.md)
+- [사용자 매뉴얼 (HTML)](docs/user-manual.html)
+- [운영 매뉴얼](docs/policies/operation-manual.md)
+- [색상 정책](docs/policies/color-policy.md)
+- [요금/할인 정책](docs/policies/pricing-policy.md)
+- [CLAUDE.md](CLAUDE.md) — AI 에이전트 컨텍스트
 
-### AI 에이전트
+## 라이선스
 
-- [CLAUDE.md](CLAUDE.md) — 프로젝트 컨텍스트 (기술스택, 규칙, 체크리스트)
+Private — Cube Escape 인천구월점 전용

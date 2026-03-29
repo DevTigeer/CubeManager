@@ -6,23 +6,25 @@
 <title>CubeManager 사용자 매뉴얼</title>
 <style>
   :root {
-    --primary: #1E88E5;
-    --primary-dark: #1565C0;
-    --primary-light: #E3F2FD;
-    --success: #4CAF50;
-    --success-light: #E8F5E9;
-    --danger: #F44336;
-    --danger-light: #FFEBEE;
-    --warning: #FF9800;
-    --warning-light: #FFF3E0;
-    --info: #2196F3;
-    --text: #1A1A2E;
-    --text-secondary: #6B7280;
-    --text-tertiary: #9CA3AF;
-    --border: #E5E7EB;
-    --surface: #FFFFFF;
-    --bg: #F8FAFC;
-    --code-bg: #F1F5F9;
+    --primary: #47A8D7;
+    --primary-dark: #2D3047;
+    --primary-light: #2D4A5F;
+    --accent: #F18A3D;
+    --success: #22C55E;
+    --success-light: #1A3D2A;
+    --danger: #EF4444;
+    --danger-light: #3D1A1A;
+    --warning: #F59E0B;
+    --warning-light: #3D3020;
+    --info: #47A8D7;
+    --text: #F0F0F0;
+    --text-secondary: #A0A3B8;
+    --text-tertiary: #6E7190;
+    --border: #4A4D68;
+    --surface: #2D3047;
+    --bg: #1E2335;
+    --code-bg: #3F425D;
+    --card: #3F425D;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -34,7 +36,7 @@
   /* ── 사이드 네비게이션 ── */
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
-    width: 260px; background: var(--surface);
+    width: 260px; background: var(--bg);
     border-right: 1px solid var(--border);
     overflow-y: auto; padding: 20px 0; z-index: 100;
   }
@@ -50,8 +52,8 @@
     text-decoration: none; font-size: 14px; transition: all 0.15s;
     border-left: 3px solid transparent;
   }
-  .sidebar a:hover { background: var(--primary-light); color: var(--primary); }
-  .sidebar a.active { color: var(--primary); font-weight: 600; border-left-color: var(--primary); background: var(--primary-light); }
+  .sidebar a:hover { background: var(--card); color: var(--accent); }
+  .sidebar a.active { color: var(--accent); font-weight: 600; border-left-color: var(--accent); background: var(--card); }
   .sidebar .section-title {
     padding: 16px 24px 6px; font-size: 11px; font-weight: 700;
     color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px;
@@ -63,7 +65,7 @@
   /* ── 타이포그래피 ── */
   h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; color: var(--text); letter-spacing: -0.5px; }
   h1 small { font-size: 14px; font-weight: 400; color: var(--text-tertiary); display: block; margin-top: 4px; }
-  h2 { font-size: 22px; font-weight: 700; margin: 48px 0 16px; padding-bottom: 10px; border-bottom: 2px solid var(--primary-light); color: var(--text); }
+  h2 { font-size: 22px; font-weight: 700; margin: 48px 0 16px; padding-bottom: 10px; border-bottom: 2px solid var(--accent); color: var(--text); }
   h2 .emoji { margin-right: 8px; }
   h3 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
   h4 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: var(--text-secondary); }
@@ -173,6 +175,11 @@
   <a href="#tab-themehint">🔑 테마힌트</a>
   <a href="#tab-settings">⚙️ 설정</a>
   <a href="#tab-admin">🛡️ 관리자</a>
+  <div class="section-title">운영 매뉴얼</div>
+  <a href="#op-open">🌅 오픈 업무</a>
+  <a href="#op-during">🏢 운영 중</a>
+  <a href="#op-close">🌙 마감 업무</a>
+  <a href="#op-weekly">📅 요일별 요약</a>
   <div class="section-title">부록</div>
   <a href="#shortcuts">⌨️ 단축키</a>
   <a href="#pricing">💰 요금/할인</a>
@@ -655,6 +662,135 @@
 <p style="text-align: center; color: var(--text-tertiary); font-size: 13px; padding: 20px 0;">
   CubeManager v0.2.0 · 인천구월점 · 2026
 </p>
+
+<!-- ══════════ 운영 매뉴얼 ══════════ -->
+<section id="op-open">
+<h2><span class="emoji">🌅</span> 오픈 업무</h2>
+
+<h3>환기 (매일 오픈)</h3>
+<div class="card">
+<ul>
+<li>장기밀매 창문 윗 고리 열기 (외부철창문은 열지않기)</li>
+<li>계단창문/문/큐브출입문도 열어서 30분환기</li>
+<li>토 오픈 : 스케줄 단톡에 올리기</li>
+</ul>
+</div>
+
+<h3>장치 확인 후 보고 (화, 목 오픈)</h3>
+<div class="card">
+<ul>
+<li>타워링 모든 버튼, 타워링캐비넷 파손된것 확인후 고치기</li>
+<li>타이타닉 냄비, 버튼, 2층올라가는 이엠락</li>
+<li>신데 땔감</li>
+<li>장기밀매 컵 확인후 메모</li>
+<li>모든 테마 낙서 확인 후 지우기</li>
+</ul>
+</div>
+
+<h3>알코올로 물건닦기 (월, 수, 금, 일 오픈)</h3>
+<div class="card">
+<ul>
+<li>상자나, 자물쇠 열어서 내부 물건 닦기</li>
+<li>이때 물건고장, 자물쇠고장, 힌트종이 교체 필요시 교체</li>
+</ul>
+</div>
+</section>
+
+<section id="op-during">
+<h2><span class="emoji">🏢</span> 운영 중</h2>
+<div class="card">
+<ul>
+<li>근무시간 엄수</li>
+</ul>
+</div>
+</section>
+
+<section id="op-close">
+<h2><span class="emoji">🌙</span> 마감 업무</h2>
+
+<h3>비품 체크 및 정비 (월~금 5:30~6:00)</h3>
+<div class="card">
+<ul>
+<li>모든 테마 : 열어서 물건닦기, 및 비품체크 랜턴건전지 (흰색)교체</li>
+<li>장치 한번씩 작동시켜서 작동유무확인</li>
+</ul>
+</div>
+
+<h3>마감 청소 (매일)</h3>
+<div class="card">
+<p>손에 잘안닿는 곳까지 청소후 사진 전송 (월화수 2개씩, 목 1개)</p>
+<table>
+<thead><tr><th>요일</th><th>청소 테마</th></tr></thead>
+<tbody>
+<tr><td><strong>월</strong></td><td>신데, 타타</td></tr>
+<tr><td><strong>화</strong></td><td>장기, 로비</td></tr>
+<tr><td><strong>수</strong></td><td>카운터</td></tr>
+<tr><td><strong>목</strong></td><td>타워링, 로비</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>테마별 청소 포인트</h4>
+<div class="card">
+<table>
+<thead><tr><th>테마</th><th>청소 포인트</th></tr></thead>
+<tbody>
+<tr><td>신데렐라</td><td>책상아래 + 첫방 / 막방+ 서랍장아래, 호박마차뒤,위</td></tr>
+<tr><td>타워링</td><td>첫방 / 막방 (마스크끼고 러그털기)</td></tr>
+<tr><td>장기밀매</td><td>첫방 작은캐비넷 빼서 아래, 마네킹 아래 / 막방 냉장고 밀어서 아래</td></tr>
+<tr><td>집착</td><td>첫방 / 막방 침대아래 ,냉장고 밀어서 냉장고아래</td></tr>
+<tr><td>타이타닉</td><td>첫방 침대아래 / 두번째방 / 막방 계단</td></tr>
+<tr><td>카운터</td><td>모니터, 노트북, 청소, 물걸레</td></tr>
+<tr><td>로비</td><td>책상위 의자위 청소, 정수기 근처 자물쇠두는곳 아래, 사진기근처</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>잔돈 교체 (목요일 마감)</h3>
+<div class="card"><ul><li>천원 : 50장 이상 / 만원 10장 이상</li></ul></div>
+
+<h3>금요일 마감</h3>
+<div class="card">
+<ul>
+<li>비품재고파악 및 부족분 확인 후 단톡에 고지</li>
+<li>장기밀매 물통 비우기 및 페트병 물받기</li>
+<li>스피커의 케이블정상작동 유무 파악 및 보조배터리 작동유무 파악</li>
+<li>건전지 부족시 사오기</li>
+</ul>
+</div>
+
+<h3>일요일</h3>
+<div class="card">
+<h4>5:30~7:00 미들</h4>
+<ul><li>손님 퇴장 후 10분안에 미들과 인터폰 점검</li></ul>
+<h4>마감: 테마별 장치 점검</h4>
+<ul>
+<li>타워링: 캐비넷 버튼 잘되는지 + 라디오 소리 잘들리는지 + 버튼누르는곳 달랑거리면 나사풀고 다시 조이기</li>
+<li>장기밀매: xray기계 안떨어졌는지, 컵 잘작동하는지, 선빠지지않았는지 확인</li>
+<li>타이타닉: 2층올라가는 이엠락 빠지려고하는지, 선빠지려는지 확인</li>
+<li>신데: 땔감확인</li>
+<li>집착: 두번째방천장 경첩 빠지려는지확인</li>
+</ul>
+</div>
+</section>
+
+<section id="op-weekly">
+<h2><span class="emoji">📅</span> 요일별 업무 요약</h2>
+<div class="card">
+<table>
+<thead><tr><th>요일</th><th>오픈</th><th>5:30~6:00</th><th>마감</th></tr></thead>
+<tbody>
+<tr><td><strong>월</strong></td><td>환기, 알코올닦기</td><td>비품 체크</td><td>청소 (신데, 타타)</td></tr>
+<tr><td><strong>화</strong></td><td>환기, 장치확인</td><td>비품 체크</td><td>청소 (장기, 로비)</td></tr>
+<tr><td><strong>수</strong></td><td>환기, 알코올닦기</td><td>비품 체크</td><td>청소 (카운터)</td></tr>
+<tr><td><strong>목</strong></td><td>환기, 장치확인</td><td>비품 체크</td><td>청소 (타워링, 로비), 잔돈교체</td></tr>
+<tr><td><strong>금</strong></td><td>환기, 알코올닦기</td><td>비품 체크</td><td>비품재고파악, 물통, 스피커, 건전지</td></tr>
+<tr><td><strong>토</strong></td><td>환기, 단톡올리기</td><td>-</td><td>청소</td></tr>
+<tr><td><strong>일</strong></td><td>환기, 알코올닦기</td><td>인터폰점검</td><td>테마별 장치점검</td></tr>
+</tbody>
+</table>
+</div>
+</section>
 
 </div><!-- /main -->
 
