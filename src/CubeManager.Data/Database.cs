@@ -17,6 +17,10 @@ public class Database
 
         Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
         _connectionString = $"Data Source={_dbPath}";
+
+        // Dapper: snake_case → PascalCase 자동 매핑 활성화
+        // hourly_wage → HourlyWage, employee_id → EmployeeId 등
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
     }
 
     public SqliteConnection CreateConnection()
