@@ -496,13 +496,13 @@ public class HandoverTab : UserControl
 
         card.Controls.AddRange([lblStatus, lblDate, lblTitle, lblMeta]);
 
-        void OnClick(object? _, EventArgs _) => _ = SelectCardAsync(handover);
+        void OnClick(object? s, EventArgs e) => _ = SelectCardAsync(handover);
         card.Click += OnClick;
         foreach (Control child in card.Controls)
             child.Click += OnClick;
 
-        void OnEnter(object? _, EventArgs _) => card.BackColor = ColorPalette.CardHover;
-        void OnLeave(object? _, EventArgs _) => card.BackColor = defaultBg;
+        void OnEnter(object? s, EventArgs e) => card.BackColor = ColorPalette.CardHover;
+        void OnLeave(object? s, EventArgs e) => card.BackColor = defaultBg;
         card.MouseEnter += OnEnter;
         card.MouseLeave += OnLeave;
         foreach (Control child in card.Controls)
