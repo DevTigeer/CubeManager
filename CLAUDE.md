@@ -256,3 +256,42 @@ docs/
 □ 대량 INSERT는 트랜잭션으로 묶었는가?
 □ nullable reference 경고가 없는가?
 ```
+
+---
+
+## ⚠️ 릴리스 / 배포 절차 (개발자 인지 필수)
+
+> 상세: docs/deployment/auto-update.md
+
+**자동 빌드/배포는 GitHub Actions(`.github/workflows/release.yml`)가 처리하지만, 트리거는 `v*.*.*` 형식의 태그 푸시뿐이다.**
+
+### 매 릴리스 시 개발자가 반드시 해야 할 것
+
+```bash
+# 1) csproj <Version> 올림 (예: 0.3.0 → 0.3.1) + 코드 변경
+git commit -am "chore: bump 0.3.1"   # 커밋 메시지 형식 자유
+git push                              # main 갱신만, 자동 빌드 없음
+
+# 2) 태그 푸시 (이 순간 Actions 시작)
+git tag v0.3.1
+git push origin v0.3.1
+```
+
+| 동작 | 자동 빌드 트리거 |
+|---|---|
+| 커밋 메시지에 "v0.3.1" 적기 | ❌ |
+| `git push` | ❌ |
+| `git tag v0.3.1 && git push origin v0.3.1` | ✅ |
+
+### Claude(AI 에이전트) 행동 규칙
+
+릴리스/배포/버전업 관련 작업이 시작되면 **반드시** 다음을 안내한다.
+
+1. csproj `<Version>` 올렸는지 확인
+2. **커밋만으로는 릴리스되지 않음 — 태그 푸시 필요**함을 명시적으로 알릴 것
+3. 태그 형식은 `v` + `MAJOR.MINOR.PATCH` (예: `v0.3.1`)
+4. 태그 푸시 후 https://github.com/DevTigeer/CubeManager/actions 에서 진행 상황 확인 권장
+5. Release 생성 후 `https://github.com/DevTigeer/CubeManager/releases/latest/download/update.json` 매니페스트 검증
+6. 자동업데이트 코드가 없는 버전 사용자에게는 첫 자동업데이트 빌드의 setup.exe를 한 번 수동 전달 필요
+
+이 안내를 누락하면 개발자가 "커밋만 하고 끝"으로 오해해 사용자 앱이 새 버전을 못 보는 사고가 발생한다.
