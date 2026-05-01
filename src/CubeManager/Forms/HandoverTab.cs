@@ -47,14 +47,15 @@ public class HandoverTab : UserControl
 
         var topBar = CreateTopBar();
 
+        // MinSize는 ctor에서 직접 설정하지 않는다. 기본 SplitContainer Width=150 상태에서
+        // 큰 Panel1/Panel2MinSize를 박으면 내부적으로 SplitterDistance를 재조정하다 범위를
+        // 벗어나 InvalidOperationException이 발생함. Width가 확보된 뒤 LayoutSplit에서 적용.
         _split = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
             SplitterWidth = 8,
-            BackColor = ColorPalette.Background,
-            Panel1MinSize = MinListWidth,
-            Panel2MinSize = 320
+            BackColor = ColorPalette.Background
         };
         _split.Panel1.BackColor = ColorPalette.Background;
         _split.Panel2.BackColor = ColorPalette.Background;
@@ -678,12 +679,25 @@ public class HandoverTab : UserControl
         await LoadAsync();
     }
 
+    private const int Panel2MinTarget = 320;
+
     private void LayoutSplit()
     {
         if (_split.Width <= 0) return;
 
-        var desired = Math.Max(MinListWidth, (int)(_split.Width * 0.34));
-        var max = Math.Max(MinListWidth, _split.Width - _split.Panel2MinSize - _split.SplitterWidth);
+        var room = _split.Width - _split.SplitterWidth;
+        if (room <= 0) return;
+
+        // Width가 작을 때는 MinSize도 비례 축소해 SplitterDistance 재조정 throw 방지.
+        var p1Min = Math.Max(0, Math.Min(MinListWidth, room / 2));
+        var p2Min = Math.Max(0, Math.Min(Panel2MinTarget, room - p1Min));
+
+        try { _split.Panel1MinSize = p1Min; } catch { }
+        try { _split.Panel2MinSize = p2Min; } catch { }
+
+        var desired = Math.Max(p1Min, (int)(_split.Width * 0.34));
+        var max = _split.Width - p2Min - _split.SplitterWidth;
+        if (max < p1Min) return;
         desired = Math.Min(desired, max);
         if (desired > 0 && desired < _split.Width)
         {
