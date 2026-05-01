@@ -100,11 +100,17 @@ public class DocumentTab : UserControl
             BackColor = ColorPalette.Border
         };
         // 1:9 비율 (Resize 시에도 유지)
-        split.SplitterDistance = Math.Max(150, (int)(Width * 0.10));
-        split.Resize += (_, _) =>
+        void ApplySplit()
         {
-            try { split.SplitterDistance = Math.Max(150, (int)(split.Width * 0.10)); } catch { }
-        };
+            if (split.Width <= 0) return;
+            var max = split.Width - split.Panel2MinSize - split.SplitterWidth;
+            if (max < split.Panel1MinSize) return;
+            var desired = Math.Max(150, (int)(split.Width * 0.10));
+            desired = Math.Min(Math.Max(desired, split.Panel1MinSize), max);
+            try { split.SplitterDistance = desired; } catch { }
+        }
+        split.HandleCreated += (_, _) => ApplySplit();
+        split.Resize += (_, _) => ApplySplit();
         split.Panel1.BackColor = ColorPalette.Surface;
         split.Panel1.Padding = new Padding(8, 8, 4, 8);  // 좌측 여백 확보
         split.Panel2.BackColor = ColorPalette.Card;

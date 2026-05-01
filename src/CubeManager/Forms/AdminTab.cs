@@ -307,8 +307,11 @@ public class AdminTab : UserControl
         // 5:5 비율
         bottomSplit.SizeChanged += (_, _) =>
         {
-            if (bottomSplit.Width > 0)
-                bottomSplit.SplitterDistance = bottomSplit.Width / 2;
+            if (bottomSplit.Width <= 0) return;
+            var max = bottomSplit.Width - bottomSplit.Panel2MinSize - bottomSplit.SplitterWidth;
+            if (max < bottomSplit.Panel1MinSize) return;
+            var desired = Math.Min(Math.Max(bottomSplit.Width / 2, bottomSplit.Panel1MinSize), max);
+            try { bottomSplit.SplitterDistance = desired; } catch { }
         };
         bottomSplit.Panel1.BackColor = ColorPalette.Surface;
         bottomSplit.Panel2.BackColor = ColorPalette.Surface;
