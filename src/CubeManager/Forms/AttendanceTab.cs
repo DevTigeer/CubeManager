@@ -30,22 +30,22 @@ public class AttendanceTab : UserControl
         var topPanel = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 210,
-            Padding = new Padding(0, 4, 0, 12)
+            Height = 172,
+            Padding = new Padding(0, 4, 0, 8)
         };
 
         // 중앙 정렬을 위한 내부 패널
         var centerPanel = new Panel
         {
-            Size = new Size(390, 184),
+            Size = new Size(390, 156),
             Anchor = AnchorStyles.Top
         };
 
         // 현재 시각 (대형, 중앙)
         _lblClock = new Label
         {
-            Location = new Point(0, 0), Size = new Size(390, 58),
-            Font = new Font("Segoe UI", 28f, FontStyle.Bold),
+            Location = new Point(0, 0), Size = new Size(390, 46),
+            Font = new Font("Segoe UI", 22f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
             TextAlign = ContentAlignment.MiddleCenter,
             Text = DateTime.Now.ToString("HH:mm:ss")
@@ -54,7 +54,7 @@ public class AttendanceTab : UserControl
         // 날짜
         var lblDate = new Label
         {
-            Location = new Point(0, 60), Size = new Size(390, 24),
+            Location = new Point(0, 48), Size = new Size(390, 22),
             Font = DesignTokens.FontBody,
             ForeColor = ColorPalette.TextSecondary,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -64,7 +64,7 @@ public class AttendanceTab : UserControl
         // 직원 선택
         _cmbEmployee = new ComboBox
         {
-            Location = new Point(50, 94), Size = new Size(290, 30),
+            Location = new Point(50, 76), Size = new Size(290, 30),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = DesignTokens.FontBody,
             DisplayMember = "Name"
@@ -72,14 +72,14 @@ public class AttendanceTab : UserControl
 
         // 출근/퇴근 버튼
         _btnClockIn = ButtonFactory.CreatePrimary("출  근", 160);
-        _btnClockIn.Location = new Point(25, 136);
-        _btnClockIn.Size = new Size(160, 42);
+        _btnClockIn.Location = new Point(25, 114);
+        _btnClockIn.Size = new Size(160, 40);
         _btnClockIn.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockIn.Click += BtnClockIn_Click;
 
         _btnClockOut = ButtonFactory.CreateDanger("퇴  근", 160);
-        _btnClockOut.Location = new Point(205, 136);
-        _btnClockOut.Size = new Size(160, 42);
+        _btnClockOut.Location = new Point(205, 114);
+        _btnClockOut.Size = new Size(160, 40);
         _btnClockOut.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockOut.Click += BtnClockOut_Click;
 
@@ -103,14 +103,14 @@ public class AttendanceTab : UserControl
         // ─── 구분선 ───
         var divider = new Panel
         {
-            Dock = DockStyle.Top, Height = 10,
+            Dock = DockStyle.Top, Height = 6,
             BackColor = ColorPalette.Surface,
-            Padding = new Padding(0, 4, 0, 5)
+            Padding = new Padding(0, 2, 0, 3)
         };
         divider.Paint += (_, e) =>
         {
             using var pen = new Pen(ColorPalette.Border);
-            e.Graphics.DrawLine(pen, 0, 4, divider.Width, 4);
+            e.Graphics.DrawLine(pen, 0, 3, divider.Width, 3);
         };
 
         // ─── 표 헤더 ───
@@ -119,8 +119,8 @@ public class AttendanceTab : UserControl
             Text = "오늘 근무 현황",
             Font = DesignTokens.FontSectionTitle,
             ForeColor = ColorPalette.TextSecondary,
-            Dock = DockStyle.Top, Height = 40,
-            Padding = new Padding(0, 12, 0, 6)
+            Dock = DockStyle.Top, Height = 28,
+            Padding = new Padding(0, 6, 0, 4)
         };
 
         // ─── 표 (Fill로 나머지 공간 전부 사용) ───
