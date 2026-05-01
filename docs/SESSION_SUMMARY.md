@@ -159,7 +159,7 @@ UI → Core ← Data
 |------|-----|------|
 | 성인 요금표 | 2인=36,000~7인=91,000 | CustomerCalcDialog.cs |
 | 아동 요금 | 카드 11,000 / 현금 10,000 | CustomerCalcDialog.cs |
-| 할인 정책 | 계좌 1,000 / 군인 2,000 / 생일 2,000 / 재방문 1,000 | CustomerCalcDialog.cs |
+| 할인 정책 | 계좌 1,000 / 군인 2,000 / 생일 2,000 / 재방문 1,000 / 리뷰 1,000 | CustomerCalcDialog.cs |
 | 지점명 | 인천구월점 | HeaderPanel.cs |
 | 이용권 시작번호 | A2000 | FreePassRepository.cs |
 

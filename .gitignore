@@ -28,6 +28,7 @@ Thumbs.db
 
 # 빌드 산출물
 publish/
+dist/
 packages/
 
 # 사용자 설정
@@ -43,3 +44,4 @@ logs/
 # Claude (plans는 로컬 전용, skills는 공유)
 .claude/*
 !.claude/skills/
+.omx/

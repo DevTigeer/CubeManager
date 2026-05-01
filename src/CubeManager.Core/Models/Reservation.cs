@@ -3,6 +3,7 @@ namespace CubeManager.Core.Models;
 public class Reservation
 {
     public int Id { get; set; }
+    public string? WebReservationId { get; set; }
     public string ReservationDate { get; set; } = string.Empty;
     public string? TimeSlot { get; set; }
     public string? ThemeName { get; set; }
@@ -10,6 +11,7 @@ public class Reservation
     public string? CustomerPhone { get; set; }
     public int Headcount { get; set; }
     public string Status { get; set; } = "confirmed";
+    public string? Note { get; set; }
     public string? RawHtml { get; set; }
     public DateTime? SyncedAt { get; set; }
 }

@@ -121,6 +121,7 @@ static class Program
         services.AddSingleton<IThemeExportService, ThemeExportService>();
         services.AddSingleton<IHolidayService, HolidayService>();
         services.AddSingleton<IAlertService, AlertService>();
+        services.AddSingleton<IUpdateCheckService, UpdateCheckService>();
     }
 
     private static void EnsureAdminPassword()

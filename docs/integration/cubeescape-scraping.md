@@ -134,10 +134,10 @@ GET http://www.cubeescape.co.kr/adm/room_list.php?sfl=r_date&stx={YY-MM-DD}
 |-------------|--------|---------------------|
 | (체크박스) | 0 | 무시 |
 | 지점명 | 1 | (참조용, 현재 단일 지점) |
-| 예약번호 | 2 | (향후 확장용) |
+| 예약번호 | 2 | `WebReservationId` |
 | 예약일 | 3 | `ReservationDate` |
 | 시간 | 4 | `TimeSlot` |
-| 선택테마 | 5 | `RoomName` |
+| 선택테마 | 5 | `ThemeName` |
 | 인원 | 6 | `Headcount` |
 | 예약자 | 7 | `CustomerName` |
 | 연락처 | 8 | `CustomerPhone` |
@@ -158,10 +158,24 @@ int ColIndex(string keyword) =>
 
 var idxTime  = ColIndex("시간");
 var idxTheme = ColIndex("테마");
+var idxReservationNo = ColIndex("예약번호");
 var idxCount = ColIndex("인원");
 var idxName  = ColIndex("예약자");
 var idxPhone = ColIndex("연락처");
 ```
+
+### 3.6 동기화 식별자
+
+예약 동기화의 1차 기준은 웹 예약번호(`web_reservation_id`)다.
+
+```
+1. 예약번호 컬럼 값을 숫자만 남겨 web_reservation_id로 저장
+2. 예약번호 컬럼이 비어 있으면 체크박스 영역의 hidden r_num 값을 fallback으로 사용
+3. DB Upsert는 web_reservation_id를 우선 사용
+4. 과거 데이터 또는 예약번호가 없는 행은 예약일+시간+테마+예약자 기준으로 fallback 매칭
+```
+
+이 방식은 웹에서 시간, 테마, 예약자명, 연락처가 수정되어도 같은 예약으로 인식하기 위한 것이다.
 
 ---
 

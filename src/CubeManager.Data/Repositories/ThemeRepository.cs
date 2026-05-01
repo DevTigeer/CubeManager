@@ -15,7 +15,7 @@ public class ThemeRepository : IThemeRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.QueryAsync<Theme>(
-            "SELECT id, theme_name, description, sort_order, is_active, created_at, updated_at " +
+            "SELECT id, theme_key, theme_name, description, bg_color, accent_color, icon, code_prefix, sort_order, is_active, created_at, updated_at " +
             "FROM themes ORDER BY sort_order, theme_name");
     }
 
@@ -23,7 +23,7 @@ public class ThemeRepository : IThemeRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.QuerySingleOrDefaultAsync<Theme>(
-            "SELECT id, theme_name, description, sort_order, is_active, created_at, updated_at " +
+            "SELECT id, theme_key, theme_name, description, bg_color, accent_color, icon, code_prefix, sort_order, is_active, created_at, updated_at " +
             "FROM themes WHERE id = @id", new { id });
     }
 
@@ -31,15 +31,17 @@ public class ThemeRepository : IThemeRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO themes (theme_name, description, sort_order) " +
-            "VALUES (@ThemeName, @Description, @SortOrder); SELECT last_insert_rowid()", theme);
+            "INSERT INTO themes (theme_key, theme_name, description, bg_color, accent_color, icon, code_prefix, sort_order) " +
+            "VALUES (@ThemeKey, @ThemeName, @Description, @BgColor, @AccentColor, @Icon, @CodePrefix, @SortOrder); " +
+            "SELECT last_insert_rowid()", theme);
     }
 
     public async Task<bool> UpdateThemeAsync(Theme theme)
     {
         using var conn = _db.CreateConnection();
         return await conn.ExecuteAsync(
-            "UPDATE themes SET theme_name = @ThemeName, description = @Description, " +
+            "UPDATE themes SET theme_key = @ThemeKey, theme_name = @ThemeName, description = @Description, " +
+            "bg_color = @BgColor, accent_color = @AccentColor, icon = @Icon, code_prefix = @CodePrefix, " +
             "sort_order = @SortOrder, is_active = @IsActive, " +
             "updated_at = datetime('now','localtime') WHERE id = @Id", theme) > 0;
     }

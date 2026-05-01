@@ -32,14 +32,14 @@ internal class HintEditDialog : Form
         var y = 15;
         AddField("힌트코드:", _numCode = new NumericUpDown
         {
-            Minimum = 1000, Maximum = 9999,
-            Value = existing?.HintCode ?? Random.Shared.Next(1000, 10000),
+            Minimum = 1, Maximum = 9999,
+            Value = existing?.HintCode ?? Random.Shared.Next(1, 10000),
             Size = new Size(120, 25)
         }, ref y);
 
-        AddField("문제:", _txtQuestion = new TextBox { Size = new Size(320, 25) }, ref y);
-        AddField("힌트 1:", _txtHint1 = new TextBox { Size = new Size(320, 25) }, ref y);
-        AddField("힌트 2:", _txtHint2 = new TextBox { Size = new Size(320, 25) }, ref y);
+        AddField("단서:", _txtQuestion = new TextBox { Size = new Size(320, 25) }, ref y);
+        AddField("풀이:", _txtHint1 = new TextBox { Size = new Size(320, 25) }, ref y);
+        AddField("추가:", _txtHint2 = new TextBox { Size = new Size(320, 25) }, ref y);
         AddField("정답:", _txtAnswer = new TextBox { Size = new Size(320, 25) }, ref y);
 
         y += 10;
@@ -50,13 +50,13 @@ internal class HintEditDialog : Form
         {
             if (string.IsNullOrWhiteSpace(_txtQuestion.Text))
             {
-                MessageBox.Show("문제를 입력하세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("단서를 입력하세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtQuestion.Focus();
                 return;
             }
             if (string.IsNullOrWhiteSpace(_txtHint1.Text))
             {
-                MessageBox.Show("힌트 1을 입력하세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("풀이를 입력하세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtHint1.Focus();
                 return;
             }

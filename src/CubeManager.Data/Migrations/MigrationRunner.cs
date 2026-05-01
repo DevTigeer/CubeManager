@@ -31,7 +31,11 @@ public class MigrationRunner
             new V016_OperationChecklist(),
             new V017_ChecklistDayMapping(),
             new V018_FridayCloseChecklist(),
-            new V019_SundayChecklist()
+            new V019_SundayChecklist(),
+            new V020_UpdateSettings(),
+            new V021_ReservationNote(),
+            new V022_WebReservationId(),
+            new V023_ThemeJsonTemplateMetadata()
         ];
     }
 

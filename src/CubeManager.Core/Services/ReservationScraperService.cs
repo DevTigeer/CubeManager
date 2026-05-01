@@ -198,15 +198,18 @@ public class ReservationScraperService : IReservationScraperService
             .Select((h, i) => (text: h.TextContent.Trim(), index: i))
             .ToList();
 
-        int ColIndex(string keyword) =>
-            headers.FirstOrDefault(h => h.text.Contains(keyword)).index;
+        int ColIndex(string keyword)
+        {
+            var header = headers.FirstOrDefault(h => h.text.Contains(keyword));
+            return string.IsNullOrWhiteSpace(header.text) ? -1 : header.index;
+        }
 
         var idxTime = ColIndex("시간");
         var idxTheme = ColIndex("테마");
         var idxCount = ColIndex("인원");
         var idxName = ColIndex("예약자");
         var idxPhone = ColIndex("연락처");
-        var idxBranch = ColIndex("지점");
+        var idxReservationNo = ColIndex("예약번호");
 
         var rows = table.QuerySelectorAll("tbody tr");
 
@@ -220,7 +223,9 @@ public class ReservationScraperService : IReservationScraperService
             var countText = SafeCell(cells, idxCount);
             var nameText = SafeCell(cells, idxName);
             var phoneText = SafeCell(cells, idxPhone);
-            var branchText = SafeCell(cells, idxBranch);
+            var reservationNo = NormalizeReservationId(SafeCell(cells, idxReservationNo));
+            if (string.IsNullOrWhiteSpace(reservationNo))
+                reservationNo = NormalizeReservationId(row.QuerySelector("input[name='r_num']")?.GetAttribute("value") ?? "");
 
             // 인원 파싱: "2 명" → 2
             var countMatch = Regex.Match(countText, @"(\d+)");
@@ -231,6 +236,7 @@ public class ReservationScraperService : IReservationScraperService
 
             reservations.Add(new Reservation
             {
+                WebReservationId = reservationNo,
                 ReservationDate = date.ToString("yyyy-MM-dd"),
                 TimeSlot = timeText,
                 ThemeName = themeText,
@@ -238,16 +244,21 @@ public class ReservationScraperService : IReservationScraperService
                 Headcount = headcount,
                 CustomerPhone = phoneMatch.Success ? phoneMatch.Groups[1].Value : null,
                 Status = "confirmed",
+                RawHtml = row.OuterHtml,
                 SyncedAt = DateTime.Now
             });
         }
 
-        Log.Information("예약 파싱 완료: {Count}건 ({Branch})",
-            reservations.Count,
-            reservations.FirstOrDefault()?.ThemeName ?? "N/A");
+        Log.Information("예약 파싱 완료: {Count}건", reservations.Count);
         return reservations;
     }
 
     private static string SafeCell(List<AngleSharp.Dom.IElement> cells, int index) =>
         index >= 0 && index < cells.Count ? cells[index].TextContent.Trim() : "";
+
+    private static string? NormalizeReservationId(string value)
+    {
+        var normalized = Regex.Replace(value, @"\D", "");
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
 }

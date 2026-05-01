@@ -60,17 +60,19 @@ SQLite 기반 로컬 데이터베이스. 파일명: `cubemanager.db`
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | INTEGER PK | 자동증가 |
+| web_reservation_id | TEXT UNIQUE NULL | 웹 예약번호 |
 | reservation_date | DATE NOT NULL | 예약 날짜 |
 | time_slot | TEXT | 예약 시간대 |
-| room_name | TEXT | 방 이름 |
+| theme_name | TEXT | 테마 이름 |
 | customer_name | TEXT | 예약자 이름 |
 | customer_phone | TEXT | 예약자 연락처 |
 | headcount | INTEGER | 인원수 |
-| status | TEXT | 'confirmed' / 'cancelled' / 'completed' |
+| status | TEXT | 'confirmed' / 'removed' / 'noshow' / 'walkin' |
+| note | TEXT | 비고 |
 | raw_html | TEXT | 원본 HTML (디버깅용) |
 | synced_at | DATETIME | 마지막 동기화 시각 |
 
-**인덱스**: `(reservation_date, time_slot, room_name)` UNIQUE
+**인덱스**: `web_reservation_id` UNIQUE, `(reservation_date, time_slot, theme_name, customer_name)` UNIQUE
 
 ---
 
@@ -219,6 +221,44 @@ SQLite 기반 로컬 데이터베이스. 파일명: `cubemanager.db`
 - `taxi_allowance`: 택시비 기본금액 (10000)
 - `taxi_cutoff_time`: 택시비 기준 시간 (23:30)
 - `holiday_bonus_per_hour`: 공휴일 추가수당 (3000)
+
+---
+
+## 14. themes (테마)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | INTEGER PK | 자동증가 |
+| theme_key | TEXT UNIQUE NULL | JSON 템플릿 키 |
+| theme_name | TEXT NOT NULL | 테마 이름 |
+| description | TEXT | 설명 |
+| bg_color | TEXT | JSON `bg` 배경색 |
+| accent_color | TEXT | JSON `accent` 강조색 |
+| icon | TEXT | JSON `icon` |
+| code_prefix | TEXT | 힌트 코드 접두사 |
+| sort_order | INTEGER DEFAULT 0 | 표시 순서 |
+| is_active | BOOLEAN DEFAULT 1 | 활성 상태 |
+| created_at | DATETIME | 생성일 |
+| updated_at | DATETIME | 수정일 |
+
+---
+
+## 15. theme_hints (테마 힌트)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | INTEGER PK | 자동증가 |
+| theme_id | INTEGER FK | themes.id |
+| hint_code | INTEGER NOT NULL | 접두사를 제외한 1~9999 힌트 번호 |
+| question | TEXT NOT NULL | JSON `idea` |
+| hint1 | TEXT NOT NULL | JSON `solution` |
+| hint2 | TEXT | 추가 힌트 |
+| answer | TEXT NOT NULL | JSON `answer` |
+| sort_order | INTEGER DEFAULT 0 | 표시 순서 |
+| created_at | DATETIME | 생성일 |
+| updated_at | DATETIME | 수정일 |
+
+**인덱스**: `(theme_id, hint_code)` UNIQUE, `theme_key` UNIQUE(값이 있는 경우)
 
 ---
 

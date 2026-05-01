@@ -4,8 +4,13 @@ namespace CubeManager.Core.Models;
 public class Theme
 {
     public int Id { get; set; }
+    public string? ThemeKey { get; set; }
     public string ThemeName { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? BgColor { get; set; }
+    public string? AccentColor { get; set; }
+    public string? Icon { get; set; }
+    public string? CodePrefix { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }

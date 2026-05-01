@@ -29,7 +29,7 @@ public class MainForm : Form
     public MainForm(IServiceProvider serviceProvider)
     {
         _sp = serviceProvider;
-        Text = "CubeManager v0.2.0";
+        Text = $"CubeManager v{AppVersionHelper.CurrentVersion}";
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
@@ -102,6 +102,8 @@ public class MainForm : Form
 
         // 첫 번째 탭 로드
         LoadTab(0);
+
+        Shown += async (_, _) => await CheckForUpdatesOnStartupAsync();
     }
 
     private DateTime _lastBackupDate = DateTime.MinValue;
@@ -271,7 +273,8 @@ public class MainForm : Form
                 _sp.GetRequiredService<IThemeExportService>()),
         9 => new SettingsTab(
                 _sp.GetRequiredService<IReservationScraperService>(),
-                _sp.GetRequiredService<IConfigRepository>()),
+                _sp.GetRequiredService<IConfigRepository>(),
+                _sp.GetRequiredService<IUpdateCheckService>()),
         10 => new AdminTab(
                 _sp.GetRequiredService<IConfigRepository>(),
                 _sp.GetRequiredService<ISalesService>(),
@@ -301,5 +304,23 @@ public class MainForm : Form
 
         Log.Information("앱 종료");
         base.OnFormClosing(e);
+    }
+
+    private async Task CheckForUpdatesOnStartupAsync()
+    {
+        try
+        {
+            var configRepo = _sp.GetRequiredService<IConfigRepository>();
+            var enabled = await configRepo.GetIntAsync("update_check_enabled", 1);
+            if (enabled != 1)
+                return;
+
+            var updateService = _sp.GetRequiredService<IUpdateCheckService>();
+            await UpdateCoordinator.CheckAndPromptAsync(this, updateService, showUpToDateToast: false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "시작 시 업데이트 확인 실패");
+        }
     }
 }

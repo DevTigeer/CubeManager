@@ -16,8 +16,8 @@ public class SideNavPanel : Panel
     private int _hoverIndex = -1;
 
     private const int NavWidth = 200;
-    private const int ItemHeight = 48;
-    private const int LogoHeight = 56;
+    private const int ItemHeight = 44;
+    private const int LogoHeight = 52;
     private const int IconAreaWidth = 48;
     private const int PillMarginX = 6;    // Pill 좌우 여백
     private const int PillRadius = 6;     // Pill 모서리 반지름
@@ -116,17 +116,17 @@ public class SideNavPanel : Panel
     private void DrawLogo(Graphics g)
     {
         // 로고 아이콘 (블랙 원형 배경 + 흰 텍스트)
-        var iconBg = new Rectangle(12, 12, 32, 32);
+        var iconBg = new Rectangle(12, 10, 32, 32);
         using var iconBgBrush = new SolidBrush(ColorPalette.Text);
         g.FillEllipse(iconBgBrush, iconBg);
         using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
         using var whiteBrush = new SolidBrush(ColorPalette.Surface);
-        g.DrawString("C", iconFont, whiteBrush, 20, 17);
+        g.DrawString("C", iconFont, whiteBrush, 20, 15);
 
         // 로고 텍스트 (무채색)
         using var logoBrush = new SolidBrush(ColorPalette.Text);
         using var logoFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        g.DrawString("CubeManager", logoFont, logoBrush, 48, 18);
+        g.DrawString("CubeManager", logoFont, logoBrush, 48, 16);
 
         // 하단 구분선
         using var divPen = new Pen(ColorPalette.Divider, 1);
@@ -179,7 +179,7 @@ public class SideNavPanel : Panel
             : new Font("Segoe UI Emoji", 14f);
         using var iconBrush = new SolidBrush(iconColor);
         var iconX = (IconAreaWidth - 24) / 2f;
-        g.DrawString(icons[index], iconFont, iconBrush, iconX, y + 12);
+        g.DrawString(icons[index], iconFont, iconBrush, iconX, y + 10);
 
         // 텍스트 (항상 표시)
         var textColor = isSelected ? ColorPalette.NavActive :
@@ -187,7 +187,7 @@ public class SideNavPanel : Panel
                         ColorPalette.TextSecondary;
         using var textFont = isSelected ? DesignTokens.FontTabMenu : DesignTokens.FontBody;
         using var textBrush = new SolidBrush(textColor);
-        g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 14);
+        g.DrawString(Labels[index], textFont, textBrush, IconAreaWidth + 4, y + 12);
     }
 
     /// <summary>Segoe MDL2 Assets 폰트 사용 가능 여부 확인</summary>

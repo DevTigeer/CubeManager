@@ -11,11 +11,17 @@ public class SettingsTab : UserControl
 {
     private readonly IReservationScraperService _scraperService;
     private readonly IConfigRepository _configRepo;
+    private readonly IUpdateCheckService _updateService;
+    private bool _isLoadingUpdateSettings;
 
-    public SettingsTab(IReservationScraperService scraperService, IConfigRepository configRepo)
+    public SettingsTab(
+        IReservationScraperService scraperService,
+        IConfigRepository configRepo,
+        IUpdateCheckService updateService)
     {
         _scraperService = scraperService;
         _configRepo = configRepo;
+        _updateService = updateService;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
@@ -30,11 +36,19 @@ public class SettingsTab : UserControl
             Height = 40
         };
 
+        var content = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = ColorPalette.Surface
+        };
+
         // === 웹 연동 설정 패널 ===
         var webPanel = new GroupBox
         {
             Text = "웹 연동 설정 (cubeescape.co.kr)",
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            Height = 145,
             Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
             Padding = new Padding(10)
         };
@@ -72,10 +86,75 @@ public class SettingsTab : UserControl
 
         webPanel.Controls.AddRange([lblUrl, txtUrl, lblId, txtId, lblPw, txtPw, btnTest, btnSaveWeb]);
 
-        Controls.Add(webPanel);
+        // === 업데이트 설정 패널 ===
+        var updatePanel = new GroupBox
+        {
+            Text = "프로그램 업데이트",
+            Dock = DockStyle.Top,
+            Height = 138,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10)
+        };
+
+        var lblVersion = new Label
+        {
+            Text = $"현재 버전: {AppVersionHelper.CurrentVersion}",
+            Location = new Point(15, 30),
+            Size = new Size(220, 24),
+            Font = new Font("맑은 고딕", 10f, FontStyle.Regular),
+            ForeColor = ColorPalette.Text
+        };
+
+        var chkAutoUpdate = new CheckBox
+        {
+            Text = "시작 시 업데이트 확인",
+            Location = new Point(15, 62),
+            Size = new Size(220, 24),
+            Font = new Font("맑은 고딕", 10f, FontStyle.Regular),
+            ForeColor = ColorPalette.Text,
+            Checked = true
+        };
+
+        var lblLastCheck = new Label
+        {
+            Text = "마지막 확인: -",
+            Location = new Point(15, 94),
+            Size = new Size(280, 24),
+            Font = new Font("맑은 고딕", 9.5f, FontStyle.Regular),
+            ForeColor = ColorPalette.TextSecondary
+        };
+
+        var btnCheckUpdate = ButtonFactory.CreateSecondary("업데이트 확인", 120);
+        btnCheckUpdate.Location = new Point(300, 28);
+        btnCheckUpdate.Height = 30;
+        btnCheckUpdate.Click += async (_, _) =>
+        {
+            await ButtonFactory.RunWithLoadingAsync(btnCheckUpdate, "확인 중...", async () =>
+            {
+                await UpdateCoordinator.CheckAndPromptAsync(this, _updateService, showUpToDateToast: true);
+                await LoadUpdateSettingsAsync(chkAutoUpdate, lblLastCheck);
+            });
+        };
+
+        chkAutoUpdate.CheckedChanged += async (_, _) =>
+        {
+            if (_isLoadingUpdateSettings)
+                return;
+
+            await _configRepo.SetAsync("update_check_enabled", chkAutoUpdate.Checked ? "1" : "0");
+            ToastNotification.Show("업데이트 설정이 저장되었습니다.", ToastType.Success);
+        };
+
+        updatePanel.Controls.AddRange([lblVersion, chkAutoUpdate, lblLastCheck, btnCheckUpdate]);
+
+        content.Controls.Add(updatePanel);
+        content.Controls.Add(webPanel);
+
+        Controls.Add(content);
         Controls.Add(header);
 
         _ = LoadWebSettingsAsync(txtUrl, txtId);
+        _ = LoadUpdateSettingsAsync(chkAutoUpdate, lblLastCheck);
     }
 
     private async Task LoadWebSettingsAsync(TextBox txtUrl, TextBox txtId)
@@ -85,6 +164,20 @@ public class SettingsTab : UserControl
         txtUrl.Text = url ?? "http://www.cubeescape.co.kr";
         txtId.Text = string.IsNullOrEmpty(encId) ? "" : CredentialHelper.Decrypt(encId);
         // PW는 표시하지 않음 (보안)
+    }
+
+    private async Task LoadUpdateSettingsAsync(CheckBox chkAutoUpdate, Label lblLastCheck)
+    {
+        var enabled = await _configRepo.GetIntAsync("update_check_enabled", 1);
+        var lastCheck = await _configRepo.GetAsync("update_last_check_at");
+
+        _isLoadingUpdateSettings = true;
+        chkAutoUpdate.Checked = enabled == 1;
+        _isLoadingUpdateSettings = false;
+
+        lblLastCheck.Text = string.IsNullOrWhiteSpace(lastCheck)
+            ? "마지막 확인: -"
+            : $"마지막 확인: {lastCheck}";
     }
 }
 

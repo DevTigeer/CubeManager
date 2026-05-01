@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v prefix, for example 0.2.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          }
+          "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Restore
+        run: dotnet restore src/CubeManager.sln
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish src/CubeManager/CubeManager.csproj `
+            -c Release `
+            -r win-x64 `
+            --no-self-contained `
+            -p:Version=${{ steps.version.outputs.value }} `
+            -p:AssemblyVersion=${{ steps.version.outputs.value }}.0 `
+            -p:FileVersion=${{ steps.version.outputs.value }}.0 `
+            -o publish
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          iscc installer/CubeManager.iss `
+            /DAppVersion=${{ steps.version.outputs.value }} `
+            /DSourceDir="$pwd\publish"
+
+      - name: Create update manifest
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.value }}"
+          $setup = "dist\CubeManagerSetup-$version.exe"
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          $repo = "${{ github.repository }}"
+          $tag = "v$version"
+          $downloadUrl = "https://github.com/$repo/releases/download/$tag/CubeManagerSetup-$version.exe"
+          $manifest = [ordered]@{
+            version = $version
+            releasedAt = (Get-Date).ToUniversalTime().ToString("o")
+            mandatory = $false
+            downloadUrl = $downloadUrl
+            sha256 = $hash
+            notes = "CubeManager $version"
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path dist\update.json -Encoding UTF8
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: CubeManager v${{ steps.version.outputs.value }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/CubeManagerSetup-${{ steps.version.outputs.value }}.exe
+            dist/update.json

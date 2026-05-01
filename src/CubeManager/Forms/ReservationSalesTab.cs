@@ -48,7 +48,7 @@ public class ReservationSalesTab : UserControl
         // ========== 1. 상단 툴바 ==========
         var topPanel = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 45,
+            Dock = DockStyle.Top, Height = 52,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
@@ -192,7 +192,7 @@ public class ReservationSalesTab : UserControl
             new DataGridViewTextBoxColumn { Name = "TransferAmt", HeaderText = "계좌금액", FillWeight = 13,
                 DefaultCellStyle = GridTheme.AmountStyle },
             new DataGridViewTextBoxColumn { Name = "Note", HeaderText = "비고", FillWeight = 12 },
-            new DataGridViewCheckBoxColumn { Name = "Verified", HeaderText = "정산", FillWeight = 5,
+            new DataGridViewCheckBoxColumn { Name = "Verified", HeaderText = "정산체크", FillWeight = 8,
                 FalseValue = false, TrueValue = true }
         );
         _gridMain.CellEndEdit += GridMain_CellEndEdit;
@@ -201,7 +201,7 @@ public class ReservationSalesTab : UserControl
         // ========== 3. 하단 패널 (지출 + 통계 + 결제 요약) ==========
         var bottomPanel = new Panel
         {
-            Dock = DockStyle.Bottom, Height = 210,
+            Dock = DockStyle.Bottom, Height = 235,
             BackColor = ColorPalette.Background,
             Padding = new Padding(0)
         };
@@ -215,9 +215,10 @@ public class ReservationSalesTab : UserControl
 
         var lblExpenseHeader = new Label
         {
-            Text = "지출 내역", Dock = DockStyle.Top, Height = 25,
+            Text = "지출 내역", Dock = DockStyle.Top, Height = 30,
             Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary
+            ForeColor = ColorPalette.TextSecondary,
+            Padding = new Padding(0, 2, 0, 4)
         };
 
         _gridExpense = new DataGridView { Dock = DockStyle.Fill };
@@ -248,7 +249,7 @@ public class ReservationSalesTab : UserControl
         var statsPanel = new Panel
         {
             Dock = DockStyle.Left, Width = 1, // Resize에서 설정
-            Padding = new Padding(15, 10, 15, 10),
+            Padding = new Padding(18, 12, 18, 12),
             BackColor = ColorPalette.Surface
         };
 
@@ -261,14 +262,15 @@ public class ReservationSalesTab : UserControl
 
         var lblStatsHeader = new Label
         {
-            Text = "오늘의 통계", Dock = DockStyle.Top, Height = 25,
+            Text = "오늘의 통계", Dock = DockStyle.Top, Height = 30,
             Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary
+            ForeColor = ColorPalette.TextSecondary,
+            Padding = new Padding(0, 2, 0, 4)
         };
 
         var statsContent = new Panel { Dock = DockStyle.Fill };
         var ssf = new Font("맑은 고딕", 10.5f);
-        var sy = 4;
+        var sy = 6;
         _lblStatTotal = MakeStatLabel(statsContent, "오늘 예약", ColorPalette.Text, ssf, ref sy);
         _lblStatRemoved = MakeStatLabel(statsContent, "취소", ColorPalette.Danger, ssf, ref sy);
         _lblStatNoshow = MakeStatLabel(statsContent, "노쇼", ColorPalette.AccentOrange.Main, ssf, ref sy);
@@ -288,7 +290,7 @@ public class ReservationSalesTab : UserControl
         var summaryRight = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(15, 10, 15, 10),
+            Padding = new Padding(18, 12, 18, 12),
             BackColor = ColorPalette.Surface
         };
 
@@ -301,15 +303,16 @@ public class ReservationSalesTab : UserControl
 
         var lblSummaryHeader = new Label
         {
-            Text = "결제 요약", Dock = DockStyle.Top, Height = 25,
+            Text = "결제 요약", Dock = DockStyle.Top, Height = 30,
             Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary
+            ForeColor = ColorPalette.TextSecondary,
+            Padding = new Padding(0, 2, 0, 4)
         };
 
         var summaryContent = new Panel { Dock = DockStyle.Fill };
         var sf = new Font("맑은 고딕", 10.5f);
         var bf = new Font("맑은 고딕", 11f, FontStyle.Bold);
-        var ry = 4;
+        var ry = 6;
         _lblSumCard = MakeStatLabel(summaryContent, "카드", ColorPalette.PaymentCard.Item2, sf, ref ry);
         _lblSumCash = MakeStatLabel(summaryContent, "현금", ColorPalette.PaymentCash.Item2, sf, ref ry);
         _lblSumTransfer = MakeStatLabel(summaryContent, "계좌", ColorPalette.PaymentTransfer.Item2, sf, ref ry);
@@ -324,7 +327,9 @@ public class ReservationSalesTab : UserControl
         _lblSumCashBalance = MakeStatLabel(summaryContent, "현금잔액", ColorPalette.Primary, bf, ref ry);
         _lblSumBalanceDetail = new Label
         {
-            Location = new Point(10, ry), Size = new Size(200, 18),
+            Location = new Point(10, ry), Size = new Size(260, 20),
+            Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right,
+            AutoEllipsis = true,
             Font = new Font("맑은 고딕", 8.5f), ForeColor = ColorPalette.TextTertiary
         };
         summaryContent.Controls.Add(_lblSumBalanceDetail);
@@ -408,6 +413,8 @@ public class ReservationSalesTab : UserControl
     // ===== 웹 스크래핑 + DB 저장 + 그리드 갱신 =====
     private async Task FetchWebAndUpdate()
     {
+        await CommitCurrentGridEditAsync();
+
         // 1. 웹에서 스크래핑
         var scraped = (await _scraperService.FetchReservationsAsync(_dtpDate.Value)).ToList();
 
@@ -423,10 +430,12 @@ public class ReservationSalesTab : UserControl
             if (dbRes.Status != "confirmed") continue;
 
             // 웹 조회 결과에 없으면 → 웹에서 삭제된 것
-            var stillExists = scraped.Any(s =>
-                s.TimeSlot == dbRes.TimeSlot &&
-                s.ThemeName == dbRes.ThemeName &&
-                s.CustomerName == dbRes.CustomerName);
+            var stillExists = !string.IsNullOrWhiteSpace(dbRes.WebReservationId)
+                ? scraped.Any(s => s.WebReservationId == dbRes.WebReservationId)
+                : scraped.Any(s =>
+                    s.TimeSlot == dbRes.TimeSlot &&
+                    s.ThemeName == dbRes.ThemeName &&
+                    s.CustomerName == dbRes.CustomerName);
 
             if (!stillExists)
                 await _reservationRepo.UpdateStatusAsync(dbRes.Id, "removed");
@@ -453,18 +462,23 @@ public class ReservationSalesTab : UserControl
         _gridMain.Rows.Clear();
 
         // 항상 시간 오름차순 정렬
-        var sorted = _reservations.OrderBy(r => r.TimeSlot).ToList();
+        var sorted = _reservations
+            .OrderBy(r => r.Status == "removed" ? 1 : 0)
+            .ThenBy(r => r.TimeSlot)
+            .ToList();
 
         foreach (var r in sorted)
         {
             var idx = _gridMain.Rows.Add();
             var row = _gridMain.Rows[idx];
+            row.Tag = r;
             row.Cells["ResId"].Value = r.Id;
             row.Cells["Time"].Value = r.TimeSlot;
             row.Cells["Theme"].Value = r.ThemeName;
             row.Cells["Customer"].Value = r.CustomerName;
             row.Cells["Phone"].Value = r.CustomerPhone ?? "";
             row.Cells["Count"].Value = r.Headcount > 0 ? $"{r.Headcount}명" : "";
+            row.Cells["Note"].Value = r.Note ?? "";
 
             // 상태 표시
             var isRemoved = r.Status == "removed";
@@ -560,6 +574,12 @@ public class ReservationSalesTab : UserControl
     {
         if (e.RowIndex < 0) return;
         var colName = _gridMain.Columns[e.ColumnIndex].Name;
+        if (colName == "Note")
+        {
+            await SaveReservationNoteAsync(e.RowIndex);
+            return;
+        }
+
         if (colName is not ("CardAmt" or "CashAmt" or "TransferAmt")) return;
 
         var row = _gridMain.Rows[e.RowIndex];
@@ -619,6 +639,43 @@ public class ReservationSalesTab : UserControl
         }
     }
 
+    private async Task SaveReservationNoteAsync(int rowIndex)
+    {
+        var row = _gridMain.Rows[rowIndex];
+        var reservation = row.Tag as Reservation;
+        if (reservation == null || reservation.Id <= 0)
+            return;
+
+        var note = row.Cells["Note"].Value?.ToString()?.Trim();
+        if (string.IsNullOrWhiteSpace(note))
+            note = null;
+
+        try
+        {
+            reservation.Note = note;
+            await _reservationRepo.UpdateNoteAsync(reservation.Id, note);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"비고 저장 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    private async Task CommitCurrentGridEditAsync()
+    {
+        if (_gridMain.CurrentCell == null)
+            return;
+
+        var rowIndex = _gridMain.CurrentCell.RowIndex;
+        var colName = _gridMain.Columns[_gridMain.CurrentCell.ColumnIndex].Name;
+
+        if (_gridMain.IsCurrentCellInEditMode)
+            _gridMain.EndEdit();
+
+        if (colName == "Note" && rowIndex >= 0)
+            await SaveReservationNoteAsync(rowIndex);
+    }
+
     // ===== 우클릭: 예약 상태 전환 =====
     private void GridMain_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
     {
@@ -660,9 +717,9 @@ public class ReservationSalesTab : UserControl
 
     private async void SetReservationStatus(int rowIndex, string status)
     {
-        if (rowIndex < 0 || rowIndex >= _reservations.Count) return;
+        if (rowIndex < 0 || rowIndex >= _gridMain.Rows.Count) return;
 
-        var reservation = _reservations[rowIndex];
+        if (_gridMain.Rows[rowIndex].Tag is not Reservation reservation) return;
         reservation.Status = status;
 
         // DB에 상태 저장 (Id가 있으면 DB 레코드)
@@ -675,9 +732,9 @@ public class ReservationSalesTab : UserControl
     // ===== 예약 완전 삭제 (DB에서 제거) =====
     private async void DeleteReservationPermanently(int rowIndex)
     {
-        if (rowIndex < 0 || rowIndex >= _reservations.Count) return;
+        if (rowIndex < 0 || rowIndex >= _gridMain.Rows.Count) return;
 
-        var reservation = _reservations[rowIndex];
+        if (_gridMain.Rows[rowIndex].Tag is not Reservation reservation) return;
         var desc = $"{reservation.TimeSlot} {reservation.ThemeName} {reservation.CustomerName}".Trim();
 
         if (MessageBox.Show($"'{desc}' 예약을 완전히 삭제합니까?\n(표와 DB에서 영구 삭제됩니다)",
@@ -689,7 +746,7 @@ public class ReservationSalesTab : UserControl
             if (reservation.Id > 0)
                 await _reservationRepo.DeleteAsync(reservation.Id);
 
-            _reservations.RemoveAt(rowIndex);
+            _reservations.Remove(reservation);
             PopulateMainGrid();
             await LoadSummaryAsync();
             ToastNotification.Show("예약이 완전 삭제되었습니다.", ToastType.Success);
@@ -714,6 +771,8 @@ public class ReservationSalesTab : UserControl
     // ===== 전체 데이터 로드 =====
     private async Task LoadAllAsync()
     {
+        await CommitCurrentGridEditAsync();
+
         // daily_sales 합계 + cash_balance 재계산 (이전 세션 데이터 정합성 보장)
         await _salesService.RecalculateTotalsAsync(_currentDate);
         await LoadReservationsFromDb();
@@ -982,11 +1041,13 @@ public class ReservationSalesTab : UserControl
     {
         var lbl = new Label
         {
-            Location = new Point(10, y), Size = new Size(220, 20),
+            Location = new Point(10, y), Size = new Size(Math.Max(parent.Width - 20, 260), 23),
+            Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right,
+            AutoEllipsis = true,
             Font = font, ForeColor = color, Text = $"{prefix}      0"
         };
         parent.Controls.Add(lbl);
-        y += 22;
+        y += 24;
         return lbl;
     }
 
@@ -1138,6 +1199,11 @@ internal class WalkinDialog : Form
 /// <summary>지출 추가 다이얼로그</summary>
 internal class SaleItemDialog : Form
 {
+    private static readonly string[] ExpenseQuickItems =
+    [
+        "밥값", "소모품", "시간연장", "택시비", "통장고고싱", "기타"
+    ];
+
     public string ItemDescription => _txtDesc.Text.Trim();
     public int Amount => (int)_numAmount.Value;
     public string PaymentType => _cmbPayment.Text switch
@@ -1152,15 +1218,57 @@ internal class SaleItemDialog : Form
     public SaleItemDialog(string category)
     {
         Text = category == "revenue" ? "매출 추가" : "지출 추가";
-        Size = new Size(360, 220);
+        Size = category == "expense" ? new Size(420, 285) : new Size(360, 220);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false; MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
 
         var y = 15;
+        if (category == "expense")
+        {
+            Controls.Add(new Label
+            {
+                Text = "빠른 항목:",
+                Location = new Point(20, y + 4),
+                Size = new Size(75, 24),
+                ForeColor = ColorPalette.Text
+            });
+
+            var quickPanel = new FlowLayoutPanel
+            {
+                Location = new Point(95, y),
+                Size = new Size(285, 70),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true
+            };
+
+            foreach (var item in ExpenseQuickItems)
+            {
+                var btn = ButtonFactory.CreateSecondary(item, item.Length >= 5 ? 92 : 70);
+                btn.Height = 28;
+                btn.Margin = new Padding(0, 0, 6, 6);
+                btn.Click += (_, _) =>
+                {
+                    _txtDesc.Text = item == "기타" ? "" : item;
+                    _txtDesc.Focus();
+                    _txtDesc.SelectAll();
+                };
+                quickPanel.Controls.Add(btn);
+            }
+
+            Controls.Add(quickPanel);
+            y += 80;
+        }
+
         Controls.Add(new Label { Text = "항목:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
-        _txtDesc = new TextBox { Location = new Point(90, y), Size = new Size(230, 25) };
+        _txtDesc = new TextBox
+        {
+            Location = new Point(90, y),
+            Size = new Size(230, 25),
+            ImeMode = ImeMode.Hangul,
+            PlaceholderText = category == "expense" ? "빠른 항목 선택 또는 직접 입력" : ""
+        };
         Controls.Add(_txtDesc);
 
         y += 38;
@@ -1191,6 +1299,15 @@ internal class SaleItemDialog : Form
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK
         };
         btnOk.FlatAppearance.BorderSize = 0;
+        btnOk.Click += (_, e) =>
+        {
+            if (!string.IsNullOrWhiteSpace(_txtDesc.Text))
+                return;
+
+            DialogResult = DialogResult.None;
+            ToastNotification.Show("항목을 선택하거나 입력하세요.", ToastType.Warning);
+            _txtDesc.Focus();
+        };
         Controls.Add(btnOk);
         Controls.Add(new Button { Text = "취소", Location = new Point(240, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
         AcceptButton = btnOk;

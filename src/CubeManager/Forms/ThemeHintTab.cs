@@ -24,6 +24,9 @@ public class ThemeHintTab : UserControl
     // 우측 힌트 그리드
     private readonly Label _lblSelectedTheme;
     private readonly DataGridView _hintGrid;
+    private readonly TextBox _txtIdeaPreview;
+    private readonly TextBox _txtSolutionPreview;
+    private readonly TextBox _txtAnswerPreview;
 
     public ThemeHintTab(IThemeRepository themeRepo, IThemeExportService exportService)
     {
@@ -54,12 +57,19 @@ public class ThemeHintTab : UserControl
         btnExportTheme.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnExportTheme.Click += BtnExportTheme_Click;
 
-        headerPanel.Controls.AddRange([lblTitle, btnExportAll, btnExportTheme]);
-        headerPanel.Resize += (_, _) =>
+        var btnImportJson = ButtonFactory.CreatePrimary("JSON 불러오기", 120);
+        btnImportJson.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        btnImportJson.Click += BtnImportJson_Click;
+
+        headerPanel.Controls.AddRange([lblTitle, btnExportAll, btnExportTheme, btnImportJson]);
+        void LayoutHeaderButtons()
         {
-            btnExportAll.Location = new Point(headerPanel.Width - btnExportAll.Width - btnExportTheme.Width - 10, 10);
-            btnExportTheme.Location = new Point(headerPanel.Width - btnExportTheme.Width, 10);
-        };
+            btnImportJson.Location = new Point(headerPanel.Width - btnImportJson.Width, 10);
+            btnExportTheme.Location = new Point(btnImportJson.Left - btnExportTheme.Width - 10, 10);
+            btnExportAll.Location = new Point(btnExportTheme.Left - btnExportAll.Width - 10, 10);
+        }
+        headerPanel.Resize += (_, _) => LayoutHeaderButtons();
+        Load += (_, _) => LayoutHeaderButtons();
 
         // === 좌측 테마 패널 (250px) ===
         var leftPanel = new Panel
@@ -101,18 +111,47 @@ public class ThemeHintTab : UserControl
         btnAddHint.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnAddHint.Click += BtnAddHint_Click;
         rightHeader.Controls.AddRange([_lblSelectedTheme, btnAddHint]);
-        rightHeader.Resize += (_, _) =>
+        void LayoutRightHeader()
         {
             btnAddHint.Location = new Point(rightHeader.Width - btnAddHint.Width - 4, 6);
-        };
+        }
+        rightHeader.Resize += (_, _) => LayoutRightHeader();
+        Load += (_, _) => LayoutRightHeader();
 
         _hintGrid = new DataGridView { Dock = DockStyle.Fill };
         GridTheme.ApplyTheme(_hintGrid);
         SetupHintColumns();
         _hintGrid.CellDoubleClick += HintGrid_CellDoubleClick;
         _hintGrid.CellContentClick += HintGrid_CellContentClick;
+        _hintGrid.SelectionChanged += (_, _) => UpdateHintPreview();
+
+        var previewPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 180,
+            ColumnCount = 3,
+            RowCount = 2,
+            Padding = new Padding(0, 8, 0, 0),
+            BackColor = ColorPalette.Background
+        };
+        previewPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        previewPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        previewPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22));
+        previewPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        previewPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        AddPreviewHeader(previewPanel, "단서", 0);
+        AddPreviewHeader(previewPanel, "풀이", 1);
+        AddPreviewHeader(previewPanel, "정답", 2);
+        _txtIdeaPreview = CreatePreviewBox();
+        _txtSolutionPreview = CreatePreviewBox();
+        _txtAnswerPreview = CreatePreviewBox();
+        previewPanel.Controls.Add(_txtIdeaPreview, 0, 1);
+        previewPanel.Controls.Add(_txtSolutionPreview, 1, 1);
+        previewPanel.Controls.Add(_txtAnswerPreview, 2, 1);
 
         rightPanel.Controls.Add(_hintGrid);
+        rightPanel.Controls.Add(previewPanel);
         rightPanel.Controls.Add(rightHeader);
 
         // === 조립 ===
@@ -131,6 +170,18 @@ public class ThemeHintTab : UserControl
         {
             _themes.Clear();
             _themes.AddRange(await _themeRepo.GetAllThemesAsync());
+            if (_themes.Count == 0)
+            {
+                var bundledJson = FindBundledTemplateJson();
+                if (bundledJson != null)
+                {
+                    var result = await _exportService.ImportOriginalJsonAsync(bundledJson);
+                    ToastNotification.Show(
+                        $"기본 테마 JSON 로드: {result.ThemeCount}개 테마, {result.HintCount}개 힌트",
+                        ToastType.Success);
+                    _themes.AddRange(await _themeRepo.GetAllThemesAsync());
+                }
+            }
             RenderThemeList();
 
             // 첫 테마 자동 선택
@@ -182,7 +233,9 @@ public class ThemeHintTab : UserControl
 
         var lblDesc = new Label
         {
-            Text = theme.Description ?? (theme.IsActive ? "활성" : "비활성"),
+            Text = !string.IsNullOrWhiteSpace(theme.CodePrefix)
+                ? $"{theme.CodePrefix} · {(theme.Description ?? (theme.IsActive ? "활성" : "비활성"))}"
+                : theme.Description ?? (theme.IsActive ? "활성" : "비활성"),
             Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
             ForeColor = ColorPalette.TextTertiary,
             Location = new Point(12, 24),
@@ -290,17 +343,17 @@ public class ThemeHintTab : UserControl
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Id", Visible = false });
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            Name = "HintCode", HeaderText = "힌트코드", Width = 90, ReadOnly = true,
+            Name = "HintCode", HeaderText = "코드", Width = 90, ReadOnly = true,
             DefaultCellStyle = GridTheme.CenterStyle
         });
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Question", HeaderText = "문제", FillWeight = 30, ReadOnly = true });
+            { Name = "Question", HeaderText = "단서", FillWeight = 28, ReadOnly = true });
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Hint1", HeaderText = "힌트 1", FillWeight = 25, ReadOnly = true });
+            { Name = "Hint1", HeaderText = "풀이", FillWeight = 36, ReadOnly = true });
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Hint2", HeaderText = "힌트 2", FillWeight = 20, ReadOnly = true });
+            { Name = "Hint2", HeaderText = "추가", FillWeight = 12, ReadOnly = true });
         _hintGrid.Columns.Add(new DataGridViewTextBoxColumn
-            { Name = "Answer", HeaderText = "정답", FillWeight = 25, ReadOnly = true });
+            { Name = "Answer", HeaderText = "정답", FillWeight = 20, ReadOnly = true });
         _hintGrid.Columns.Add(new DataGridViewButtonColumn
         {
             Name = "Delete", HeaderText = "삭제", Width = 60,
@@ -320,13 +373,15 @@ public class ThemeHintTab : UserControl
             {
                 var idx = _hintGrid.Rows.Add();
                 var row = _hintGrid.Rows[idx];
+                row.Tag = h;
                 row.Cells["Id"].Value = h.Id;
-                row.Cells["HintCode"].Value = h.HintCode;
+                row.Cells["HintCode"].Value = FormatHintCode(h);
                 row.Cells["Question"].Value = h.Question;
                 row.Cells["Hint1"].Value = h.Hint1;
                 row.Cells["Hint2"].Value = h.Hint2 ?? "";
                 row.Cells["Answer"].Value = h.Answer;
             }
+            UpdateHintPreview();
         }
         catch (Exception ex)
         {
@@ -352,7 +407,7 @@ public class ThemeHintTab : UserControl
             // 힌트코드 중복 체크
             var code = dlg.HintCode;
             while (await _themeRepo.IsHintCodeExistsAsync(_selectedThemeId, code))
-                code = Random.Shared.Next(1000, 10000);
+                code = Random.Shared.Next(1, 10000);
 
             var hint = new ThemeHint
             {
@@ -419,6 +474,33 @@ public class ThemeHintTab : UserControl
 
     // ==================== JSON Export ====================
 
+    private async void BtnImportJson_Click(object? sender, EventArgs e)
+    {
+        using var ofd = new OpenFileDialog
+        {
+            Filter = "JSON 파일|*.json",
+            FileName = "escape_rooms_full.json",
+            Title = "테마 힌트 JSON 불러오기"
+        };
+
+        var bundledJson = FindBundledTemplateJson();
+        if (bundledJson != null)
+            ofd.InitialDirectory = Path.GetDirectoryName(bundledJson);
+
+        if (ofd.ShowDialog() != DialogResult.OK) return;
+
+        try
+        {
+            var result = await _exportService.ImportOriginalJsonAsync(ofd.FileName);
+            ToastNotification.Show(
+                $"JSON 불러오기 완료: {result.ThemeCount}개 테마, {result.HintCount}개 힌트",
+                ToastType.Success);
+            _selectedThemeId = -1;
+            await LoadThemesAsync();
+        }
+        catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+    }
+
     private async void BtnExportAll_Click(object? sender, EventArgs e)
     {
         using var sfd = new SaveFileDialog
@@ -460,5 +542,58 @@ public class ThemeHintTab : UserControl
             ToastNotification.Show($"'{theme?.ThemeName}' Export 완료.", ToastType.Success);
         }
         catch (Exception ex) { ToastNotification.Show(ex.Message, ToastType.Error); }
+    }
+
+    private static void AddPreviewHeader(TableLayoutPanel panel, string text, int column)
+    {
+        panel.Controls.Add(new Label
+        {
+            Text = text,
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 9.5f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextSecondary,
+            TextAlign = ContentAlignment.MiddleLeft
+        }, column, 0);
+    }
+
+    private static TextBox CreatePreviewBox() => new()
+    {
+        Dock = DockStyle.Fill,
+        Multiline = true,
+        ReadOnly = true,
+        ScrollBars = ScrollBars.Vertical,
+        BackColor = ColorPalette.Card,
+        ForeColor = ColorPalette.Text,
+        BorderStyle = BorderStyle.FixedSingle,
+        Font = new Font("맑은 고딕", 9.5f),
+        Margin = new Padding(0, 0, 8, 0)
+    };
+
+    private void UpdateHintPreview()
+    {
+        var hint = _hintGrid.CurrentRow?.Tag as ThemeHint;
+        _txtIdeaPreview.Text = hint?.Question ?? "";
+        _txtSolutionPreview.Text = hint?.Hint1 ?? "";
+        _txtAnswerPreview.Text = hint?.Answer ?? "";
+    }
+
+    private string FormatHintCode(ThemeHint hint)
+    {
+        var theme = _themes.FirstOrDefault(t => t.Id == hint.ThemeId);
+        var prefix = theme?.CodePrefix;
+        return string.IsNullOrWhiteSpace(prefix) ? hint.HintCode.ToString("D4") : $"{prefix}{hint.HintCode:D4}";
+    }
+
+    private static string? FindBundledTemplateJson()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Data", "escape_rooms_full.json"),
+            Path.Combine(AppContext.BaseDirectory, "data", "escape_rooms_full.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "data", "escape_rooms_full.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Data", "escape_rooms_full.json")
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
     }
 }

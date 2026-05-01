@@ -14,7 +14,7 @@ public class ReservationRepository : IReservationRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.QueryAsync<Reservation>(
-            "SELECT id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, synced_at " +
+            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, raw_html, synced_at " +
             "FROM reservations WHERE reservation_date = @date ORDER BY time_slot",
             new { date });
     }
@@ -23,27 +23,50 @@ public class ReservationRepository : IReservationRepository
     {
         using var conn = _db.CreateConnection();
 
-        // 복합키로 기존 예약 찾기
-        var existing = await conn.QuerySingleOrDefaultAsync<Reservation>(
-            "SELECT id, status FROM reservations " +
+        Reservation? existing = null;
+
+        if (!string.IsNullOrWhiteSpace(r.WebReservationId))
+        {
+            existing = await conn.QuerySingleOrDefaultAsync<Reservation>(
+                "SELECT id, status, note FROM reservations WHERE web_reservation_id = @WebReservationId",
+                r);
+        }
+
+        // 과거 데이터나 웹 예약번호가 없는 행은 기존 복합키로 fallback 매칭한다.
+        existing ??= await conn.QuerySingleOrDefaultAsync<Reservation>(
+            "SELECT id, status, note FROM reservations " +
             "WHERE reservation_date = @ReservationDate AND time_slot = @TimeSlot " +
             "AND theme_name = @ThemeName AND customer_name = @CustomerName",
             r);
 
         if (existing != null)
         {
-            // 기존 예약: 인원/연락처만 업데이트, 상태는 보존 (사용자가 변경한 것 유지)
+            // 기존 예약: 웹 원본값은 최신화, 상태/비고는 보존한다.
             await conn.ExecuteAsync(
-                "UPDATE reservations SET headcount = @Headcount, customer_phone = @CustomerPhone, " +
-                "synced_at = @SyncedAt WHERE id = @Id",
-                new { r.Headcount, r.CustomerPhone, r.SyncedAt, existing.Id });
+                "UPDATE reservations SET web_reservation_id = COALESCE(@WebReservationId, web_reservation_id), " +
+                "reservation_date = @ReservationDate, time_slot = @TimeSlot, theme_name = @ThemeName, " +
+                "customer_name = @CustomerName, customer_phone = @CustomerPhone, headcount = @Headcount, " +
+                "raw_html = @RawHtml, synced_at = @SyncedAt WHERE id = @Id",
+                new
+                {
+                    r.WebReservationId,
+                    r.ReservationDate,
+                    r.TimeSlot,
+                    r.ThemeName,
+                    r.CustomerName,
+                    r.CustomerPhone,
+                    r.Headcount,
+                    r.RawHtml,
+                    r.SyncedAt,
+                    existing.Id
+                });
             return existing.Id;
         }
 
         // 새 예약 삽입
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO reservations (reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, synced_at) " +
-            "VALUES (@ReservationDate, @TimeSlot, @ThemeName, @CustomerName, @CustomerPhone, @Headcount, @Status, @SyncedAt); " +
+            "INSERT INTO reservations (web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, raw_html, synced_at) " +
+            "VALUES (@WebReservationId, @ReservationDate, @TimeSlot, @ThemeName, @CustomerName, @CustomerPhone, @Headcount, @Status, @Note, @RawHtml, @SyncedAt); " +
             "SELECT last_insert_rowid()", r);
     }
 
@@ -55,11 +78,19 @@ public class ReservationRepository : IReservationRepository
             new { id, status });
     }
 
+    public async Task UpdateNoteAsync(int id, string? note)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE reservations SET note = @note WHERE id = @id",
+            new { id, note });
+    }
+
     public async Task<Reservation?> GetByIdAsync(int id)
     {
         using var conn = _db.CreateConnection();
         return await conn.QuerySingleOrDefaultAsync<Reservation>(
-            "SELECT id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, synced_at " +
+            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, raw_html, synced_at " +
             "FROM reservations WHERE id = @id",
             new { id });
     }

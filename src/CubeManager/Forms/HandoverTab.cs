@@ -8,470 +8,664 @@ using CubeManager.Helpers;
 namespace CubeManager.Forms;
 
 /// <summary>
-/// 인수인계 탭 — 2025 리디자인.
-/// 좌: 카드 목록 (날짜, 제목, 다음근무자 체크) | 우: 상세보기 (내용 + 댓글)
+/// 인수인계 탭.
+/// 좌측은 최신 글 목록, 우측은 본문과 댓글을 분리해 작은 창에서도 잘리지 않도록 구성한다.
 /// </summary>
 public class HandoverTab : UserControl
 {
     private readonly IHandoverRepository _repo;
 
-    // 좌측: 카드 목록
-    private readonly Panel _listPanel;
-    private readonly TextBox _txtSearch;
-    private readonly Label _lblPageInfo;
-    private int _page = 1;
-    private const int PageSize = 10;
-
-    // 우측: 상세보기
-    private readonly Panel _detailPanel;
-    private readonly Label _lblDetailTitle;
-    private readonly Label _lblDetailMeta;
-    private readonly CheckBox _chkNextWorker;
-    private readonly Label _lblDetailContent;
-    private readonly Panel _commentListPanel;
-    private readonly Panel _emptyDetail;
+    private SplitContainer _split = null!;
+    private Panel _listPanel = null!;
+    private TextBox _txtSearch = null!;
+    private Label _lblPageInfo = null!;
+    private Panel _detailPanel = null!;
+    private Panel _emptyDetail = null!;
+    private Label _lblDetailTitle = null!;
+    private Label _lblDetailMeta = null!;
+    private CheckBox _chkNextWorker = null!;
+    private TextBox _txtDetailContent = null!;
+    private Panel _commentsShell = null!;
+    private Panel _commentListPanel = null!;
+    private TextBox _txtCommentAuthor = null!;
+    private TextBox _txtCommentContent = null!;
+    private Button _btnAddComment = null!;
 
     private Handover? _selected;
+    private int _page = 1;
+    private bool _isLoadingDetail;
+
+    private const int PageSize = 10;
+    private const int MinListWidth = 280;
 
     public HandoverTab(IHandoverRepository repo)
     {
         _repo = repo;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Background;
-        Padding = new Padding(12);
+        Padding = new Padding(16);
 
-        // ═══ 상단 헤더 ═══
-        var topBar = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top, Height = 50,
-            WrapContents = false,
-            Padding = new Padding(0, 8, 0, 5)
-        };
+        var topBar = CreateTopBar();
 
-        topBar.Controls.Add(new Label
-        {
-            Text = "인수인계", Size = new Size(100, 32),
-            Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
-            ForeColor = ColorPalette.Text,
-            TextAlign = ContentAlignment.MiddleLeft
-        });
-
-        var btnNew = ButtonFactory.CreatePrimary("+ 새 글 작성", 110);
-        btnNew.Margin = new Padding(10, 0, 0, 0);
-        btnNew.Click += BtnNew_Click;
-
-        _txtSearch = new TextBox
-        {
-            PlaceholderText = "🔍 제목/내용 검색...",
-            Size = new Size(200, 28),
-            Font = new Font("맑은 고딕", 10f),
-            Margin = new Padding(20, 2, 0, 0)
-        };
-        _txtSearch.KeyDown += (_, e) =>
-        {
-            if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; _page = 1; _ = LoadAsync(); }
-        };
-
-        topBar.Controls.AddRange([btnNew, _txtSearch]);
-
-        // ═══ Split: 좌측 목록 | 우측 상세 ═══
-        var split = new SplitContainer
+        _split = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterWidth = 6,
-            BackColor = ColorPalette.Border
+            SplitterWidth = 8,
+            BackColor = ColorPalette.Background,
+            Panel1MinSize = MinListWidth,
+            Panel2MinSize = 320
         };
-        // 3:7 비율
-        split.SplitterDistance = Math.Max(250, (int)(Width * 0.30));
-        split.Resize += (_, _) =>
-        {
-            try { split.SplitterDistance = Math.Max(250, (int)(split.Width * 0.30)); } catch { }
-        };
-        split.Panel1.BackColor = ColorPalette.Background;
-        split.Panel2.BackColor = ColorPalette.Surface;
+        _split.Panel1.BackColor = ColorPalette.Background;
+        _split.Panel2.BackColor = ColorPalette.Background;
+        _split.HandleCreated += (_, _) => LayoutSplit();
+        _split.Resize += (_, _) => LayoutSplit();
 
-        // ── 좌측: 카드 목록 ──
         _listPanel = new Panel
         {
             Dock = DockStyle.Fill,
             AutoScroll = true,
             BackColor = ColorPalette.Background,
-            Padding = new Padding(4, 4, 4, 0)
+            Padding = new Padding(0, 2, 8, 2)
         };
+        _listPanel.Resize += (_, _) => LayoutListCards();
 
-        var navBar = new FlowLayoutPanel
+        var navBar = CreateNavigationBar();
+        _split.Panel1.Controls.Add(_listPanel);
+        _split.Panel1.Controls.Add(navBar);
+
+        _detailPanel = CreateDetailPanel();
+        _emptyDetail = CreateEmptyDetailPanel();
+        _split.Panel2.Controls.Add(_detailPanel);
+        _split.Panel2.Controls.Add(_emptyDetail);
+
+        Controls.Add(_split);
+        Controls.Add(topBar);
+
+        _ = LoadAsync();
+    }
+
+    private Control CreateTopBar()
+    {
+        var topBar = new TableLayoutPanel
         {
-            Dock = DockStyle.Bottom, Height = 35,
-            Padding = new Padding(0, 5, 0, 0),
+            Dock = DockStyle.Top,
+            Height = 56,
+            ColumnCount = 4,
+            RowCount = 1,
+            Padding = new Padding(0, 2, 0, 10),
             BackColor = ColorPalette.Background
         };
-        var btnPrev = ButtonFactory.CreateGhost("◀", 36);
-        btnPrev.Click += (_, _) => { if (_page > 1) { _page--; _ = LoadAsync(); } };
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 124));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 2));
+
+        var lblTitle = new Label
+        {
+            Text = "인수인계",
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 16f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+
+        var btnNew = ButtonFactory.CreatePrimary("+ 새 글 작성", 112);
+        btnNew.Dock = DockStyle.Left;
+        btnNew.Margin = new Padding(0, 7, 12, 0);
+        btnNew.Click += BtnNew_Click;
+
+        _txtSearch = new TextBox
+        {
+            PlaceholderText = "제목/내용/작성자 검색",
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(0, 8, 0, 8)
+        };
+        _txtSearch.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.SuppressKeyPress = true;
+            _page = 1;
+            _ = LoadAsync();
+        };
+
+        topBar.Controls.Add(lblTitle, 0, 0);
+        topBar.Controls.Add(btnNew, 1, 0);
+        topBar.Controls.Add(_txtSearch, 2, 0);
+        return topBar;
+    }
+
+    private Control CreateNavigationBar()
+    {
+        var navBar = new TableLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 44,
+            ColumnCount = 3,
+            RowCount = 1,
+            Padding = new Padding(0, 8, 8, 0),
+            BackColor = ColorPalette.Background
+        };
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 44));
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 44));
+
+        var btnPrev = ButtonFactory.CreateGhost("◀", 38);
+        btnPrev.Dock = DockStyle.Fill;
+        btnPrev.Click += (_, _) =>
+        {
+            if (_page <= 1) return;
+            _page--;
+            _ = LoadAsync();
+        };
+
         _lblPageInfo = new Label
         {
-            Size = new Size(80, 28), TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("맑은 고딕", 9f), ForeColor = ColorPalette.TextSecondary
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextSecondary
         };
-        var btnNextPage = ButtonFactory.CreateGhost("▶", 36);
-        btnNextPage.Click += (_, _) => { _page++; _ = LoadAsync(); };
-        navBar.Controls.AddRange([btnPrev, _lblPageInfo, btnNextPage]);
 
-        split.Panel1.Controls.Add(_listPanel);
-        split.Panel1.Controls.Add(navBar);
+        var btnNext = ButtonFactory.CreateGhost("▶", 38);
+        btnNext.Dock = DockStyle.Fill;
+        btnNext.Click += (_, _) =>
+        {
+            _page++;
+            _ = LoadAsync();
+        };
 
-        // ── 우측: 상세보기 ──
-        _detailPanel = new Panel
+        navBar.Controls.Add(btnPrev, 0, 0);
+        navBar.Controls.Add(_lblPageInfo, 1, 0);
+        navBar.Controls.Add(btnNext, 2, 0);
+        return navBar;
+    }
+
+    private Panel CreateDetailPanel()
+    {
+        var panel = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(20, 16, 20, 16),
-            AutoScroll = true,
+            Padding = new Padding(16),
+            BackColor = ColorPalette.Surface,
             Visible = false
+        };
+
+        var headerPanel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 116,
+            BackColor = ColorPalette.Surface
         };
 
         _lblDetailTitle = new Label
         {
-            Dock = DockStyle.Top, Height = 32,
-            Font = new Font("맑은 고딕", 14f, FontStyle.Bold),
-            ForeColor = ColorPalette.Text
+            Dock = DockStyle.Top,
+            Height = 38,
+            Font = new Font("맑은 고딕", 15f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            AutoEllipsis = true,
+            TextAlign = ContentAlignment.MiddleLeft
         };
 
         _lblDetailMeta = new Label
         {
-            Dock = DockStyle.Top, Height = 24,
+            Dock = DockStyle.Top,
+            Height = 24,
             Font = new Font("맑은 고딕", 9f),
             ForeColor = ColorPalette.TextTertiary,
-            Padding = new Padding(0, 4, 0, 0)
+            TextAlign = ContentAlignment.MiddleLeft
         };
+
+        var actionRow = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 42,
+            ColumnCount = 3,
+            RowCount = 1,
+            Padding = new Padding(0, 6, 0, 0),
+            BackColor = ColorPalette.Surface
+        };
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 4));
 
         _chkNextWorker = new CheckBox
         {
             Text = "다음 근무자 확인 완료",
-            Dock = DockStyle.Top, Height = 30,
+            Dock = DockStyle.Fill,
             Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
             ForeColor = ColorPalette.Success,
-            Padding = new Padding(0, 6, 0, 0)
+            TextAlign = ContentAlignment.MiddleLeft
         };
         _chkNextWorker.CheckedChanged += ChkNextWorker_Changed;
 
-        var separator1 = new Panel
+        var btnDelete = ButtonFactory.CreateDanger("삭제", 76);
+        btnDelete.Dock = DockStyle.Fill;
+        btnDelete.Click += BtnDelete_Click;
+
+        actionRow.Controls.Add(_chkNextWorker, 0, 0);
+        actionRow.Controls.Add(btnDelete, 1, 0);
+
+        var divider = new Panel
         {
-            Dock = DockStyle.Top, Height = 1,
-            BackColor = ColorPalette.Border,
+            Dock = DockStyle.Bottom,
+            Height = 1,
+            BackColor = ColorPalette.Border
+        };
+
+        headerPanel.Controls.Add(divider);
+        headerPanel.Controls.Add(actionRow);
+        headerPanel.Controls.Add(_lblDetailMeta);
+        headerPanel.Controls.Add(_lblDetailTitle);
+
+        _commentsShell = CreateCommentsPanel();
+
+        _txtDetailContent = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Multiline = true,
+            ReadOnly = true,
+            ScrollBars = ScrollBars.Vertical,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = ColorPalette.Card,
+            ForeColor = ColorPalette.Text,
+            Font = new Font("맑은 고딕", 10.5f),
             Margin = new Padding(0, 8, 0, 8)
         };
 
-        _lblDetailContent = new Label
-        {
-            Dock = DockStyle.Top, AutoSize = true,
-            MaximumSize = new Size(500, 0),
-            Font = new Font("맑은 고딕", 11f),
-            ForeColor = ColorPalette.Text,
-            Padding = new Padding(0, 8, 0, 0)
-        };
+        panel.Controls.Add(_txtDetailContent);
+        panel.Controls.Add(_commentsShell);
+        panel.Controls.Add(headerPanel);
+        panel.Resize += (_, _) => LayoutDetailPanel();
+        return panel;
+    }
 
-        // 삭제 버튼
-        var btnDelete = ButtonFactory.CreateDanger("삭제", 60);
-        btnDelete.Dock = DockStyle.Top;
-        btnDelete.Height = 32;
-        btnDelete.Margin = new Padding(0, 8, 0, 0);
-        btnDelete.Click += async (_, _) =>
+    private Panel CreateCommentsPanel()
+    {
+        var panel = new Panel
         {
-            if (_selected == null) return;
-            var title = string.IsNullOrEmpty(_selected.Title) ? "(제목 없음)" : _selected.Title;
-            if (MessageBox.Show($"'{title}' 인수인계를 삭제하시겠습니까?", "삭제 확인",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            await _repo.DeleteHandoverAsync(_selected.Id);
-            _selected = null;
-            _detailPanel!.Visible = false;
-            _emptyDetail!.Visible = true;
-            ToastNotification.Show("인수인계가 삭제되었습니다.", ToastType.Success);
-            await LoadAsync();
+            Dock = DockStyle.Bottom,
+            Height = 240,
+            Padding = new Padding(0, 10, 0, 0),
+            BackColor = ColorPalette.Surface
         };
 
         var lblCommentHeader = new Label
         {
-            Text = "💬 댓글",
-            Dock = DockStyle.Top, Height = 30,
-            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Text = "댓글",
+            Dock = DockStyle.Top,
+            Height = 28,
+            Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary,
-            Padding = new Padding(0, 12, 0, 0)
+            TextAlign = ContentAlignment.MiddleLeft
         };
+
+        var inputPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 42,
+            ColumnCount = 3,
+            RowCount = 1,
+            Padding = new Padding(0, 8, 0, 0),
+            BackColor = ColorPalette.Surface
+        };
+        inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+        inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
+
+        _txtCommentAuthor = new TextBox
+        {
+            PlaceholderText = "작성자",
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 9f),
+            Margin = new Padding(0, 0, 8, 0)
+        };
+        _txtCommentContent = new TextBox
+        {
+            PlaceholderText = "댓글 입력",
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 9f),
+            Margin = new Padding(0, 0, 8, 0)
+        };
+        _txtCommentContent.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.SuppressKeyPress = true;
+            _btnAddComment.PerformClick();
+        };
+
+        _btnAddComment = ButtonFactory.CreatePrimary("등록", 64);
+        _btnAddComment.Dock = DockStyle.Fill;
+        _btnAddComment.Click += BtnAddComment_Click;
+
+        inputPanel.Controls.Add(_txtCommentAuthor, 0, 0);
+        inputPanel.Controls.Add(_txtCommentContent, 1, 0);
+        inputPanel.Controls.Add(_btnAddComment, 2, 0);
 
         _commentListPanel = new Panel
         {
-            Dock = DockStyle.Top, Height = 200,
+            Dock = DockStyle.Fill,
             AutoScroll = true,
-            Padding = new Padding(0, 4, 0, 0)
+            BackColor = ColorPalette.Surface,
+            Padding = new Padding(0, 4, 8, 4)
         };
+        _commentListPanel.Resize += (_, _) => LayoutCommentCards();
 
-        var commentInputPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top, Height = 38,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 6, 0, 0)
-        };
+        panel.Controls.Add(_commentListPanel);
+        panel.Controls.Add(inputPanel);
+        panel.Controls.Add(lblCommentHeader);
+        return panel;
+    }
 
-        var txtCommentAuthor = new TextBox
+    private static Panel CreateEmptyDetailPanel()
+    {
+        var panel = new Panel
         {
-            PlaceholderText = "작성자",
-            Size = new Size(80, 28), Font = new Font("맑은 고딕", 9f)
+            Dock = DockStyle.Fill,
+            BackColor = ColorPalette.Surface
         };
-        var txtCommentContent = new TextBox
+        panel.Controls.Add(new Label
         {
-            PlaceholderText = "댓글 입력...",
-            Size = new Size(200, 28), Font = new Font("맑은 고딕", 9f)
-        };
-        var btnAddComment = ButtonFactory.CreatePrimary("등록", 55);
-        btnAddComment.Height = 28;
-        btnAddComment.Click += async (_, _) =>
-        {
-            if (_selected == null || string.IsNullOrWhiteSpace(txtCommentAuthor.Text)
-                || string.IsNullOrWhiteSpace(txtCommentContent.Text)) return;
-            await _repo.InsertCommentAsync(_selected.Id, txtCommentAuthor.Text.Trim(), txtCommentContent.Text.Trim());
-            txtCommentContent.Clear();
-            ToastNotification.Show("댓글 등록 완료.", ToastType.Success);
-            await LoadDetailAsync(_selected);
-        };
-        // Enter키로 댓글 등록
-        txtCommentContent.KeyDown += (_, e) =>
-        {
-            if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; btnAddComment.PerformClick(); }
-        };
-
-        commentInputPanel.Controls.AddRange([txtCommentAuthor, txtCommentContent, btnAddComment]);
-
-        // Dock.Top 순서 (역순 추가 아님, 위→아래)
-        _detailPanel.Controls.Add(btnDelete);
-        _detailPanel.Controls.Add(commentInputPanel);
-        _detailPanel.Controls.Add(_commentListPanel);
-        _detailPanel.Controls.Add(lblCommentHeader);
-        _detailPanel.Controls.Add(_lblDetailContent);
-        _detailPanel.Controls.Add(separator1);
-        _detailPanel.Controls.Add(_chkNextWorker);
-        _detailPanel.Controls.Add(_lblDetailMeta);
-        _detailPanel.Controls.Add(_lblDetailTitle);
-
-        // 빈 상태 (상세 미선택)
-        _emptyDetail = new Panel { Dock = DockStyle.Fill };
-        _emptyDetail.Controls.Add(new Label
-        {
-            Text = "📋 인수인계를 선택하세요",
-            Font = new Font("맑은 고딕", 12f),
+            Text = "인수인계를 선택하세요",
+            Font = new Font("맑은 고딕", 12f, FontStyle.Bold),
             ForeColor = ColorPalette.TextTertiary,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter
         });
-
-        split.Panel2.Controls.Add(_detailPanel);
-        split.Panel2.Controls.Add(_emptyDetail);
-
-        Controls.Add(split);
-        Controls.Add(topBar);
-        _ = LoadAsync();
+        return panel;
     }
-
-    // ═══════ 데이터 로드 ═══════
 
     private async Task LoadAsync()
     {
         var keyword = _txtSearch.Text.Trim();
-        var (items, totalCount) = await _repo.GetPagedAsync(_page, PageSize,
-            string.IsNullOrEmpty(keyword) ? null : keyword);
+        var (itemsEnumerable, totalCount) = await _repo.GetPagedAsync(_page, PageSize,
+            string.IsNullOrWhiteSpace(keyword) ? null : keyword);
 
         var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalCount / PageSize));
-        _lblPageInfo.Text = $"{_page}/{totalPages}";
+        if (_page > totalPages)
+        {
+            _page = totalPages;
+            (itemsEnumerable, totalCount) = await _repo.GetPagedAsync(_page, PageSize,
+                string.IsNullOrWhiteSpace(keyword) ? null : keyword);
+        }
 
+        var items = itemsEnumerable.ToList();
+        _lblPageInfo.Text = $"{_page}/{totalPages}";
         _listPanel.Controls.Clear();
 
-        if (!items.Any())
+        if (items.Count == 0)
         {
             _listPanel.Controls.Add(new Label
             {
-                Text = _page == 1 ? "📋 아직 인수인계가 없습니다.\n'새 글 작성'으로 시작하세요."
-                    : "더 이상 글이 없습니다.",
-                Font = new Font("맑은 고딕", 11f),
+                Text = _page == 1 ? "아직 인수인계가 없습니다.\n'새 글 작성'으로 시작하세요." : "더 이상 글이 없습니다.",
+                Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold),
                 ForeColor = ColorPalette.TextTertiary,
-                Size = new Size(350, 60),
-                Location = new Point(15, 20)
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Height = 76
             });
             return;
         }
 
         var y = 2;
-        foreach (var h in items)
+        foreach (var handover in items)
         {
-            var card = CreateCard(h);
-            card.Location = new Point(2, y);
-            card.Width = _listPanel.Width - 28;
+            var card = CreateCard(handover);
+            card.Location = new Point(0, y);
             _listPanel.Controls.Add(card);
-            y += card.Height + 6;
+            y += card.Height + 8;
         }
+        LayoutListCards();
     }
 
-    /// <summary>카드 생성: 날짜 + 제목 + 다음근무자체크 아이콘</summary>
-    private Panel CreateCard(Handover h)
+    private Panel CreateCard(Handover handover)
     {
-        // 미확인=하늘색, 확인완료=흰색
-        var unreadBg = Color.FromArgb(232, 244, 253); // 하늘색 #E8F4FD
-        var readBg = ColorPalette.Surface;
-        var defaultBg = h.IsNextWorkerChecked ? readBg : unreadBg;
+        var isUnread = !handover.IsNextWorkerChecked;
+        var defaultBg = isUnread ? ColorPalette.InfoLight : ColorPalette.Card;
+        var title = string.IsNullOrWhiteSpace(handover.Title) ? "(제목 없음)" : handover.Title;
 
         var card = new Panel
         {
-            Size = new Size(_listPanel.Width - 28, 68),
-            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            Size = new Size(Math.Max(220, _listPanel.ClientSize.Width - 12), 92),
             BackColor = defaultBg,
             Cursor = Cursors.Hand,
-            Padding = new Padding(12, 8, 12, 8)
+            Padding = new Padding(12, 8, 12, 8),
+            Tag = handover
         };
-        // 라운드 테두리 적용
-        card.Paint += (_, pe) =>
-        {
-            pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = RoundedCard.CreateRoundedPath(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
-            using var borderPen = new Pen(
-                _selected?.Id == h.Id ? ColorPalette.Primary : Color.FromArgb(40, ColorPalette.Border), 1);
-            pe.Graphics.DrawPath(borderPen, path);
 
-            // 선택된 카드 좌측 액센트
-            if (_selected?.Id == h.Id)
+        card.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+            using var path = RoundedCard.CreateRoundedPath(rect, 8);
+            using var borderPen = new Pen(_selected?.Id == handover.Id ? ColorPalette.Primary : ColorPalette.Border, 1);
+            e.Graphics.DrawPath(borderPen, path);
+
+            if (_selected?.Id == handover.Id)
             {
-                using var accentBrush = new SolidBrush(ColorPalette.Primary);
-                pe.Graphics.FillRectangle(accentBrush, 0, 8, 3, card.Height - 16);
+                using var accent = new SolidBrush(ColorPalette.Primary);
+                e.Graphics.FillRectangle(accent, 0, 8, 3, card.Height - 16);
             }
         };
 
-        // 날짜
+        var lblStatus = new Label
+        {
+            Text = handover.IsNextWorkerChecked ? "확인완료" : "미확인",
+            Location = new Point(card.Width - 82, 8),
+            Size = new Size(68, 20),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Font = new Font("맑은 고딕", 8.5f, FontStyle.Bold),
+            ForeColor = handover.IsNextWorkerChecked ? ColorPalette.Success : ColorPalette.Warning,
+            TextAlign = ContentAlignment.MiddleRight
+        };
+
         var lblDate = new Label
         {
-            Text = h.CreatedAt.ToString("MM/dd HH:mm"),
+            Text = handover.CreatedAt.ToString("MM/dd HH:mm"),
+            Location = new Point(12, 8),
+            Size = new Size(card.Width - 104, 18),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
             Font = new Font("맑은 고딕", 8.5f),
             ForeColor = ColorPalette.TextTertiary,
-            Location = new Point(12, 6), Size = new Size(100, 16)
-        };
-
-        // 체크 아이콘
-        var lblCheck = new Label
-        {
-            Text = h.IsNextWorkerChecked ? "✅" : "",
-            Font = new Font("Segoe UI Emoji", 10f),
-            Location = new Point(card.Width - 35, 6), Size = new Size(25, 20),
-            Anchor = AnchorStyles.Top | AnchorStyles.Right
-        };
-
-        // 제목
-        var title = string.IsNullOrEmpty(h.Title) ? "(제목 없음)" : h.Title;
-        var lblTitle = new Label
-        {
-            Text = title,
-            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
-            ForeColor = ColorPalette.Text,
-            Location = new Point(12, 24), Size = new Size(card.Width - 60, 20),
-            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
             AutoEllipsis = true
         };
 
-        // 작성자
-        var lblAuthor = new Label
+        var lblTitle = new Label
         {
-            Text = h.AuthorName,
-            Font = new Font("맑은 고딕", 9f),
-            ForeColor = ColorPalette.TextSecondary,
-            Location = new Point(12, 46), Size = new Size(card.Width - 60, 16),
-            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+            Text = title,
+            Location = new Point(12, 30),
+            Size = new Size(card.Width - 24, 24),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            AutoEllipsis = true
         };
 
-        card.Controls.AddRange([lblDate, lblCheck, lblTitle, lblAuthor]);
+        var lblMeta = new Label
+        {
+            Text = $"{handover.AuthorName}  ·  {GetPreview(handover.Content)}",
+            Location = new Point(12, 58),
+            Size = new Size(card.Width - 24, 24),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            Font = new Font("맑은 고딕", 9f),
+            ForeColor = ColorPalette.TextSecondary,
+            AutoEllipsis = true
+        };
 
-        // 클릭 → 상세보기
-        void OnClick(object? s, EventArgs e) { _ = SelectCard(h); }
+        card.Controls.AddRange([lblStatus, lblDate, lblTitle, lblMeta]);
+
+        void OnClick(object? _, EventArgs _) => _ = SelectCardAsync(handover);
         card.Click += OnClick;
-        foreach (Control c in card.Controls) c.Click += OnClick;
+        foreach (Control child in card.Controls)
+            child.Click += OnClick;
 
-        // 호버 효과
-        void OnEnter(object? s, EventArgs e) { card.BackColor = ColorPalette.CardHover; }
-        void OnLeave(object? s, EventArgs e) { card.BackColor = defaultBg; }
+        void OnEnter(object? _, EventArgs _) => card.BackColor = ColorPalette.CardHover;
+        void OnLeave(object? _, EventArgs _) => card.BackColor = defaultBg;
         card.MouseEnter += OnEnter;
         card.MouseLeave += OnLeave;
-        foreach (Control c in card.Controls) { c.MouseEnter += OnEnter; c.MouseLeave += OnLeave; }
+        foreach (Control child in card.Controls)
+        {
+            child.MouseEnter += OnEnter;
+            child.MouseLeave += OnLeave;
+        }
 
         return card;
     }
 
-    // ═══════ 상세보기 ═══════
-
-    private async Task SelectCard(Handover h)
+    private async Task SelectCardAsync(Handover handover)
     {
-        _selected = h;
-        await LoadDetailAsync(h);
+        _selected = handover;
+        await LoadDetailAsync(handover);
         _emptyDetail.Visible = false;
         _detailPanel.Visible = true;
 
-        // 카드 목록 repaint (선택 표시)
-        foreach (Control c in _listPanel.Controls) c.Invalidate();
+        foreach (Control control in _listPanel.Controls)
+            control.Invalidate();
     }
 
-    private async Task LoadDetailAsync(Handover h)
+    private async Task LoadDetailAsync(Handover handover)
     {
-        _lblDetailTitle.Text = string.IsNullOrEmpty(h.Title) ? "(제목 없음)" : h.Title;
-        _lblDetailMeta.Text = $"{h.AuthorName}  ·  {h.CreatedAt:yyyy-MM-dd HH:mm}";
-        _chkNextWorker.Checked = h.IsNextWorkerChecked;
-        _lblDetailContent.Text = h.Content;
-
-        // 댓글 로드
-        var comments = (await _repo.GetCommentsAsync(h.Id)).ToList();
-        _commentListPanel.Controls.Clear();
-        var cy = 0;
-        foreach (var c in comments)
+        _isLoadingDetail = true;
+        try
         {
-            var commentCard = new Panel
-            {
-                Location = new Point(0, cy),
-                Size = new Size(_commentListPanel.Width - 20, 50),
-                BackColor = ColorPalette.SubtleBg,
-                Padding = new Padding(10, 6, 10, 6)
-            };
-            commentCard.Paint += (_, pe) =>
-            {
-                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using var path = RoundedCard.CreateRoundedPath(
-                    new Rectangle(0, 0, commentCard.Width - 1, commentCard.Height - 1), 4);
-                using var pen = new Pen(Color.FromArgb(30, ColorPalette.Border));
-                pe.Graphics.DrawPath(pen, path);
-            };
-            commentCard.Controls.Add(new Label
-            {
-                Text = $"{c.AuthorName}  ·  {c.CreatedAt:MM/dd HH:mm}",
-                Font = new Font("맑은 고딕", 8f),
-                ForeColor = ColorPalette.TextTertiary,
-                Dock = DockStyle.Top, Height = 16
-            });
-            commentCard.Controls.Add(new Label
-            {
-                Text = c.Content,
-                Font = new Font("맑은 고딕", 9.5f),
-                ForeColor = ColorPalette.Text,
-                Location = new Point(10, 22),
-                Size = new Size(commentCard.Width - 30, 24),
-                AutoEllipsis = true
-            });
-            _commentListPanel.Controls.Add(commentCard);
-            cy += 56;
+            _lblDetailTitle.Text = string.IsNullOrWhiteSpace(handover.Title) ? "(제목 없음)" : handover.Title;
+            _lblDetailMeta.Text = $"{handover.AuthorName}  ·  {handover.CreatedAt:yyyy-MM-dd HH:mm}";
+            _chkNextWorker.Checked = handover.IsNextWorkerChecked;
+            _txtDetailContent.Text = handover.Content;
+
+            var comments = (await _repo.GetCommentsAsync(handover.Id)).ToList();
+            RenderComments(comments);
         }
-        _commentListPanel.Height = comments.Count == 0 ? 10 : cy + 10;
+        finally
+        {
+            _isLoadingDetail = false;
+        }
+    }
+
+    private void RenderComments(IReadOnlyList<HandoverComment> comments)
+    {
+        _commentListPanel.Controls.Clear();
+
+        if (comments.Count == 0)
+        {
+            _commentListPanel.Controls.Add(new Label
+            {
+                Text = "아직 댓글이 없습니다.",
+                Dock = DockStyle.Top,
+                Height = 34,
+                Font = new Font("맑은 고딕", 9f),
+                ForeColor = ColorPalette.TextTertiary,
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+            return;
+        }
+
+        var y = 0;
+        foreach (var comment in comments)
+        {
+            var card = CreateCommentCard(comment);
+            card.Location = new Point(0, y);
+            _commentListPanel.Controls.Add(card);
+            y += card.Height + 8;
+        }
+        LayoutCommentCards();
+    }
+
+    private Panel CreateCommentCard(HandoverComment comment)
+    {
+        var width = Math.Max(260, _commentListPanel.ClientSize.Width - 16);
+        using var measureFont = new Font("맑은 고딕", 9.5f);
+        var contentHeight = Math.Max(28, TextRenderer.MeasureText(
+            comment.Content,
+            measureFont,
+            new Size(width - 24, 0),
+            TextFormatFlags.WordBreak).Height + 6);
+
+        var card = new Panel
+        {
+            Size = new Size(width, 42 + contentHeight),
+            BackColor = ColorPalette.SubtleBg,
+            Padding = new Padding(10, 6, 10, 8),
+            Tag = comment
+        };
+        card.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = RoundedCard.CreateRoundedPath(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 6);
+            using var pen = new Pen(ColorPalette.Border, 1);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        card.Controls.Add(new Label
+        {
+            Text = comment.Content,
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 9.5f),
+            ForeColor = ColorPalette.Text,
+            Padding = new Padding(0, 4, 0, 0)
+        });
+        card.Controls.Add(new Label
+        {
+            Text = $"{comment.AuthorName}  ·  {comment.CreatedAt:MM/dd HH:mm}",
+            Dock = DockStyle.Top,
+            Height = 20,
+            Font = new Font("맑은 고딕", 8.5f, FontStyle.Bold),
+            ForeColor = ColorPalette.TextTertiary
+        });
+
+        return card;
     }
 
     private async void ChkNextWorker_Changed(object? sender, EventArgs e)
     {
-        if (_selected == null) return;
+        if (_selected == null || _isLoadingDetail) return;
+
         await _repo.UpdateNextWorkerCheckAsync(_selected.Id, _chkNextWorker.Checked);
         _selected.IsNextWorkerChecked = _chkNextWorker.Checked;
-        // 카드 목록 repaint
-        foreach (Control c in _listPanel.Controls) c.Invalidate();
+        ToastNotification.Show(_chkNextWorker.Checked ? "확인 완료로 변경했습니다." : "미확인으로 변경했습니다.", ToastType.Success);
+        await LoadAsync();
     }
 
-    // ═══════ 새 글 작성 ═══════
+    private async void BtnDelete_Click(object? sender, EventArgs e)
+    {
+        if (_selected == null) return;
+
+        var title = string.IsNullOrWhiteSpace(_selected.Title) ? "(제목 없음)" : _selected.Title;
+        if (MessageBox.Show($"'{title}' 인수인계를 삭제하시겠습니까?", "삭제 확인",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        await _repo.DeleteHandoverAsync(_selected.Id);
+        _selected = null;
+        _detailPanel.Visible = false;
+        _emptyDetail.Visible = true;
+        ToastNotification.Show("인수인계가 삭제되었습니다.", ToastType.Success);
+        await LoadAsync();
+    }
+
+    private async void BtnAddComment_Click(object? sender, EventArgs e)
+    {
+        if (_selected == null)
+            return;
+
+        var author = _txtCommentAuthor.Text.Trim();
+        var content = _txtCommentContent.Text.Trim();
+        if (string.IsNullOrWhiteSpace(author) || string.IsNullOrWhiteSpace(content))
+        {
+            ToastNotification.Show("작성자와 댓글 내용을 입력하세요.", ToastType.Warning);
+            return;
+        }
+
+        await ButtonFactory.RunWithLoadingAsync(_btnAddComment, "...", async () =>
+        {
+            await _repo.InsertCommentAsync(_selected.Id, author, content);
+            _txtCommentContent.Clear();
+            await LoadDetailAsync(_selected);
+        });
+        ToastNotification.Show("댓글 등록 완료.", ToastType.Success);
+    }
 
     private async void BtnNew_Click(object? sender, EventArgs e)
     {
@@ -482,6 +676,71 @@ public class HandoverTab : UserControl
         ToastNotification.Show("인수인계가 등록되었습니다.", ToastType.Success);
         _page = 1;
         await LoadAsync();
+    }
+
+    private void LayoutSplit()
+    {
+        if (_split.Width <= 0) return;
+
+        var desired = Math.Max(MinListWidth, (int)(_split.Width * 0.34));
+        var max = Math.Max(MinListWidth, _split.Width - _split.Panel2MinSize - _split.SplitterWidth);
+        desired = Math.Min(desired, max);
+        if (desired > 0 && desired < _split.Width)
+        {
+            try { _split.SplitterDistance = desired; } catch { }
+        }
+    }
+
+    private void LayoutDetailPanel()
+    {
+        if (_detailPanel.ClientSize.Height <= 0) return;
+
+        const int headerHeight = 116;
+        const int minContentHeight = 130;
+        var clientHeight = _detailPanel.ClientSize.Height - _detailPanel.Padding.Vertical;
+        var desired = Math.Clamp((int)(clientHeight * 0.34), 160, 260);
+        var maxWithoutCrushingContent = Math.Max(120, clientHeight - headerHeight - minContentHeight);
+        _commentsShell.Height = Math.Min(desired, maxWithoutCrushingContent);
+    }
+
+    private void LayoutListCards()
+    {
+        var width = Math.Max(220, _listPanel.ClientSize.Width - 12);
+        foreach (Control control in _listPanel.Controls)
+        {
+            if (control.Tag is not Handover)
+                continue;
+
+            control.Width = width;
+            foreach (Control child in control.Controls)
+            {
+                if (child.Anchor.HasFlag(AnchorStyles.Right))
+                    continue;
+
+                child.Width = Math.Max(40, control.Width - child.Left - 12);
+            }
+        }
+    }
+
+    private void LayoutCommentCards()
+    {
+        var y = 0;
+        var width = Math.Max(260, _commentListPanel.ClientSize.Width - 16);
+        foreach (Control control in _commentListPanel.Controls)
+        {
+            if (control.Tag is not HandoverComment)
+                continue;
+
+            control.Location = new Point(0, y);
+            control.Width = width;
+            y += control.Height + 8;
+        }
+    }
+
+    private static string GetPreview(string text)
+    {
+        var normalized = text.ReplaceLineEndings(" ").Trim();
+        return normalized.Length <= 42 ? normalized : $"{normalized[..42]}...";
     }
 
     public async Task RefreshAsync() => await LoadAsync();
@@ -501,37 +760,71 @@ internal class HandoverWriteDialog : Form
     public HandoverWriteDialog()
     {
         Text = "인수인계 작성";
-        Size = new Size(440, 360);
-        FormBorderStyle = FormBorderStyle.None;
+        Size = new Size(520, 430);
+        MinimumSize = new Size(460, 380);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
         BackColor = ColorPalette.Surface;
+        Padding = new Padding(18);
 
-        var y = 15;
-        Controls.Add(new Label { Text = "작성자:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
-        _txtAuthor = new TextBox { Location = new Point(90, y), Size = new Size(310, 25) };
-        Controls.Add(_txtAuthor);
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 5,
+            BackColor = ColorPalette.Surface
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
 
-        y += 35;
-        Controls.Add(new Label { Text = "제목:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
-        _txtTitle = new TextBox { Location = new Point(90, y), Size = new Size(310, 25), PlaceholderText = "인수인계 제목" };
-        Controls.Add(_txtTitle);
-
-        y += 35;
-        Controls.Add(new Label { Text = "내용:", Location = new Point(20, y + 2), Size = new Size(60, 22) });
+        _txtAuthor = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(0, 3, 0, 7)
+        };
+        _txtTitle = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            PlaceholderText = "인수인계 제목",
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(0, 3, 0, 7)
+        };
         _txtContent = new TextBox
         {
-            Location = new Point(90, y), Size = new Size(310, 160),
-            Multiline = true, ScrollBars = ScrollBars.Vertical,
-            PlaceholderText = "인수인계 내용을 입력하세요..."
+            Dock = DockStyle.Fill,
+            Multiline = true,
+            ScrollBars = ScrollBars.Vertical,
+            PlaceholderText = "인수인계 내용을 입력하세요.",
+            Font = new Font("맑은 고딕", 10f),
+            Margin = new Padding(0, 3, 0, 7)
         };
-        Controls.Add(_txtContent);
 
-        y += 170;
-        var btnOk = ButtonFactory.CreatePrimary("등록", 80);
-        btnOk.Location = new Point(230, y);
+        layout.Controls.Add(CreateDialogLabel("작성자"), 0, 0);
+        layout.Controls.Add(_txtAuthor, 1, 0);
+        layout.Controls.Add(CreateDialogLabel("제목"), 0, 1);
+        layout.Controls.Add(_txtTitle, 1, 1);
+        layout.Controls.Add(CreateDialogLabel("내용"), 0, 2);
+        layout.Controls.Add(_txtContent, 1, 2);
+
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            BackColor = ColorPalette.Surface
+        };
+
+        var btnOk = ButtonFactory.CreatePrimary("등록", 84);
+        btnOk.Margin = new Padding(8, 3, 0, 0);
         btnOk.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(_txtAuthor.Text))
@@ -549,13 +842,15 @@ internal class HandoverWriteDialog : Form
             DialogResult = DialogResult.OK;
         };
 
-        var btnCancel = new Button
-        {
-            Text = "취소", Location = new Point(320, y), Size = new Size(80, 34),
-            DialogResult = DialogResult.Cancel
-        };
+        var btnCancel = ButtonFactory.CreateGhost("취소", 84);
+        btnCancel.Margin = new Padding(8, 3, 0, 0);
+        btnCancel.DialogResult = DialogResult.Cancel;
 
-        Controls.AddRange([btnOk, btnCancel]);
+        actions.Controls.Add(btnOk);
+        actions.Controls.Add(btnCancel);
+        layout.Controls.Add(actions, 1, 4);
+
+        Controls.Add(layout);
         AcceptButton = btnOk;
         CancelButton = btnCancel;
 
@@ -564,4 +859,14 @@ internal class HandoverWriteDialog : Form
         _txtContent.TabIndex = 2;
         btnOk.TabIndex = 3;
     }
+
+    private static Label CreateDialogLabel(string text) => new()
+    {
+        Text = text,
+        Dock = DockStyle.Fill,
+        Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+        ForeColor = ColorPalette.TextSecondary,
+        TextAlign = ContentAlignment.TopLeft,
+        Padding = new Padding(0, 6, 0, 0)
+    };
 }

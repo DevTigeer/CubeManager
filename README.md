@@ -36,6 +36,25 @@ dotnet publish src/CubeManager/CubeManager.csproj -c Release -r win-x64 --self-c
 
 생성된 `publish/CubeManager.exe` 또는 `publish-standalone/CubeManager.exe`를 실행합니다.
 
+### 설치파일 배포 + 업데이트
+
+릴리스 태그를 push하면 GitHub Actions가 Windows 설치파일과 업데이트 manifest를 생성합니다.
+
+```bash
+git tag v0.2.1
+git push origin v0.2.1
+```
+
+생성물:
+
+```text
+CubeManagerSetup-0.2.1.exe
+update.json
+```
+
+앱은 시작 시 `update.json`을 확인하고 새 버전이 있으면 업데이트 다이얼로그를 표시합니다.
+자세한 내용은 [설치형 배포 및 자동 업데이트](docs/deployment/auto-update.md)를 참고하세요.
+
 ---
 
 ## 핵심 기능

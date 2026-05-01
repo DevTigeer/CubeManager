@@ -24,22 +24,27 @@ public class AttendanceTab : UserControl
         _scheduleService = scheduleService;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
-        Padding = new Padding(20);
+        Padding = new Padding(20, 18, 20, 20);
 
         // ─── 상단: 출퇴근 버튼 영역 (중앙 배치) ───
-        var topPanel = new Panel { Dock = DockStyle.Top, Height = 160, Padding = new Padding(0) };
+        var topPanel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 210,
+            Padding = new Padding(0, 4, 0, 12)
+        };
 
         // 중앙 정렬을 위한 내부 패널
         var centerPanel = new Panel
         {
-            Size = new Size(360, 140),
+            Size = new Size(390, 184),
             Anchor = AnchorStyles.Top
         };
 
         // 현재 시각 (대형, 중앙)
         _lblClock = new Label
         {
-            Location = new Point(0, 0), Size = new Size(360, 45),
+            Location = new Point(0, 0), Size = new Size(390, 58),
             Font = new Font("Segoe UI", 28f, FontStyle.Bold),
             ForeColor = ColorPalette.Text,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -49,7 +54,7 @@ public class AttendanceTab : UserControl
         // 날짜
         var lblDate = new Label
         {
-            Location = new Point(0, 45), Size = new Size(360, 22),
+            Location = new Point(0, 60), Size = new Size(390, 24),
             Font = DesignTokens.FontBody,
             ForeColor = ColorPalette.TextSecondary,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -59,22 +64,22 @@ public class AttendanceTab : UserControl
         // 직원 선택
         _cmbEmployee = new ComboBox
         {
-            Location = new Point(50, 78), Size = new Size(260, 28),
+            Location = new Point(50, 94), Size = new Size(290, 30),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = DesignTokens.FontBody,
             DisplayMember = "Name"
         };
 
         // 출근/퇴근 버튼
-        _btnClockIn = ButtonFactory.CreatePrimary("출  근", 150);
-        _btnClockIn.Location = new Point(20, 114);
-        _btnClockIn.Size = new Size(150, 40);
+        _btnClockIn = ButtonFactory.CreatePrimary("출  근", 160);
+        _btnClockIn.Location = new Point(25, 136);
+        _btnClockIn.Size = new Size(160, 42);
         _btnClockIn.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockIn.Click += BtnClockIn_Click;
 
-        _btnClockOut = ButtonFactory.CreateDanger("퇴  근", 150);
-        _btnClockOut.Location = new Point(190, 114);
-        _btnClockOut.Size = new Size(150, 40);
+        _btnClockOut = ButtonFactory.CreateDanger("퇴  근", 160);
+        _btnClockOut.Location = new Point(205, 136);
+        _btnClockOut.Size = new Size(160, 42);
         _btnClockOut.Font = new Font("맑은 고딕", 14f, FontStyle.Bold);
         _btnClockOut.Click += BtnClockOut_Click;
 
@@ -91,16 +96,21 @@ public class AttendanceTab : UserControl
         topPanel.Resize += (_, _) =>
         {
             centerPanel.Location = new Point(
-                Math.Max(0, (topPanel.Width - centerPanel.Width) / 2), 5);
+                Math.Max(0, (topPanel.Width - centerPanel.Width) / 2), 4);
         };
         topPanel.Controls.Add(centerPanel);
 
         // ─── 구분선 ───
         var divider = new Panel
         {
-            Dock = DockStyle.Top, Height = 1,
-            BackColor = ColorPalette.Border,
-            Margin = new Padding(0, 5, 0, 5)
+            Dock = DockStyle.Top, Height = 10,
+            BackColor = ColorPalette.Surface,
+            Padding = new Padding(0, 4, 0, 5)
+        };
+        divider.Paint += (_, e) =>
+        {
+            using var pen = new Pen(ColorPalette.Border);
+            e.Graphics.DrawLine(pen, 0, 4, divider.Width, 4);
         };
 
         // ─── 표 헤더 ───
@@ -109,8 +119,8 @@ public class AttendanceTab : UserControl
             Text = "오늘 근무 현황",
             Font = DesignTokens.FontSectionTitle,
             ForeColor = ColorPalette.TextSecondary,
-            Dock = DockStyle.Top, Height = 32,
-            Padding = new Padding(0, 8, 0, 0)
+            Dock = DockStyle.Top, Height = 40,
+            Padding = new Padding(0, 12, 0, 6)
         };
 
         // ─── 표 (Fill로 나머지 공간 전부 사용) ───
@@ -120,8 +130,16 @@ public class AttendanceTab : UserControl
             Col("실제출근", 110), Col("실제퇴근", 110), Col("상태", 80));
         _gridToday.Dock = DockStyle.Fill;
 
+        var gridPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(0, 6, 0, 0),
+            BackColor = ColorPalette.Surface
+        };
+        gridPanel.Controls.Add(_gridToday);
+
         // Dock 역순 추가 (Fill 마지막)
-        Controls.Add(_gridToday);     // Fill (나머지 전부)
+        Controls.Add(gridPanel);      // Fill (나머지 전부)
         Controls.Add(lblGridTitle);   // Top
         Controls.Add(divider);        // Top
         Controls.Add(topPanel);       // Top

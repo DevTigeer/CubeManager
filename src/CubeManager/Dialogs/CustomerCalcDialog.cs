@@ -5,7 +5,7 @@ namespace CubeManager.Dialogs;
 
 /// <summary>
 /// 손님 요금 계산기.
-/// 성인 요금표 + 아동(초2이하) + 할인정책(계좌/군인/생일/재방문) 적용.
+/// 성인 요금표 + 아동(초2이하) + 할인정책(계좌/군인/생일/재방문/리뷰) 적용.
 /// </summary>
 public class CustomerCalcDialog : Form
 {
@@ -22,6 +22,7 @@ public class CustomerCalcDialog : Form
     private const int MilitaryDiscount = 2_000; // 인당
     private const int BirthdayDiscount = 2_000; // 인당
     private const int RevisitPerTheme = 1_000;  // 테마당
+    private const int ReviewDiscount = 1_000;   // 인당
 
     private readonly NumericUpDown _numAdults;
     private readonly NumericUpDown _numChildren;
@@ -45,6 +46,7 @@ public class CustomerCalcDialog : Form
         MinimizeBox = false;
         Font = new Font("맑은 고딕", 10f);
         BackColor = ColorPalette.Surface;
+        ForeColor = Color.White;
         AutoScroll = true;
 
         var y = 12;
@@ -75,7 +77,8 @@ public class CustomerCalcDialog : Form
         {
             Text = "계좌/현금 결제 (성인 인당 1,000원 할인)",
             Location = new Point(15, y), Size = new Size(350, 24),
-            Font = new Font("맑은 고딕", 9.5f)
+            Font = new Font("맑은 고딕", 9.5f, FontStyle.Bold),
+            ForeColor = Color.White
         };
         _chkAccount.CheckedChanged += (_, _) => Recalculate();
         Controls.Add(_chkAccount);
@@ -86,8 +89,8 @@ public class CustomerCalcDialog : Form
         {
             Text = "※ 아동(초2이하): 카드 11,000원 / 현금·계좌 10,000원",
             Location = new Point(15, y), Size = new Size(370, 22),
-            Font = new Font("맑은 고딕", 9f),
-            ForeColor = ColorPalette.TextSecondary
+            Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+            ForeColor = Color.White
         });
 
         y += 34;
@@ -102,10 +105,10 @@ public class CustomerCalcDialog : Form
         // ─── 인별 할인 (동적) ───
         Controls.Add(new Label
         {
-            Text = "── 인별 할인 (택1: 군인/생일/재방문) ──",
+            Text = "── 인별 할인 (택1: 군인/생일/재방문/리뷰) ──",
             Location = new Point(15, y), Size = new Size(370, 22),
             Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary
+            ForeColor = Color.White
         });
         y += 26;
 
@@ -124,7 +127,7 @@ public class CustomerCalcDialog : Form
             Text = "── 계산 결과 ──",
             Location = new Point(15, y), Size = new Size(370, 22),
             Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
-            ForeColor = ColorPalette.TextSecondary
+            ForeColor = Color.White
         });
         y += 26;
 
@@ -139,8 +142,8 @@ public class CustomerCalcDialog : Form
         {
             Location = new Point(15, y), Size = new Size(370, 100),
             MaximumSize = new Size(370, 0), AutoSize = true,
-            Font = new Font("맑은 고딕", 10f),
-            ForeColor = ColorPalette.Text
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            ForeColor = Color.White
         };
         Controls.Add(_lblBreakdown);
 
@@ -150,7 +153,7 @@ public class CustomerCalcDialog : Form
         {
             Location = new Point(15, y), Size = new Size(370, 35),
             Font = new Font("맑은 고딕", 18f, FontStyle.Bold),
-            ForeColor = ColorPalette.Primary,
+            ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleRight
         };
         Controls.Add(_lblResult);
@@ -185,6 +188,7 @@ public class CustomerCalcDialog : Form
         _discountPanel.Controls.Clear();
         _personDiscounts.Clear();
         _revisitThemes.Clear();
+        _discountPanel.Height = 120;
 
         var count = (int)_numAdults.Value;
         var py = 0;
@@ -196,15 +200,18 @@ public class CustomerCalcDialog : Form
             {
                 Text = $"{i + 1}번 손님:",
                 Location = new Point(0, py + 2), Size = new Size(70, 22),
-                Font = new Font("맑은 고딕", 9f)
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                ForeColor = Color.White
             };
 
             var cmb = new ComboBox
             {
                 Location = new Point(75, py), Size = new Size(100, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Items = { "없음", "군인", "생일", "재방문" },
-                Font = new Font("맑은 고딕", 9f)
+                Items = { "없음", "군인", "생일", "재방문", "리뷰" },
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                BackColor = ColorPalette.Card,
+                ForeColor = Color.White
             };
             cmb.SelectedIndex = 0;
 
@@ -213,15 +220,17 @@ public class CustomerCalcDialog : Form
                 Location = new Point(185, py), Size = new Size(55, 25),
                 Minimum = 1, Maximum = 10, Value = 1,
                 Visible = false,
-                Font = new Font("맑은 고딕", 9f)
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                BackColor = ColorPalette.Card,
+                ForeColor = Color.White
             };
 
             var lblTheme = new Label
             {
                 Text = "테마",
                 Location = new Point(245, py + 2), Size = new Size(40, 22),
-                Font = new Font("맑은 고딕", 9f),
-                ForeColor = ColorPalette.TextTertiary,
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                ForeColor = Color.White,
                 Visible = false
             };
 
@@ -241,7 +250,7 @@ public class CustomerCalcDialog : Form
             py += 30;
         }
 
-        _discountPanel.Height = Math.Max(py, 30);
+        _discountPanel.AutoScrollMinSize = new Size(0, py);
     }
 
     /// <summary>실시간 요금 재계산</summary>
@@ -265,6 +274,7 @@ public class CustomerCalcDialog : Form
         var militaryCount = 0;
         var birthdayCount = 0;
         var revisitThemeTotal = 0;
+        var reviewCount = 0;
 
         for (var i = 0; i < _personDiscounts.Count; i++)
         {
@@ -273,14 +283,16 @@ public class CustomerCalcDialog : Form
                 case 1: militaryCount++; break;
                 case 2: birthdayCount++; break;
                 case 3: revisitThemeTotal += (int)_revisitThemes[i].Value; break;
+                case 4: reviewCount++; break;
             }
         }
 
         var militaryDsc = militaryCount * MilitaryDiscount;
         var birthdayDsc = birthdayCount * BirthdayDiscount;
         var revisitDsc = revisitThemeTotal * RevisitPerTheme;
+        var reviewDsc = reviewCount * ReviewDiscount;
 
-        var totalDiscount = accountDsc + militaryDsc + birthdayDsc + revisitDsc;
+        var totalDiscount = accountDsc + militaryDsc + birthdayDsc + revisitDsc + reviewDsc;
         var finalPrice = basePrice + childTotal - totalDiscount;
         if (finalPrice < 0) finalPrice = 0;
 
@@ -300,6 +312,8 @@ public class CustomerCalcDialog : Form
             lines.Add($"생일 할인: -{birthdayDsc:N0}원 ({birthdayCount}명)");
         if (revisitDsc > 0)
             lines.Add($"재방문 할인: -{revisitDsc:N0}원 ({revisitThemeTotal}테마)");
+        if (reviewDsc > 0)
+            lines.Add($"리뷰 할인: -{reviewDsc:N0}원 ({reviewCount}명)");
 
         _lblBreakdown.Text = string.Join("\n", lines);
         _lblResult.Text = $"{finalPrice:N0}원";
@@ -308,6 +322,7 @@ public class CustomerCalcDialog : Form
     private static Label MakeLabel(string text, int x, int y) => new()
     {
         Text = text, Location = new Point(x, y + 2),
-        Size = new Size(80, 22), Font = new Font("맑은 고딕", 10f)
+        Size = new Size(95, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+        ForeColor = Color.White
     };
 }

@@ -1,6 +1,6 @@
 namespace CubeManager.Core.Models;
 
-/// <summary>테마별 문제/힌트/정답. 힌트코드는 1000~9999 난수.</summary>
+/// <summary>테마별 단서/풀이/정답. 힌트코드는 1~9999 숫자이며 표시/Export 시 4자리로 채운다.</summary>
 public class ThemeHint
 {
     public int Id { get; set; }
