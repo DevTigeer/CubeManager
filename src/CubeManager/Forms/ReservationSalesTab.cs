@@ -11,6 +11,11 @@ public class ReservationSalesTab : UserControl
     private static readonly Font StrikeoutFont = new("맑은 고딕", 10f, FontStyle.Strikeout | FontStyle.Bold);
     private static readonly Font StrikeoutBoldFont = new("맑은 고딕", 10f, FontStyle.Strikeout | FontStyle.Bold);
 
+    // 관리자가 추가한 현금 보정 항목은 예약/매출 탭에 노출하지 않음
+    private const string CashCorrectionPrefix = "현금 보정:";
+    private static bool IsCashCorrection(SaleItem i) =>
+        i.Description != null && i.Description.StartsWith(CashCorrectionPrefix);
+
     private readonly ISalesService _salesService;
     private readonly IReservationScraperService _scraperService;
     private readonly IReservationRepository _reservationRepo;
@@ -452,7 +457,7 @@ public class ReservationSalesTab : UserControl
     {
         _reservations = (await _reservationRepo.GetByDateAsync(_currentDate)).ToList();
         _existingSaleItems = (await _salesService.GetSaleItemsAsync(_currentDate))
-            .Where(i => i.Category == "revenue").ToList();
+            .Where(i => i.Category == "revenue" && !IsCashCorrection(i)).ToList();
         PopulateMainGrid();
     }
 
@@ -792,7 +797,7 @@ public class ReservationSalesTab : UserControl
         try
         {
             var items = (await _salesService.GetSaleItemsAsync(_currentDate))
-                .Where(i => i.Category == "expense").ToList();
+                .Where(i => i.Category == "expense" && !IsCashCorrection(i)).ToList();
 
             _gridExpense.Rows.Clear();
             var num = 1;
@@ -833,16 +838,21 @@ public class ReservationSalesTab : UserControl
         {
             var daily = await _salesService.GetDailySalesAsync(_currentDate);
             var balance = await _salesService.GetCashBalanceAsync(_currentDate);
+            var allItems = (await _salesService.GetSaleItemsAsync(_currentDate)).ToList();
+
+            // 관리자 현금 보정분은 예약/매출 표시에서 제외 (현금잔액에는 그대로 반영)
+            var cashCorrectRevenue = allItems
+                .Where(i => i.Category == "revenue" && IsCashCorrection(i)).Sum(i => i.Amount);
+            var cashCorrectExpense = allItems
+                .Where(i => i.Category == "expense" && IsCashCorrection(i)).Sum(i => i.Amount);
 
             var card = daily?.CardAmount ?? 0;
-            var cash = daily?.CashAmount ?? 0;
+            var cash = (daily?.CashAmount ?? 0) - cashCorrectRevenue;
             var transfer = daily?.TransferAmount ?? 0;
-            var total = daily?.TotalRevenue ?? 0;
+            var total = (daily?.TotalRevenue ?? 0) - cashCorrectRevenue + cashCorrectExpense;
 
-            // 지출 합계
-            var expenseItems = (await _salesService.GetSaleItemsAsync(_currentDate))
-                .Where(i => i.Category == "expense").ToList();
-            var totalExpense = expenseItems.Sum(i => i.Amount);
+            var totalExpense = allItems
+                .Where(i => i.Category == "expense" && !IsCashCorrection(i)).Sum(i => i.Amount);
 
             // ── 우측 결제 요약 ──
             _lblSumCard.Text = $"카드      ₩ {card:N0}";
@@ -953,7 +963,7 @@ public class ReservationSalesTab : UserControl
         try
         {
             var items = (await _salesService.GetSaleItemsAsync(_currentDate))
-                .Where(i => i.Category == "revenue").ToList();
+                .Where(i => i.Category == "revenue" && !IsCashCorrection(i)).ToList();
 
             if (items.Count == 0)
             {

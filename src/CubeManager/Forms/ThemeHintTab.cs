@@ -127,11 +127,11 @@ public class ThemeHintTab : UserControl
 
         var previewPanel = new TableLayoutPanel
         {
-            Dock = DockStyle.Bottom,
+            Dock = DockStyle.Top,
             Height = 180,
             ColumnCount = 3,
             RowCount = 2,
-            Padding = new Padding(0, 8, 0, 0),
+            Padding = new Padding(0, 8, 0, 8),
             BackColor = ColorPalette.Background
         };
         previewPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
