@@ -90,6 +90,7 @@ jobs:
           name: CubeManager v${{ steps.version.outputs.value }}
           draft: false
           prerelease: false
+          make_latest: "true"
           files: |
             dist/CubeManagerSetup-${{ steps.version.outputs.value }}.exe
             dist/update.json
