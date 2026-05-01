@@ -583,13 +583,8 @@ public class ReservationSalesTab : UserControl
         if (colName is not ("CardAmt" or "CashAmt" or "TransferAmt")) return;
 
         var row = _gridMain.Rows[e.RowIndex];
-        var cellValue = row.Cells[e.ColumnIndex].Value?.ToString()?.Replace(",", "").Replace("₩", "").Trim();
-
-        if (!int.TryParse(cellValue, out var amount) || amount < 0)
-        {
-            row.Cells[e.ColumnIndex].Value = null;
-            return;
-        }
+        var cellRaw = row.Cells[e.ColumnIndex].Value?.ToString();
+        var cellValue = cellRaw?.Replace(",", "").Replace("₩", "").Trim();
 
         var paymentType = colName switch
         {
@@ -599,11 +594,31 @@ public class ReservationSalesTab : UserControl
             _ => "card"
         };
 
-        // 금액이 0이면 셀 초기화
-        if (amount == 0)
+        // 예약 ID 기반으로 고유 설명 생성
+        var resId = row.Cells["ResId"].Value;
+        var theme = row.Cells["Theme"].Value?.ToString() ?? "매출";
+        var customer = row.Cells["Customer"].Value?.ToString() ?? "";
+        var time = row.Cells["Time"].Value?.ToString() ?? "";
+        var desc = resId != null && (int)resId > 0
+            ? $"[R{resId}] {time} {theme} {customer}".Trim()
+            : $"{time} {theme} {customer}".Trim();
+
+        // 빈 값 또는 0/음수 → 기존 매출 항목 삭제
+        var isEmpty = string.IsNullOrWhiteSpace(cellValue);
+        var parseOk = int.TryParse(cellValue, out var amount);
+        if (isEmpty || !parseOk || amount <= 0)
         {
             row.Cells[e.ColumnIndex].Value = null;
             row.Cells[e.ColumnIndex].Style.BackColor = ColorPalette.Surface;
+            try
+            {
+                await _salesService.RemoveSaleItemByDescAsync(_currentDate, desc, paymentType, "revenue");
+                await LoadSummaryAsync();
+            }
+            catch (Exception ex)
+            {
+                ToastNotification.Show(ex.Message, ToastType.Error);
+            }
             return;
         }
 
@@ -618,15 +633,6 @@ public class ReservationSalesTab : UserControl
         row.Cells[e.ColumnIndex].Style.BackColor = tagColor.Item1;
         row.Cells[e.ColumnIndex].Style.ForeColor = tagColor.Item2;
         row.Cells[e.ColumnIndex].Value = amount.ToString("N0");
-
-        // 예약 ID 기반으로 고유 설명 생성
-        var resId = row.Cells["ResId"].Value;
-        var theme = row.Cells["Theme"].Value?.ToString() ?? "매출";
-        var customer = row.Cells["Customer"].Value?.ToString() ?? "";
-        var time = row.Cells["Time"].Value?.ToString() ?? "";
-        var desc = resId != null && (int)resId > 0
-            ? $"[R{resId}] {time} {theme} {customer}".Trim()
-            : $"{time} {theme} {customer}".Trim();
 
         try
         {

@@ -63,6 +63,17 @@ public class SalesService : ISalesService
         }
     }
 
+    public async Task<bool> RemoveSaleItemByDescAsync(string date, string description, string paymentType, string category)
+    {
+        var daily = await _salesRepo.GetDailySalesAsync(date);
+        if (daily == null) return false;
+        var deleted = await _salesRepo.DeleteSaleItemByDescAsync(daily.Id, description, paymentType, category);
+        if (deleted == 0) return false;
+        await _salesRepo.UpdateDailySalesTotalsAsync(daily.Id);
+        await _salesRepo.UpdateCashBalanceAsync(date);
+        return true;
+    }
+
     public Task<CashBalance?> GetCashBalanceAsync(string date) =>
         _salesRepo.GetCashBalanceAsync(date);
 

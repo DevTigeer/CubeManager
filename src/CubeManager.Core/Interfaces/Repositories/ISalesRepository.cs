@@ -10,6 +10,7 @@ public interface ISalesRepository
     Task<int> InsertSaleItemAsync(SaleItem item);
     Task UpsertSaleItemByDescAsync(int dailySalesId, string description, int amount, string paymentType, string category);
     Task<bool> DeleteSaleItemAsync(int id);
+    Task<int> DeleteSaleItemByDescAsync(int dailySalesId, string description, string paymentType, string category);
     Task UpdateDailySalesTotalsAsync(int dailySalesId);
     Task<CashBalance?> GetCashBalanceAsync(string date);
     Task UpdateCashBalanceAsync(string date);
