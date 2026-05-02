@@ -56,6 +56,14 @@ public class FreePassRepository : IFreePassRepository
             new { id, today });
     }
 
+    public async Task MarkUnusedAsync(int id)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE free_passes SET is_used = 0, used_date = NULL WHERE id = @id",
+            new { id });
+    }
+
     public async Task DeleteAsync(int id)
     {
         using var conn = _db.CreateConnection();

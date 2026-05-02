@@ -147,8 +147,12 @@ public class FreePassTab : UserControl
                 DefaultCellStyle = GridTheme.CenterStyle },
             new DataGridViewTextBoxColumn { Name = "UsedDate", HeaderText = "사용일", FillWeight = 10,
                 DefaultCellStyle = GridTheme.CenterStyle },
-            new DataGridViewButtonColumn { Name = "UseBtn", HeaderText = "관리", FillWeight = 10,
-                FlatStyle = FlatStyle.Flat }
+            new DataGridViewButtonColumn { Name = "UseBtn", HeaderText = "사용", FillWeight = 9,
+                FlatStyle = FlatStyle.Flat },
+            new DataGridViewButtonColumn { Name = "DelBtn", HeaderText = "삭제", FillWeight = 6,
+                Text = "🗑", UseColumnTextForButtonValue = true,
+                FlatStyle = FlatStyle.Flat,
+                DefaultCellStyle = GridTheme.CenterStyle }
         );
 
         _grid.CellContentClick += Grid_CellContentClick;
@@ -213,27 +217,54 @@ public class FreePassTab : UserControl
         }
     }
 
-    // ========== 사용 체크 ==========
+    // ========== 사용/미사용 토글 + 삭제 ==========
     private async void Grid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
     {
-        if (e.RowIndex < 0 || _grid.Columns[e.ColumnIndex].Name != "UseBtn") return;
+        if (e.RowIndex < 0) return;
+        var col = _grid.Columns[e.ColumnIndex].Name;
+        if (col != "UseBtn" && col != "DelBtn") return;
 
         var row = _grid.Rows[e.RowIndex];
-        var isUsed = row.Cells["UsedDate"].Value?.ToString();
-        if (!string.IsNullOrEmpty(isUsed)) return; // 이미 사용됨
-
         var id = (int)row.Cells["PassId"].Value;
         var passNo = row.Cells["PassNo"].Value?.ToString();
 
+        if (col == "DelBtn")
+        {
+            if (MessageBox.Show($"{passNo} 이용권을 삭제하시겠습니까?", "삭제 확인",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+            try
+            {
+                await _repo.DeleteAsync(id);
+                ToastNotification.Show($"{passNo} 삭제 완료.", ToastType.Success);
+                await LoadAsync();
+            }
+            catch (Exception ex) { ToastNotification.Show($"삭제 실패: {ex.Message}", ToastType.Error); }
+            return;
+        }
+
+        // UseBtn 토글
+        var isUsed = !string.IsNullOrEmpty(row.Cells["UsedDate"].Value?.ToString());
         try
         {
-            await _repo.MarkUsedAsync(id);
-            ToastNotification.Show($"{passNo} 사용 처리 완료.", ToastType.Success);
+            if (isUsed)
+            {
+                if (MessageBox.Show($"{passNo} 사용을 취소하시겠습니까?", "사용 취소",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+                await _repo.MarkUnusedAsync(id);
+                ToastNotification.Show($"{passNo} 미사용으로 복원.", ToastType.Success);
+            }
+            else
+            {
+                await _repo.MarkUsedAsync(id);
+                ToastNotification.Show($"{passNo} 사용 처리 완료.", ToastType.Success);
+            }
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            ToastNotification.Show($"사용 처리 실패: {ex.Message}", ToastType.Error);
+            ToastNotification.Show($"처리 실패: {ex.Message}", ToastType.Error);
         }
     }
 
@@ -290,16 +321,20 @@ public class FreePassTab : UserControl
                 row.Cells["Reason"].Style.ForeColor = reasonFg;
                 row.Cells["Reason"].Style.Font = new Font("맑은 고딕", 9f, FontStyle.Bold);
 
-                // 사용 버튼
+                // 사용 버튼 (토글)
                 if (p.IsUsed)
                 {
-                    row.Cells["UseBtn"].Value = "✓ 사용됨";
+                    // 사용된 행은 약간 흐리게 (먼저 적용하고 버튼 색은 뒤에)
+                    for (var c = 0; c < _grid.Columns.Count; c++)
+                    {
+                        var name = _grid.Columns[c].Name;
+                        if (name == "UseBtn" || name == "DelBtn") continue;
+                        row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
+                    }
+
+                    row.Cells["UseBtn"].Value = "↺ 사용취소";
                     row.Cells["UseBtn"].Style.BackColor = ColorPalette.SuccessLight;
                     row.Cells["UseBtn"].Style.ForeColor = ColorPalette.Success;
-
-                    // 사용된 행은 약간 흐리게
-                    for (var c = 0; c < _grid.Columns.Count - 1; c++)
-                        row.Cells[c].Style.ForeColor = ColorPalette.TextTertiary;
                 }
                 else
                 {

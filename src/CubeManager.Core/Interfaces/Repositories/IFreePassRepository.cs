@@ -19,6 +19,9 @@ public interface IFreePassRepository
     /// <summary>사용 처리 (used_date = today, is_used = 1)</summary>
     Task MarkUsedAsync(int id);
 
+    /// <summary>미사용 복원 (used_date = NULL, is_used = 0)</summary>
+    Task MarkUnusedAsync(int id);
+
     /// <summary>삭제</summary>
     Task DeleteAsync(int id);
 }
