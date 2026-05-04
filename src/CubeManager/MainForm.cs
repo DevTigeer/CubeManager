@@ -29,6 +29,7 @@ public class MainForm : Form
     public MainForm(IServiceProvider serviceProvider)
     {
         _sp = serviceProvider;
+        AppIcon.Apply(this);
         Text = $"CubeManager v{AppVersionHelper.CurrentVersion}";
         MinimumSize = new Size(1024, 600);
         StartPosition = FormStartPosition.CenterScreen;
@@ -274,7 +275,9 @@ public class MainForm : Form
         9 => new SettingsTab(
                 _sp.GetRequiredService<IReservationScraperService>(),
                 _sp.GetRequiredService<IConfigRepository>(),
-                _sp.GetRequiredService<IUpdateCheckService>()),
+                _sp.GetRequiredService<IUpdateCheckService>(),
+                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotConfigService>(),
+                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotWorker>()),
         10 => new AdminTab(
                 _sp.GetRequiredService<IConfigRepository>(),
                 _sp.GetRequiredService<ISalesService>(),
@@ -291,6 +294,18 @@ public class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        // 텔레그램 봇 워커 정지 (DB 종료 전)
+        try
+        {
+            var worker = _sp.GetService(typeof(CubeManager.Telegram.ITelegramBotWorker))
+                as CubeManager.Telegram.ITelegramBotWorker;
+            worker?.StopAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "텔레그램 봇 정지 실패 (무시)");
+        }
+
         // DB 종료 처리
         try
         {

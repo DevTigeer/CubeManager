@@ -4,6 +4,7 @@ using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
 using CubeManager.Helpers;
+using CubeManager.Telegram;
 
 namespace CubeManager.Forms;
 
@@ -12,16 +13,22 @@ public class SettingsTab : UserControl
     private readonly IReservationScraperService _scraperService;
     private readonly IConfigRepository _configRepo;
     private readonly IUpdateCheckService _updateService;
+    private readonly ITelegramBotConfigService _telegramConfig;
+    private readonly ITelegramBotWorker _telegramWorker;
     private bool _isLoadingUpdateSettings;
 
     public SettingsTab(
         IReservationScraperService scraperService,
         IConfigRepository configRepo,
-        IUpdateCheckService updateService)
+        IUpdateCheckService updateService,
+        ITelegramBotConfigService telegramConfig,
+        ITelegramBotWorker telegramWorker)
     {
         _scraperService = scraperService;
         _configRepo = configRepo;
         _updateService = updateService;
+        _telegramConfig = telegramConfig;
+        _telegramWorker = telegramWorker;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
         Padding = new Padding(15);
@@ -147,6 +154,81 @@ public class SettingsTab : UserControl
 
         updatePanel.Controls.AddRange([lblVersion, chkAutoUpdate, lblLastCheck, btnCheckUpdate]);
 
+        // === 텔레그램 봇 설정 패널 ===
+        var telegramPanel = new GroupBox
+        {
+            Text = "텔레그램 봇 설정",
+            Dock = DockStyle.Top,
+            Height = 200,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10)
+        };
+
+        var lblToken = new Label { Text = "봇 토큰:", Location = new Point(15, 28), Size = new Size(80, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+        var txtBotToken = new TextBox { Name = "txtBotToken", Location = new Point(110, 26), Size = new Size(280, 25), UseSystemPasswordChar = true, Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+
+        var lblChatIds = new Label { Text = "허용 chat_id:", Location = new Point(15, 58), Size = new Size(90, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+        var txtChatIds = new TextBox { Name = "txtChatIds", Location = new Point(110, 56), Size = new Size(280, 25), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+
+        var lblHint = new Label
+        {
+            Text = "콤마 구분. 단톡방은 음수 (예: -1001234567890)",
+            Location = new Point(110, 84),
+            Size = new Size(300, 18),
+            Font = new Font("맑은 고딕", 8.5f, FontStyle.Regular),
+            ForeColor = ColorPalette.TextSecondary
+        };
+
+        var chkEnableBot = new CheckBox
+        {
+            Text = "봇 활성화",
+            Location = new Point(15, 110),
+            Size = new Size(120, 24),
+            Font = new Font("맑은 고딕", 10f, FontStyle.Regular),
+            ForeColor = ColorPalette.Text
+        };
+
+        var btnTestBot = ButtonFactory.CreateSecondary("테스트 발송", 110);
+        btnTestBot.Location = new Point(15, 145);
+        btnTestBot.Height = 32;
+        btnTestBot.Click += async (_, _) =>
+        {
+            var token = txtBotToken.Text.Trim();
+            var ids = TelegramBotOptions.ParseChatIds(txtChatIds.Text);
+            if (string.IsNullOrEmpty(token) || ids.Count == 0)
+            {
+                ToastNotification.Show("토큰과 chat_id를 입력하세요.", ToastType.Warning);
+                return;
+            }
+            await ButtonFactory.RunWithLoadingAsync(btnTestBot, "발송 중...", async () =>
+            {
+                var result = await _telegramWorker.SendTestMessageAsync(token, ids[0]);
+                if (result.Success)
+                    ToastNotification.Show($"테스트 발송 성공 (chat: {ids[0]})", ToastType.Success);
+                else
+                    ToastNotification.Show($"발송 실패: {result.Error}", ToastType.Error);
+            });
+        };
+
+        var btnSaveBot = ButtonFactory.CreatePrimary("저장 + 재시작", 140);
+        btnSaveBot.Location = new Point(135, 145);
+        btnSaveBot.Height = 32;
+        btnSaveBot.Click += async (_, _) =>
+        {
+            var token = txtBotToken.Text.Trim();
+            var ids = TelegramBotOptions.ParseChatIds(txtChatIds.Text);
+            await _telegramConfig.SaveAsync(token, ids, chkEnableBot.Checked);
+            await _telegramWorker.RestartAsync();
+            var status = chkEnableBot.Checked && !string.IsNullOrEmpty(token) && ids.Count > 0
+                ? "저장 완료, 봇 재시작됨"
+                : "저장 완료 (봇 비활성)";
+            ToastNotification.Show(status, ToastType.Success);
+        };
+
+        telegramPanel.Controls.AddRange([lblToken, txtBotToken, lblChatIds, txtChatIds, lblHint, chkEnableBot, btnTestBot, btnSaveBot]);
+
+        // Top 도킹은 Add 역순으로 쌓임. 맨 아래에 telegramPanel을 두려면 가장 먼저 Add.
+        content.Controls.Add(telegramPanel);
         content.Controls.Add(updatePanel);
         content.Controls.Add(webPanel);
 
@@ -155,6 +237,15 @@ public class SettingsTab : UserControl
 
         _ = LoadWebSettingsAsync(txtUrl, txtId);
         _ = LoadUpdateSettingsAsync(chkAutoUpdate, lblLastCheck);
+        _ = LoadTelegramSettingsAsync(txtBotToken, txtChatIds, chkEnableBot);
+    }
+
+    private async Task LoadTelegramSettingsAsync(TextBox txtToken, TextBox txtChatIds, CheckBox chkEnable)
+    {
+        var opts = await _telegramConfig.LoadAsync();
+        txtToken.Text = opts.Token;
+        txtChatIds.Text = TelegramBotOptions.FormatChatIds(opts.AllowedChatIds);
+        chkEnable.Checked = opts.Enabled;
     }
 
     private async Task LoadWebSettingsAsync(TextBox txtUrl, TextBox txtId)

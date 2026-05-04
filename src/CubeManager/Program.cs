@@ -7,6 +7,7 @@ using CubeManager.Data;
 using CubeManager.Data.Migrations;
 using CubeManager.Data.Repositories;
 using CubeManager.Dialogs;
+using CubeManager.Telegram;
 using Serilog;
 
 namespace CubeManager;
@@ -71,6 +72,20 @@ static class Program
             // 최초 실행: 웹 자격증명 설정 (cubeescape.co.kr)
             EnsureWebCredentials();
 
+            // 텔레그램 봇 워커 시작 (백그라운드, 비차단; 미설정 시 무동작)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var worker = ServiceProvider.GetRequiredService<ITelegramBotWorker>();
+                    await worker.StartAsync();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "텔레그램 봇 시작 실패 (무시)");
+                }
+            });
+
             // 메인 폼 실행
             Application.Run(new MainForm(ServiceProvider));
         }
@@ -122,6 +137,9 @@ static class Program
         services.AddSingleton<IHolidayService, HolidayService>();
         services.AddSingleton<IAlertService, AlertService>();
         services.AddSingleton<IUpdateCheckService, UpdateCheckService>();
+
+        // Telegram Bot
+        services.AddCubeManagerTelegram();
     }
 
     private static void EnsureAdminPassword()

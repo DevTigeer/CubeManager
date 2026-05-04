@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using CubeManager.Helpers;
 
 namespace CubeManager.Controls;
@@ -34,6 +35,8 @@ public class SideNavPanel : Panel
     private static readonly string[] FallbackIcons =
         ["📅", "📋", "✅", "⏰", "📝", "🎫", "📦", "📄", "🔑", "⚙️", "🛡️"];
     private static readonly bool _useMdl2 = IsMdl2Available();
+    private static readonly Image? _logoImage = LoadEmbeddedImage("CubeManager.Resources.logo@2x.png")
+                                              ?? LoadEmbeddedImage("CubeManager.Resources.logo.png");
 
     public int SelectedIndex
     {
@@ -115,22 +118,42 @@ public class SideNavPanel : Panel
 
     private void DrawLogo(Graphics g)
     {
-        // 로고 아이콘 (블랙 원형 배경 + 흰 텍스트)
-        var iconBg = new Rectangle(12, 10, 32, 32);
-        using var iconBgBrush = new SolidBrush(ColorPalette.Text);
-        g.FillEllipse(iconBgBrush, iconBg);
-        using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        using var whiteBrush = new SolidBrush(ColorPalette.Surface);
-        g.DrawString("C", iconFont, whiteBrush, 20, 15);
-
-        // 로고 텍스트 (무채색)
-        using var logoBrush = new SolidBrush(ColorPalette.Text);
-        using var logoFont = new Font("Segoe UI", 11f, FontStyle.Bold);
-        g.DrawString("CubeManager", logoFont, logoBrush, 48, 16);
+        if (_logoImage is not null)
+        {
+            // 원본 비율 유지 + 사이드바 폭 안에서 좌측 정렬
+            const int marginX = 12;
+            const int marginY = 8;
+            var maxW = Width - marginX * 2;
+            var maxH = LogoHeight - marginY * 2;
+            var ratio = Math.Min(maxW / (float)_logoImage.Width, maxH / (float)_logoImage.Height);
+            var w = (int)(_logoImage.Width * ratio);
+            var h = (int)(_logoImage.Height * ratio);
+            var y = (LogoHeight - h) / 2;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(_logoImage, new Rectangle(marginX, y, w, h));
+        }
+        else
+        {
+            // 폴백: GDI+ 텍스트 로고
+            using var iconFont = new Font("Segoe UI", 11f, FontStyle.Bold);
+            using var brush = new SolidBrush(ColorPalette.Text);
+            g.DrawString("CubeManager", iconFont, brush, 12, 16);
+        }
 
         // 하단 구분선
         using var divPen = new Pen(ColorPalette.Divider, 1);
         g.DrawLine(divPen, 12, LogoHeight - 1, Width - 12, LogoHeight - 1);
+    }
+
+    private static Image? LoadEmbeddedImage(string resourceName)
+    {
+        try
+        {
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+            return stream is null ? null : Image.FromStream(stream);
+        }
+        catch { return null; }
     }
 
     private void DrawNavItem(Graphics g, int index)
