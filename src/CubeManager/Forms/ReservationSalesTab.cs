@@ -3,6 +3,7 @@ using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
 using CubeManager.Helpers;
+using Serilog;
 
 namespace CubeManager.Forms;
 
@@ -110,13 +111,16 @@ public class ReservationSalesTab : UserControl
             ShowUpDown = false,
             Margin = new Padding(0, 2, 0, 0)
         };
+        // 초기값을 먼저 설정해야 ValueChanged가 CTOR 도중 발화하지 않는다
+        // (CTOR 시점엔 _gridMain 등 후속 필드가 null + SyncContext 미설치 상태라
+        //  LoadAllAsync가 호출되면 NRE/cross-thread 예외가 silent 실패함)
+        _dtpDate.Value = DateTime.Today;
         _dtpDate.ValueChanged += (_, _) =>
         {
             _currentDate = _dtpDate.Value.ToString("yyyy-MM-dd");
             txtDate.Text = _currentDate;
-            _ = LoadAllAsync();
+            _ = SafeLoadAllAsync();
         };
-        _dtpDate.Value = DateTime.Today;
         topPanel.Controls.Add(_dtpDate);
 
         var btnFetch = CreateBtn("웹 조회", ColorPalette.Info);
@@ -375,8 +379,31 @@ public class ReservationSalesTab : UserControl
         _autoRefreshTimer = new System.Windows.Forms.Timer { Interval = 120_000, Enabled = true };
         _autoRefreshTimer.Tick += async (_, _) => await FetchWebSilently();
 
-        // 초기 로드
-        _ = LoadAllAsync();
+        // 초기 로드는 핸들 생성 이후로 지연.
+        // CTOR 시점엔 SyncContext가 미설치라 await continuation이 ThreadPool로 가고,
+        // PopulateMainGrid 안의 BeginInvoke가 핸들 미생성 상태에서 throw → silent 실패함.
+        EventHandler? initialLoad = null;
+        initialLoad = (_, _) =>
+        {
+            HandleCreated -= initialLoad!;
+            _ = SafeLoadAllAsync();
+        };
+        HandleCreated += initialLoad;
+    }
+
+    // ===== fire-and-forget LoadAll: 예외를 묻지 않고 로깅 =====
+    private async Task SafeLoadAllAsync()
+    {
+        try
+        {
+            await LoadAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "ReservationSalesTab LoadAllAsync 실패 (date={Date})", _currentDate);
+            try { ToastNotification.Show($"매출 로드 실패: {ex.Message}", ToastType.Error); }
+            catch { /* 토스트 자체 실패는 무시 */ }
+        }
     }
 
     // ===== 탭 활성/비활성 시 타이머 제어 =====
