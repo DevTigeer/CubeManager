@@ -351,18 +351,25 @@ public class ReservationSalesTab : UserControl
         // 구분선
         var divider = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = ColorPalette.Border };
 
+        // 하단 패널 크기 조정 (3분할: 지출 36% / 통계 28% / 결제요약 36%)
+        // Resize 핸들러는 Controls.Add 이전에 부착해야 초기 레이아웃에서도 발화한다.
+        void ResizeBottom()
+        {
+            if (bottomPanel.Width <= 0) return;
+            expensePanel.Width = (int)(bottomPanel.Width * 0.36);
+            statsPanel.Width = (int)(bottomPanel.Width * 0.28);
+        }
+        bottomPanel.Resize += (_, _) => ResizeBottom();
+
         // ========== 레이아웃 조립 (역순) ==========
         Controls.Add(_gridMain);
         Controls.Add(divider);
         Controls.Add(bottomPanel);
         Controls.Add(topPanel);
 
-        // 하단 패널 크기 조정 (3분할: 지출 36% / 통계 28% / 결제요약 36%)
-        bottomPanel.Resize += (_, _) =>
-        {
-            expensePanel.Width = (int)(bottomPanel.Width * 0.36);
-            statsPanel.Width = (int)(bottomPanel.Width * 0.28);
-        };
+        // 초기 1회 강제 사이징 (UserControl 부모 부착 시점에 Resize가 누락되는 케이스 방지)
+        HandleCreated += (_, _) => ResizeBottom();
+        ResizeBottom();
 
         // ========== 자동 갱신 타이머 ==========
         _autoRefreshTimer = new System.Windows.Forms.Timer { Interval = 120_000, Enabled = true };
