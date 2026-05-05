@@ -5,6 +5,7 @@ using CubeManager.Core.Interfaces.Services;
 using CubeManager.Core.Models;
 using CubeManager.Dialogs;
 using CubeManager.Helpers;
+using CubeManager.Telegram;
 
 namespace CubeManager.Forms;
 
@@ -22,6 +23,8 @@ public class AdminTab : UserControl
     private readonly Data.Database? _database;
     private readonly ISalaryService? _salaryService2;
     private readonly IAlertService? _alertService;
+    private readonly ITelegramBotConfigService _telegramConfig;
+    private readonly ITelegramBotWorker _telegramWorker;
 
     private Panel _authPanel = null!;
     private Panel _mainPanel = null!;
@@ -67,7 +70,8 @@ public class AdminTab : UserControl
         IAttendanceService attendanceService, IEmployeeService employeeService,
         IMicePopupRepository miceRepo, IChecklistRepository checklistRepo,
         Data.Database database, ISalaryService salaryService, IAlertService alertService,
-        IWorkPartRepository workPartRepo)
+        IWorkPartRepository workPartRepo,
+        ITelegramBotConfigService telegramConfig, ITelegramBotWorker telegramWorker)
     {
         _configRepo = configRepo;
         _salesService = salesService;
@@ -79,6 +83,8 @@ public class AdminTab : UserControl
         _salaryService2 = salaryService;
         _alertService = alertService;
         _workPartRepo = workPartRepo;
+        _telegramConfig = telegramConfig;
+        _telegramWorker = telegramWorker;
         Dock = DockStyle.Fill;
         BackColor = ColorPalette.Surface;
 
@@ -207,6 +213,7 @@ public class AdminTab : UserControl
         tabControl.TabPages.Add(BuildChecklistTab());
         tabControl.TabPages.Add(BuildWorkPartTab());
         tabControl.TabPages.Add(BuildAlertHistoryTab());
+        tabControl.TabPages.Add(BuildTelegramTab());
 
         _mainPanel.Controls.Add(tabControl);
         _mainPanel.Controls.Add(header);
@@ -2092,5 +2099,102 @@ public class AdminTab : UserControl
             _gridAlerts.Rows.Add(a.Id, a.AlertDate, a.AlertTime, sevLabel, typeLabel,
                 a.EmployeeName ?? "-", a.Message, a.IsResolved);
         }
+    }
+
+    // ==================== 탭: 텔레그램 봇 ====================
+    private TabPage BuildTelegramTab()
+    {
+        var page = new TabPage("텔레그램 봇") { Padding = new Padding(15), BackColor = ColorPalette.Surface };
+
+        var panel = new Panel
+        {
+            Location = new Point(20, 20),
+            Size = new Size(440, 230),
+            BackColor = ColorPalette.Surface
+        };
+
+        var lblTitle = new Label
+        {
+            Text = "텔레그램 봇 설정",
+            Font = new Font("맑은 고딕", 12f, FontStyle.Bold),
+            ForeColor = ColorPalette.Text,
+            Location = new Point(0, 0),
+            Size = new Size(420, 26)
+        };
+
+        var lblToken = new Label { Text = "봇 토큰:", Location = new Point(0, 36), Size = new Size(90, 22), Font = new Font("맑은 고딕", 10f) };
+        var txtBotToken = new TextBox { Location = new Point(100, 34), Size = new Size(320, 25), UseSystemPasswordChar = true, Font = new Font("맑은 고딕", 10f) };
+
+        var lblChatIds = new Label { Text = "허용 chat_id:", Location = new Point(0, 68), Size = new Size(95, 22), Font = new Font("맑은 고딕", 10f) };
+        var txtChatIds = new TextBox { Location = new Point(100, 66), Size = new Size(320, 25), Font = new Font("맑은 고딕", 10f) };
+
+        var lblHint = new Label
+        {
+            Text = "콤마 구분. 단톡방은 음수 (예: -1001234567890)",
+            Location = new Point(100, 94),
+            Size = new Size(320, 18),
+            Font = new Font("맑은 고딕", 8.5f),
+            ForeColor = ColorPalette.TextSecondary
+        };
+
+        var chkEnableBot = new CheckBox
+        {
+            Text = "봇 활성화",
+            Location = new Point(0, 122),
+            Size = new Size(120, 24),
+            Font = new Font("맑은 고딕", 10f),
+            ForeColor = ColorPalette.Text
+        };
+
+        var btnTestBot = ButtonFactory.CreateSecondary("테스트 발송", 110);
+        btnTestBot.Location = new Point(0, 158);
+        btnTestBot.Height = 32;
+        btnTestBot.Click += async (_, _) =>
+        {
+            var token = txtBotToken.Text.Trim();
+            var ids = TelegramBotOptions.ParseChatIds(txtChatIds.Text);
+            if (string.IsNullOrEmpty(token) || ids.Count == 0)
+            {
+                ToastNotification.Show("토큰과 chat_id를 입력하세요.", ToastType.Warning);
+                return;
+            }
+            await ButtonFactory.RunWithLoadingAsync(btnTestBot, "발송 중...", async () =>
+            {
+                var result = await _telegramWorker.SendTestMessageAsync(token, ids[0]);
+                if (result.Success)
+                    ToastNotification.Show($"테스트 발송 성공 (chat: {ids[0]})", ToastType.Success);
+                else
+                    ToastNotification.Show($"발송 실패: {result.Error}", ToastType.Error);
+            });
+        };
+
+        var btnSaveBot = ButtonFactory.CreatePrimary("저장 + 재시작", 140);
+        btnSaveBot.Location = new Point(120, 158);
+        btnSaveBot.Height = 32;
+        btnSaveBot.Click += async (_, _) =>
+        {
+            var token = txtBotToken.Text.Trim();
+            var ids = TelegramBotOptions.ParseChatIds(txtChatIds.Text);
+            await _telegramConfig.SaveAsync(token, ids, chkEnableBot.Checked);
+            await _telegramWorker.RestartAsync();
+            var status = chkEnableBot.Checked && !string.IsNullOrEmpty(token) && ids.Count > 0
+                ? "저장 완료, 봇 재시작됨"
+                : "저장 완료 (봇 비활성)";
+            ToastNotification.Show(status, ToastType.Success);
+        };
+
+        panel.Controls.AddRange([lblTitle, lblToken, txtBotToken, lblChatIds, txtChatIds, lblHint, chkEnableBot, btnTestBot, btnSaveBot]);
+        page.Controls.Add(panel);
+
+        _ = LoadTelegramSettingsAsync(txtBotToken, txtChatIds, chkEnableBot);
+        return page;
+    }
+
+    private async Task LoadTelegramSettingsAsync(TextBox txtToken, TextBox txtChatIds, CheckBox chkEnable)
+    {
+        var opts = await _telegramConfig.LoadAsync();
+        txtToken.Text = opts.Token;
+        txtChatIds.Text = TelegramBotOptions.FormatChatIds(opts.AllowedChatIds);
+        chkEnable.Checked = opts.Enabled;
     }
 }

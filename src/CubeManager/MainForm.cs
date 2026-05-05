@@ -275,9 +275,7 @@ public class MainForm : Form
         9 => new SettingsTab(
                 _sp.GetRequiredService<IReservationScraperService>(),
                 _sp.GetRequiredService<IConfigRepository>(),
-                _sp.GetRequiredService<IUpdateCheckService>(),
-                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotConfigService>(),
-                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotWorker>()),
+                _sp.GetRequiredService<IUpdateCheckService>()),
         10 => new AdminTab(
                 _sp.GetRequiredService<IConfigRepository>(),
                 _sp.GetRequiredService<ISalesService>(),
@@ -288,7 +286,9 @@ public class MainForm : Form
                 _sp.GetRequiredService<Data.Database>(),
                 _sp.GetRequiredService<ISalaryService>(),
                 _sp.GetRequiredService<IAlertService>(),
-                _sp.GetRequiredService<IWorkPartRepository>()),
+                _sp.GetRequiredService<IWorkPartRepository>(),
+                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotConfigService>(),
+                _sp.GetRequiredService<CubeManager.Telegram.ITelegramBotWorker>()),
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 
