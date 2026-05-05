@@ -81,6 +81,14 @@ public class SalesRepository : ISalesRepository
         return await conn.ExecuteAsync("DELETE FROM sale_items WHERE id = @id", new { id }) > 0;
     }
 
+    public async Task<bool> UpdateSaleItemAsync(int id, string description, int amount, string paymentType)
+    {
+        using var conn = _db.CreateConnection();
+        return await conn.ExecuteAsync(
+            "UPDATE sale_items SET description = @description, amount = @amount, payment_type = @paymentType WHERE id = @id",
+            new { id, description, amount, paymentType }) > 0;
+    }
+
     public async Task<int> DeleteSaleItemByDescAsync(int dailySalesId, string description, string paymentType, string category)
     {
         using var conn = _db.CreateConnection();

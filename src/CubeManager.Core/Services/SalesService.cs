@@ -63,6 +63,20 @@ public class SalesService : ISalesService
         }
     }
 
+    public async Task UpdateSaleItemAsync(string date, int itemId, string description, int amount, string paymentType)
+    {
+        if (amount <= 0)
+            throw new ArgumentException("금액은 양수여야 합니다.");
+
+        await _salesRepo.UpdateSaleItemAsync(itemId, description, amount, paymentType);
+        var daily = await _salesRepo.GetDailySalesAsync(date);
+        if (daily != null)
+        {
+            await _salesRepo.UpdateDailySalesTotalsAsync(daily.Id);
+            await _salesRepo.UpdateCashBalanceAsync(date);
+        }
+    }
+
     public async Task<bool> RemoveSaleItemByDescAsync(string date, string description, string paymentType, string category)
     {
         var daily = await _salesRepo.GetDailySalesAsync(date);

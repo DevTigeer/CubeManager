@@ -224,7 +224,7 @@ public class ReservationSalesTab : UserControl
 
         var lblExpenseHeader = new Label
         {
-            Text = "지출 내역", Dock = DockStyle.Top, Height = 30,
+            Text = "지출 내역  (더블클릭=수정 / Delete=삭제)", Dock = DockStyle.Top, Height = 30,
             Font = new Font("맑은 고딕", 11f, FontStyle.Bold),
             ForeColor = ColorPalette.TextSecondary,
             Padding = new Padding(0, 2, 0, 4)
@@ -243,6 +243,7 @@ public class ReservationSalesTab : UserControl
             new DataGridViewTextBoxColumn { Name = "ExpPay", HeaderText = "결제", FillWeight = 20 }
         );
         _gridExpense.KeyDown += GridExpense_KeyDown;
+        _gridExpense.CellDoubleClick += GridExpense_CellDoubleClick;
 
         var btnAddExpense = CreateBtn("+ 지출 추가", ColorPalette.Danger);
         btnAddExpense.Dock = DockStyle.Bottom;
@@ -1031,6 +1032,37 @@ public class ReservationSalesTab : UserControl
         await LoadAllAsync();
     }
 
+    // ===== 지출 수정 (더블클릭) =====
+    private async void GridExpense_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0) return;
+        var row = _gridExpense.Rows[e.RowIndex];
+        if (row.Cells["ExpId"].Value is not int id) return;
+
+        var desc = row.Cells["ExpDesc"].Value?.ToString() ?? "";
+        var amountText = row.Cells["ExpAmt"].Value?.ToString() ?? "0";
+        if (!int.TryParse(amountText.Replace(",", "").Trim(), out var amount)) return;
+        var paymentType = row.Cells["ExpPay"].Value?.ToString() switch
+        {
+            "카드" => "card", "현금" => "cash", "계좌" => "transfer", _ => "cash"
+        };
+
+        using var dlg = new SaleItemDialog("expense", desc, amount, paymentType);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            await _salesService.UpdateSaleItemAsync(_currentDate, id,
+                dlg.ItemDescription, dlg.Amount, dlg.PaymentType);
+            ToastNotification.Show("지출 수정 완료.", ToastType.Success);
+            await LoadAllAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
     // ===== 기존 결제 데이터를 그리드 셀에 채우기 =====
     private void LoadExistingPayments(DataGridViewRow row, Reservation r)
     {
@@ -1266,9 +1298,20 @@ internal class SaleItemDialog : Form
     private readonly NumericUpDown _numAmount;
     private readonly ComboBox _cmbPayment;
 
-    public SaleItemDialog(string category)
+    /// <param name="initialDesc">편집 모드: 초기 항목명(null이면 추가 모드)</param>
+    /// <param name="initialAmount">편집 모드: 초기 금액</param>
+    /// <param name="initialPaymentType">편집 모드: 초기 결제수단 (card/cash/transfer)</param>
+    public SaleItemDialog(string category,
+        string? initialDesc = null, int initialAmount = 0, string? initialPaymentType = null)
     {
-        Text = category == "revenue" ? "매출 추가" : "지출 추가";
+        var isEdit = initialDesc != null;
+        Text = (category, isEdit) switch
+        {
+            ("revenue", true) => "매출 수정",
+            ("revenue", false) => "매출 추가",
+            (_, true) => "지출 수정",
+            _ => "지출 추가"
+        };
         Size = category == "expense" ? new Size(420, 285) : new Size(360, 220);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
@@ -1342,10 +1385,22 @@ internal class SaleItemDialog : Form
         _cmbPayment.SelectedIndex = category == "expense" ? 1 : 0;
         Controls.Add(_cmbPayment);
 
+        // 편집 모드: 초기값 채우기
+        if (isEdit)
+        {
+            _txtDesc.Text = initialDesc ?? "";
+            if (initialAmount >= _numAmount.Minimum && initialAmount <= _numAmount.Maximum)
+                _numAmount.Value = initialAmount;
+            _cmbPayment.SelectedIndex = initialPaymentType switch
+            {
+                "card" => 0, "cash" => 1, "transfer" => 2, _ => _cmbPayment.SelectedIndex
+            };
+        }
+
         y += 45;
         var btnOk = new Button
         {
-            Text = "추가", Location = new Point(150, y), Size = new Size(80, 35),
+            Text = isEdit ? "저장" : "추가", Location = new Point(150, y), Size = new Size(80, 35),
             BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.OK
         };
