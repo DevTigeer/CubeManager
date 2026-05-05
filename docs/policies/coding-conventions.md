@@ -221,6 +221,84 @@ private async void BtnAdd_Click(object sender, EventArgs e)
 - CPU 바운드 작업 (급여 계산 등): `Task.Run`으로 백그라운드 스레드
 - UI 업데이트: 반드시 UI 스레드에서 (await 후 자동으로 UI 스레드 복귀)
 
+### 4.1 WinForms 라이프사이클 / fire-and-forget 금지 규칙
+
+> 배경: v0.3.13 이전 ReservationSalesTab은 CTOR 시점에 `_ = LoadAllAsync()`로
+> 초기 로드를 시작했고, `Application.Run` 이전이라 `SyncContext`가 미설치 +
+> 컨트롤 핸들 미생성 상태에서 `BeginInvoke`가 발화해 silent 예외로 그리드가
+> 비어있는 사고가 있었음. 같은 패턴을 만들지 않도록 아래 규칙을 강제한다.
+
+**규칙 1 — UI UserControl/Form CTOR에서 fire-and-forget async 호출 금지**
+
+```csharp
+// ❌ 금지: CTOR 시점엔 SyncContext 미설치 + 핸들 미생성
+public MyTab()
+{
+    InitializeUi();
+    _ = LoadAllAsync();   // 위험: await 후 ThreadPool로 빠질 수 있음
+}
+
+// ✅ 권장: HandleCreated 이후로 1회성 지연
+public MyTab()
+{
+    InitializeUi();
+
+    EventHandler? once = null;
+    once = (_, _) =>
+    {
+        HandleCreated -= once!;
+        _ = SafeLoadAllAsync();
+    };
+    HandleCreated += once;
+}
+```
+
+**규칙 2 — fire-and-forget Task는 반드시 try/catch + 로깅 wrapper 경유**
+
+```csharp
+// ❌ 금지: 예외가 묻힘
+_ = LoadAllAsync();
+
+// ✅ 권장: Safe* wrapper로 감싸 Serilog로 흘려보냄
+private async Task SafeLoadAllAsync()
+{
+    try { await LoadAllAsync(); }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "{Tab} LoadAllAsync 실패", nameof(MyTab));
+        try { ToastNotification.Show($"로드 실패: {ex.Message}", ToastType.Error); }
+        catch { }
+    }
+}
+```
+
+**규칙 3 — 컨트롤 초기 값을 ValueChanged 핸들러보다 먼저 세팅**
+
+```csharp
+// ❌ 금지: CTOR 도중 ValueChanged 발화 → 후속 필드 null 상태에서 콜백 실행
+_dtpDate.ValueChanged += (_, _) => _ = LoadAllAsync();
+_dtpDate.Value = DateTime.Today;
+
+// ✅ 권장: 값 먼저 세팅 → 핸들러 부착
+_dtpDate.Value = DateTime.Today;
+_dtpDate.ValueChanged += (_, _) => _ = SafeLoadAllAsync();
+```
+
+**규칙 4 — Resize 핸들러는 `Controls.Add` 이전에 부착**
+
+비율 기반 사이징(`expensePanel.Width = parent.Width * 0.36` 등)을 Resize에서
+적용할 경우, 초기 dock 레이아웃에서 핸들러가 누락되면 자식이 1px 상태로 고정됨.
+
+```csharp
+// ✅ 핸들러 먼저, Controls.Add 다음, HandleCreated 1회 호출
+parent.Resize += (_, _) => DoLayout();
+this.Controls.Add(parent);
+HandleCreated += (_, _) => DoLayout();
+DoLayout();
+```
+
+더 안전한 대안: `TableLayoutPanel` + `ColumnStyle(SizeType.Percent, ...)` 사용.
+
 ---
 
 ## 5. 주석 규칙
