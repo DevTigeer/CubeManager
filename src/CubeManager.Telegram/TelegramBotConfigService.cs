@@ -10,6 +10,7 @@ public sealed class TelegramBotConfigService : ITelegramBotConfigService
     public const string KeyToken = "telegram_bot_token";
     public const string KeyChatIds = "telegram_allowed_chat_ids";
     public const string KeyEnabled = "telegram_bot_enabled";
+    public const string KeyOwnerChatId = "telegram_owner_chat_id";
 
     private readonly IConfigRepository _config;
 
@@ -27,15 +28,19 @@ public sealed class TelegramBotConfigService : ITelegramBotConfigService
 
         var enabled = await _config.GetIntAsync(KeyEnabled, 0) == 1;
 
+        var ownerRaw = await _config.GetAsync(KeyOwnerChatId);
+        var ownerId = long.TryParse(ownerRaw, out var o) ? o : 0L;
+
         return new TelegramBotOptions
         {
             Token = token,
             AllowedChatIds = ids,
-            Enabled = enabled
+            Enabled = enabled,
+            OwnerChatId = ownerId
         };
     }
 
-    public async Task SaveAsync(string token, IReadOnlyList<long> allowedChatIds, bool enabled)
+    public async Task SaveAsync(string token, IReadOnlyList<long> allowedChatIds, bool enabled, long ownerChatId = 0)
     {
         var encrypted = string.IsNullOrEmpty(token)
             ? string.Empty
@@ -44,5 +49,6 @@ public sealed class TelegramBotConfigService : ITelegramBotConfigService
         await _config.SetAsync(KeyToken, encrypted);
         await _config.SetAsync(KeyChatIds, TelegramBotOptions.FormatChatIds(allowedChatIds));
         await _config.SetAsync(KeyEnabled, enabled ? "1" : "0");
+        await _config.SetAsync(KeyOwnerChatId, ownerChatId == 0 ? "" : ownerChatId.ToString());
     }
 }

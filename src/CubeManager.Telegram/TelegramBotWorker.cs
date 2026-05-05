@@ -16,6 +16,7 @@ public sealed class TelegramBotWorker : ITelegramBotWorker
     private TelegramBotClient? _bot;
     private CancellationTokenSource? _cts;
     private HashSet<long> _allowedChatIds = new();
+    private long _ownerChatId;
     private bool _running;
 
     public TelegramBotWorker(ITelegramBotConfigService configService, CommandRouter router)
@@ -45,6 +46,9 @@ public sealed class TelegramBotWorker : ITelegramBotWorker
             }
 
             _allowedChatIds = options.AllowedChatIds.ToHashSet();
+            _ownerChatId = options.OwnerChatId;
+            // 점주 DM이 그룹 화이트리스트에 없어도 명령 받도록 자동 추가
+            if (_ownerChatId != 0) _allowedChatIds.Add(_ownerChatId);
             _cts = new CancellationTokenSource();
             _bot = new TelegramBotClient(options.Token);
 
@@ -136,7 +140,7 @@ public sealed class TelegramBotWorker : ITelegramBotWorker
                 return; // 미허용 chat에는 무응답 (정보 노출 차단)
             }
 
-            await _router.RouteAsync(bot, chatId, message.Text, ct);
+            await _router.RouteAsync(bot, chatId, message.Text, _ownerChatId, ct);
         }
         catch (OperationCanceledException) { /* shutdown */ }
         catch (Exception ex)

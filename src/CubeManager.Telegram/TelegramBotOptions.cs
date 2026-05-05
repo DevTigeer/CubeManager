@@ -8,6 +8,8 @@ public sealed class TelegramBotOptions
     public string Token { get; init; } = string.Empty;
     public IReadOnlyList<long> AllowedChatIds { get; init; } = Array.Empty<long>();
     public bool Enabled { get; init; }
+    /// <summary>관리자 전용 명령(/salary 등)이 응답하는 chat. 보통 점주 DM. 0이면 미설정.</summary>
+    public long OwnerChatId { get; init; }
 
     public bool IsConfigured => Enabled
         && !string.IsNullOrWhiteSpace(Token)

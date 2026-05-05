@@ -6,5 +6,5 @@ namespace CubeManager.Telegram;
 public interface ITelegramBotConfigService
 {
     Task<TelegramBotOptions> LoadAsync();
-    Task SaveAsync(string token, IReadOnlyList<long> allowedChatIds, bool enabled);
+    Task SaveAsync(string token, IReadOnlyList<long> allowedChatIds, bool enabled, long ownerChatId = 0);
 }
