@@ -332,7 +332,7 @@ public class ReservationSalesTab : UserControl
         _lblSumCashBalance = MakeStatLabel(summaryContent, "현금잔액", ColorPalette.Primary, bf, ref ry);
         _lblSumBalanceDetail = new Label
         {
-            Location = new Point(10, ry), Size = new Size(260, 20),
+            Location = new Point(10, ry), Size = new Size(330, 20),
             Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right,
             AutoEllipsis = true,
             Font = new Font("맑은 고딕", 8.5f), ForeColor = ColorPalette.TextTertiary
@@ -357,11 +357,11 @@ public class ReservationSalesTab : UserControl
         Controls.Add(bottomPanel);
         Controls.Add(topPanel);
 
-        // 하단 패널 크기 조정 (3분할)
+        // 하단 패널 크기 조정 (3분할: 지출 36% / 통계 28% / 결제요약 36%)
         bottomPanel.Resize += (_, _) =>
         {
-            expensePanel.Width = (int)(bottomPanel.Width * 0.40);
-            statsPanel.Width = (int)(bottomPanel.Width * 0.30);
+            expensePanel.Width = (int)(bottomPanel.Width * 0.36);
+            statsPanel.Width = (int)(bottomPanel.Width * 0.28);
         };
 
         // ========== 자동 갱신 타이머 ==========
@@ -849,7 +849,8 @@ public class ReservationSalesTab : UserControl
             var card = daily?.CardAmount ?? 0;
             var cash = (daily?.CashAmount ?? 0) - cashCorrectRevenue;
             var transfer = daily?.TransferAmount ?? 0;
-            var total = (daily?.TotalRevenue ?? 0) - cashCorrectRevenue + cashCorrectExpense;
+            // 총매출 = 카드+현금+계좌 매출 합 (지출 차감 X — daily.TotalRevenue는 지출까지 빼므로 사용 안 함)
+            var total = card + cash + transfer;
 
             var totalExpense = allItems
                 .Where(i => i.Category == "expense" && !IsCashCorrection(i)).Sum(i => i.Amount);
