@@ -90,8 +90,20 @@ public class AdminTab : UserControl
 
         // 컨트롤 초기화
         _dtpCashDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Size = new Size(130, 25) };
-        _numCashAmount = new NumericUpDown { Minimum = -10_000_000, Maximum = 100_000_000, Increment = 1000, ThousandsSeparator = true, Size = new Size(150, 25) };
-        _txtCashNote = new TextBox { Size = new Size(200, 25), PlaceholderText = "보정 사유 (예: 잔돈 오차)" };
+        _numCashAmount = new NumericUpDown
+        {
+            Minimum = -10_000_000, Maximum = 100_000_000,
+            Increment = 1000, ThousandsSeparator = true,
+            Size = new Size(150, 25),
+            // 한글 IME 활성 시 숫자 키 입력이 컴포지션 버퍼에 들어가 표시되지 않는 이슈 차단
+            ImeMode = ImeMode.Disable
+        };
+        _txtCashNote = new TextBox
+        {
+            Size = new Size(200, 25),
+            PlaceholderText = "보정 사유 (예: 잔돈 오차)",
+            ImeMode = ImeMode.Hangul
+        };
         _dtpStatMonth = new DateTimePicker { Format = DateTimePickerFormat.Custom, CustomFormat = "yyyy년 MM월", ShowUpDown = true, Size = new Size(150, 25), Value = DateTime.Today };
         _gridAttendStats = new DataGridView { Dock = DockStyle.Fill };
         _gridSalesStats = new DataGridView { Dock = DockStyle.Fill };
@@ -1131,12 +1143,21 @@ public class AdminTab : UserControl
     // ========== 현금 보정 ==========
     private async void BtnApplyCash_Click(object? sender, EventArgs e)
     {
-        var amount = (int)_numCashAmount.Value;
+        // 입력 직후 클릭 시 NumericUpDown.Value가 미커밋 상태(0)인 레이스 회피:
+        // 표시 텍스트(Text)를 콤마 제거 후 직접 파싱. 실패 시 Value로 폴백.
+        var raw = _numCashAmount.Text?.Replace(",", "").Replace(" ", "") ?? string.Empty;
+        if (!int.TryParse(raw, out var amount))
+            amount = (int)_numCashAmount.Value;
+
         if (amount == 0)
         {
             ToastNotification.Show("보정 금액을 입력하세요.", ToastType.Warning);
             return;
         }
+
+        var min = (int)_numCashAmount.Minimum;
+        var max = (int)_numCashAmount.Maximum;
+        amount = Math.Clamp(amount, min, max);
 
         var date = _dtpCashDate.Value.ToString("yyyy-MM-dd");
         var note = _txtCashNote.Text.Trim();
