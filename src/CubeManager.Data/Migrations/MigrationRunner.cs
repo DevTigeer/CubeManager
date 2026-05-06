@@ -36,7 +36,8 @@ public class MigrationRunner
             new V021_ReservationNote(),
             new V022_WebReservationId(),
             new V023_ThemeJsonTemplateMetadata(),
-            new V024_RecomputeCashBalance()
+            new V024_RecomputeCashBalance(),
+            new V025_CashRefDateReset()
         ];
     }
 
