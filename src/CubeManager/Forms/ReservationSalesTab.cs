@@ -872,7 +872,7 @@ public class ReservationSalesTab : UserControl
         try
         {
             var daily = await _salesService.GetDailySalesAsync(_currentDate);
-            var balance = await _salesService.GetCashBalanceAsync(_currentDate);
+            var balance = await _salesService.GetEffectiveCashBalanceAsync(_currentDate);
             var allItems = (await _salesService.GetSaleItemsAsync(_currentDate)).ToList();
 
             // 관리자 현금 보정분은 예약/매출 표시에서 제외 (현금잔액에는 그대로 반영)
@@ -897,11 +897,9 @@ public class ReservationSalesTab : UserControl
             _lblSumTotal.Text = $"총매출    ₩ {total:N0}";
             _lblSumExpense.Text = $"총지출    ₩ {totalExpense:N0}";
 
-            var closingBal = balance?.ClosingBalance ?? 0;
-            _lblSumCashBalance.Text = $"현금잔액  ₩ {closingBal:N0}";
-            _lblSumBalanceDetail.Text = balance != null
-                ? $"(전일 {balance.OpeningBalance:N0} + {balance.CashIn:N0} - {balance.CashOut:N0})"
-                : "";
+            _lblSumCashBalance.Text = $"현금잔액  ₩ {balance.ClosingBalance:N0}";
+            _lblSumBalanceDetail.Text =
+                $"(전일 {balance.OpeningBalance:N0} + {balance.CashIn:N0} - {balance.CashOut:N0})";
 
             // ── 중앙 오늘의 통계 ──
             var totalCount = _reservations.Count;
@@ -920,11 +918,8 @@ public class ReservationSalesTab : UserControl
             _lblStatHeadcount.Text = $"총 인원         {headcount}명";
             _lblStatAvgPrice.Text = $"객단가          ₩ {avgPrice:N0}";
 
-            // 어제 잔돈: 전일 CashBalance
-            var yesterday = DateTime.Parse(_currentDate).AddDays(-1).ToString("yyyy-MM-dd");
-            var yesterdayBalance = await _salesService.GetCashBalanceAsync(yesterday);
-            var yesterdayCash = yesterdayBalance?.ClosingBalance ?? 0;
-            _lblStatYesterdayCash.Text = $"어제 잔돈     ₩ {yesterdayCash:N0}";
+            // 어제 잔돈: 당일 opening_balance (= 전일까지 carry-forward 마감액)
+            _lblStatYesterdayCash.Text = $"어제 잔돈     ₩ {balance.OpeningBalance:N0}";
         }
         catch (Exception ex)
         {

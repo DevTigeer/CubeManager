@@ -1,3 +1,4 @@
+using System.Data;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Models;
 using Dapper;
@@ -119,31 +120,60 @@ public class SalesRepository : ISalesRepository
             "FROM cash_balance WHERE balance_date = @date", new { date });
     }
 
-    public async Task UpdateCashBalanceAsync(string date)
+    // 행이 없어도 carry-forward로 합성된 잔액을 반환 (조회 전용, DB 쓰기 없음)
+    public async Task<CashBalance> GetEffectiveCashBalanceAsync(string date)
     {
         using var conn = _db.CreateConnection();
 
-        // 전일 마감 잔액 조회
-        var prevDate = DateTime.Parse(date).AddDays(-1).ToString("yyyy-MM-dd");
+        var stored = await conn.QuerySingleOrDefaultAsync<CashBalance>(
+            "SELECT id, balance_date, opening_balance, cash_in, cash_out, closing_balance, note " +
+            "FROM cash_balance WHERE balance_date = @date", new { date });
+        if (stored != null) return stored;
+
+        // 직전(과거) 행에서 carry-forward
         var prevClosing = await conn.ExecuteScalarAsync<int?>(
-            "SELECT closing_balance FROM cash_balance WHERE balance_date = @prevDate",
-            new { prevDate }) ?? 0;
+            "SELECT closing_balance FROM cash_balance WHERE balance_date < @date ORDER BY balance_date DESC LIMIT 1",
+            new { date }) ?? 0;
 
-        // 당일 현금 수입/지출
-        var dailySales = await conn.QuerySingleOrDefaultAsync<int?>(
-            "SELECT id FROM daily_sales WHERE sale_date = @date", new { date });
-
-        int cashIn = 0, cashOut = 0;
-        if (dailySales.HasValue)
+        // 당일 sale_items로 현금 수입/지출 계산 (행이 없어도 sale_items만 존재할 가능성 대비)
+        var (cashIn, cashOut) = await ComputeCashFlowsAsync(conn, null, date);
+        return new CashBalance
         {
-            cashIn = await conn.ExecuteScalarAsync<int>(
-                "SELECT COALESCE(SUM(amount),0) FROM sale_items WHERE daily_sales_id = @id AND payment_type = 'cash' AND category = 'revenue'",
-                new { id = dailySales.Value });
-            cashOut = await conn.ExecuteScalarAsync<int>(
-                "SELECT COALESCE(SUM(amount),0) FROM sale_items WHERE daily_sales_id = @id AND category = 'expense' AND payment_type = 'cash'",
-                new { id = dailySales.Value });
-        }
+            BalanceDate = date,
+            OpeningBalance = prevClosing,
+            CashIn = cashIn,
+            CashOut = cashOut,
+            ClosingBalance = prevClosing + cashIn - cashOut
+        };
+    }
 
+    public async Task UpdateCashBalanceAsync(string date)
+    {
+        using var conn = _db.CreateConnection();
+        using var tx = conn.BeginTransaction();
+
+        // 1) 대상일 재계산
+        await RecomputeOneAsync(conn, tx, date);
+
+        // 2) 대상일 이후 모든 행 연쇄 재계산 (과거 수정 시 미래 잔액 stale 방지)
+        var futureDates = (await conn.QueryAsync<string>(
+            "SELECT balance_date FROM cash_balance WHERE balance_date > @date ORDER BY balance_date ASC",
+            new { date }, transaction: tx)).ToList();
+
+        foreach (var d in futureDates)
+            await RecomputeOneAsync(conn, tx, d);
+
+        tx.Commit();
+    }
+
+    private static async Task RecomputeOneAsync(IDbConnection conn, IDbTransaction tx, string date)
+    {
+        // 전일이 아닌 "직전 가장 최근 행"에서 carry-forward (거래 없는 날 건너뛰기)
+        var prevClosing = await conn.ExecuteScalarAsync<int?>(
+            "SELECT closing_balance FROM cash_balance WHERE balance_date < @date ORDER BY balance_date DESC LIMIT 1",
+            new { date }, transaction: tx) ?? 0;
+
+        var (cashIn, cashOut) = await ComputeCashFlowsAsync(conn, tx, date);
         var closing = prevClosing + cashIn - cashOut;
 
         await conn.ExecuteAsync("""
@@ -152,6 +182,23 @@ public class SalesRepository : ISalesRepository
             ON CONFLICT(balance_date) DO UPDATE SET
                 opening_balance = @prevClosing, cash_in = @cashIn,
                 cash_out = @cashOut, closing_balance = @closing
-            """, new { date, prevClosing, cashIn, cashOut, closing });
+            """, new { date, prevClosing, cashIn, cashOut, closing }, transaction: tx);
+    }
+
+    private static async Task<(int cashIn, int cashOut)> ComputeCashFlowsAsync(
+        IDbConnection conn, IDbTransaction? tx, string date)
+    {
+        var dailyId = await conn.ExecuteScalarAsync<int?>(
+            "SELECT id FROM daily_sales WHERE sale_date = @date",
+            new { date }, transaction: tx);
+        if (!dailyId.HasValue) return (0, 0);
+
+        var cashIn = await conn.ExecuteScalarAsync<int>(
+            "SELECT COALESCE(SUM(amount),0) FROM sale_items WHERE daily_sales_id = @id AND payment_type = 'cash' AND category = 'revenue'",
+            new { id = dailyId.Value }, transaction: tx);
+        var cashOut = await conn.ExecuteScalarAsync<int>(
+            "SELECT COALESCE(SUM(amount),0) FROM sale_items WHERE daily_sales_id = @id AND payment_type = 'cash' AND category = 'expense'",
+            new { id = dailyId.Value }, transaction: tx);
+        return (cashIn, cashOut);
     }
 }
