@@ -11,7 +11,7 @@ public sealed class HelpCommandHandler : ICommandHandler
     public HelpCommandHandler(IServiceProvider sp) => _sp = sp;
 
     public string Command => "help";
-    public IReadOnlyList<string> Aliases => new[] { "start", "도움말" };
+    public IReadOnlyList<string> Aliases => new[] { "start", "도움말", "명령어" };
     public string Description => "사용 가능한 명령 목록";
 
     public async Task HandleAsync(CommandContext ctx)
