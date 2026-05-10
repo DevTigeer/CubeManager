@@ -136,7 +136,7 @@ public sealed class TelegramBotWorker : ITelegramBotWorker
             var chatId = message.Chat.Id;
             if (!_allowedChatIds.Contains(chatId))
             {
-                Log.Warning("Telegram unauthorized chat_id {ChatId} text={Text}", chatId, message.Text);
+                Log.Warning("Telegram unauthorized chat_id {ChatId}", chatId);
                 return; // 미허용 chat에는 무응답 (정보 노출 차단)
             }
 

@@ -55,6 +55,7 @@ public sealed class CommandRouter
         try
         {
             await handler.HandleAsync(ctx);
+            Log.Information("Telegram cmd: chat={ChatId} cmd={Cmd}", chatId, name);
         }
         catch (OperationCanceledException)
         {
