@@ -16,6 +16,9 @@ public interface IReservationRepository
     /// <summary>예약 비고 변경</summary>
     Task UpdateNoteAsync(int id, string? note);
 
+    /// <summary>예약 정산체크 변경</summary>
+    Task UpdateVerifiedAsync(int id, bool isVerified);
+
     /// <summary>ID로 조회</summary>
     Task<Reservation?> GetByIdAsync(int id);
 

@@ -14,7 +14,7 @@ public class ReservationRepository : IReservationRepository
     {
         using var conn = _db.CreateConnection();
         return await conn.QueryAsync<Reservation>(
-            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, raw_html, synced_at " +
+            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, is_verified, raw_html, synced_at " +
             "FROM reservations WHERE reservation_date = @date ORDER BY time_slot",
             new { date });
     }
@@ -86,11 +86,19 @@ public class ReservationRepository : IReservationRepository
             new { id, note });
     }
 
+    public async Task UpdateVerifiedAsync(int id, bool isVerified)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE reservations SET is_verified = @flag WHERE id = @id",
+            new { id, flag = isVerified ? 1 : 0 });
+    }
+
     public async Task<Reservation?> GetByIdAsync(int id)
     {
         using var conn = _db.CreateConnection();
         return await conn.QuerySingleOrDefaultAsync<Reservation>(
-            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, raw_html, synced_at " +
+            "SELECT id, web_reservation_id, reservation_date, time_slot, theme_name, customer_name, customer_phone, headcount, status, note, is_verified, raw_html, synced_at " +
             "FROM reservations WHERE id = @id",
             new { id });
     }

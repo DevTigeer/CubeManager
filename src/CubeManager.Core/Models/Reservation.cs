@@ -12,6 +12,7 @@ public class Reservation
     public int Headcount { get; set; }
     public string Status { get; set; } = "confirmed";
     public string? Note { get; set; }
+    public bool IsVerified { get; set; }
     public string? RawHtml { get; set; }
     public DateTime? SyncedAt { get; set; }
 }

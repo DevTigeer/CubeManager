@@ -38,6 +38,9 @@ public class ReservationSalesTab : UserControl
     private string _currentDate;
     private List<Reservation> _reservations = [];
     private List<SaleItem> _existingSaleItems = [];
+    // PopulateMainGrid 가 셀을 채우는 동안 CellValueChanged 발화를 무시하기 위한 플래그.
+    // 체크박스(Verified) 는 사용자 입력 없이도 Value 세팅만으로 이벤트가 발화하므로 필요.
+    private bool _isPopulating;
     // _sortState 제거 — 항상 시간순, 현재 시간으로 스크롤
 
     public ReservationSalesTab(ISalesService salesService, IReservationScraperService scraperService,
@@ -206,6 +209,10 @@ public class ReservationSalesTab : UserControl
         );
         _gridMain.CellEndEdit += GridMain_CellEndEdit;
         _gridMain.CellMouseClick += GridMain_CellMouseClick;
+        // 체크박스(Verified)는 클릭 즉시 dirty 상태가 되지만 EndEdit 까지 Value 가 commit 되지 않는다.
+        // CurrentCellDirtyStateChanged 에서 CommitEdit 을 호출해야 CellValueChanged 가 즉시 발화한다.
+        _gridMain.CurrentCellDirtyStateChanged += GridMain_CurrentCellDirtyStateChanged;
+        _gridMain.CellValueChanged += GridMain_CellValueChanged;
 
         // ========== 3. 하단 패널 (지출 + 통계 + 결제 요약) ==========
         var bottomPanel = new Panel
@@ -499,6 +506,13 @@ public class ReservationSalesTab : UserControl
     // ===== 통합 그리드 데이터 채우기 =====
     private void PopulateMainGrid()
     {
+        _isPopulating = true;
+        try { PopulateMainGridCore(); }
+        finally { _isPopulating = false; }
+    }
+
+    private void PopulateMainGridCore()
+    {
         _gridMain.Rows.Clear();
 
         // 항상 시간 오름차순 정렬
@@ -519,6 +533,7 @@ public class ReservationSalesTab : UserControl
             row.Cells["Phone"].Value = r.CustomerPhone ?? "";
             row.Cells["Count"].Value = r.Headcount > 0 ? $"{r.Headcount}명" : "";
             row.Cells["Note"].Value = r.Note ?? "";
+            row.Cells["Verified"].Value = r.IsVerified;
 
             // 상태 표시
             var isRemoved = r.Status == "removed";
@@ -705,6 +720,42 @@ public class ReservationSalesTab : UserControl
         {
             ToastNotification.Show($"비고 저장 실패: {ex.Message}", ToastType.Error);
         }
+    }
+
+    private async Task SaveReservationVerifiedAsync(int rowIndex)
+    {
+        var row = _gridMain.Rows[rowIndex];
+        var reservation = row.Tag as Reservation;
+        if (reservation == null || reservation.Id <= 0)
+            return;
+
+        var verified = row.Cells["Verified"].Value is bool b && b;
+
+        try
+        {
+            reservation.IsVerified = verified;
+            await _reservationRepo.UpdateVerifiedAsync(reservation.Id, verified);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"정산체크 저장 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    // 체크박스 클릭 시 즉시 Value 를 commit 시켜 CellValueChanged 가 발화하도록 한다.
+    private void GridMain_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
+    {
+        if (_gridMain.CurrentCell is DataGridViewCheckBoxCell && _gridMain.IsCurrentCellDirty)
+            _gridMain.CommitEdit(DataGridViewDataErrorContexts.Commit);
+    }
+
+    private async void GridMain_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (_isPopulating) return;
+        if (e.RowIndex < 0) return;
+        var colName = _gridMain.Columns[e.ColumnIndex].Name;
+        if (colName == "Verified")
+            await SaveReservationVerifiedAsync(e.RowIndex);
     }
 
     private async Task CommitCurrentGridEditAsync()
