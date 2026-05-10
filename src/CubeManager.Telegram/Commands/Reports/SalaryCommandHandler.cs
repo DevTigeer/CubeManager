@@ -8,7 +8,7 @@ using Telegram.Bot.Types;
 namespace CubeManager.Telegram.Commands.Reports;
 
 [SupportedOSPlatform("windows")]
-public sealed class SalaryCommandHandler : ICommandHandler, IOwnerOnlyCommand
+public sealed class SalaryCommandHandler : ICommandHandler
 {
     private readonly ISalaryService _salary;
     private readonly IBotImageRenderer _renderer;
@@ -21,7 +21,7 @@ public sealed class SalaryCommandHandler : ICommandHandler, IOwnerOnlyCommand
 
     public string Command => "salary";
     public IReadOnlyList<string> Aliases => new[] { "급여", "급여관리" };
-    public string Description => "월간 급여표 (점주 DM 전용, 인자 없음=이번달, /salary YYYY-MM)";
+    public string Description => "월간 급여표 (인자 없음=이번달, /salary YYYY-MM)";
 
     public async Task HandleAsync(CommandContext ctx)
     {

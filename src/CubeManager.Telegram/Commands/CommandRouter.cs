@@ -20,10 +20,7 @@ public sealed class CommandRouter
 
     public IEnumerable<ICommandHandler> AllHandlers => _byName.Values.Distinct();
 
-    public Task RouteAsync(ITelegramBotClient client, long chatId, string text, CancellationToken ct)
-        => RouteAsync(client, chatId, text, 0L, ct);
-
-    public async Task RouteAsync(ITelegramBotClient client, long chatId, string text, long ownerChatId, CancellationToken ct)
+    public async Task RouteAsync(ITelegramBotClient client, long chatId, string text, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
@@ -46,23 +43,13 @@ public sealed class CommandRouter
             return;
         }
 
-        if (handler is IOwnerOnlyCommand)
-        {
-            if (ownerChatId == 0 || chatId != ownerChatId)
-            {
-                await client.SendMessage(chatId, "이 명령은 점주 DM에서만 사용할 수 있습니다.", cancellationToken: ct);
-                return;
-            }
-        }
-
         var ctx = new CommandContext
         {
             Client = client,
             ChatId = chatId,
             CommandText = text,
             Args = args,
-            CancellationToken = ct,
-            OwnerChatId = ownerChatId
+            CancellationToken = ct
         };
 
         try

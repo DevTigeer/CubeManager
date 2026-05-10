@@ -31,7 +31,6 @@ public static class TelegramServiceCollectionExtensions
         services.AddSingleton<ICommandHandler, ScheduleCommandHandler>();
         services.AddSingleton<ICommandHandler, DashboardCommandHandler>();
 
-        // 관리자 전용 (점주 DM에서만)
         services.AddSingleton<ICommandHandler, SalaryCommandHandler>();
         services.AddSingleton<ICommandHandler, AttendanceAdminCommandHandler>();
 

@@ -8,7 +8,7 @@ using Telegram.Bot.Types;
 namespace CubeManager.Telegram.Commands.Reports;
 
 [SupportedOSPlatform("windows")]
-public sealed class AttendanceAdminCommandHandler : ICommandHandler, IOwnerOnlyCommand
+public sealed class AttendanceAdminCommandHandler : ICommandHandler
 {
     private readonly IAttendanceService _attendance;
     private readonly IBotImageRenderer _renderer;
@@ -21,7 +21,7 @@ public sealed class AttendanceAdminCommandHandler : ICommandHandler, IOwnerOnlyC
 
     public string Command => "attendance_admin";
     public IReadOnlyList<string> Aliases => new[] { "출퇴근관리", "근무관리" };
-    public string Description => "관리자 출퇴근 상세 (점주 DM 전용, 스케줄 vs 실제)";
+    public string Description => "관리자 출퇴근 상세 (스케줄 vs 실제)";
 
     public async Task HandleAsync(CommandContext ctx)
     {

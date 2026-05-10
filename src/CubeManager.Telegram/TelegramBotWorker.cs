@@ -140,7 +140,7 @@ public sealed class TelegramBotWorker : ITelegramBotWorker
                 return; // 미허용 chat에는 무응답 (정보 노출 차단)
             }
 
-            await _router.RouteAsync(bot, chatId, message.Text, _ownerChatId, ct);
+            await _router.RouteAsync(bot, chatId, message.Text, ct);
         }
         catch (OperationCanceledException) { /* shutdown */ }
         catch (Exception ex)
