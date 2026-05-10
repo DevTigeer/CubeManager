@@ -299,6 +299,42 @@ DoLayout();
 
 더 안전한 대안: `TableLayoutPanel` + `ColumnStyle(SizeType.Percent, ...)` 사용.
 
+**규칙 5 — 입력 컨트롤은 `ImeMode`를 컨트롤 단위로 명시**
+
+> 배경: v0.3.17 — 관리자 현금 보정의 NumericUpDown에서 한글 IME 활성 시
+> 숫자 키 입력이 IME 컴포지션 버퍼에 들어가 화면에 표시되지 않는 사고가 있었음.
+
+부모 폼/패널의 `ImeMode`에 의존하지 말고 입력 컨트롤마다 명시한다.
+
+| 컨트롤 용도 | ImeMode |
+|---|---|
+| 한글 텍스트(이름, 메모, 사유) | `ImeMode.Hangul` |
+| 영문/숫자만(전화번호, 코드) | `ImeMode.Alpha` |
+| **NumericUpDown / 숫자 전용 TextBox** | **`ImeMode.Disable`** |
+
+```csharp
+// ✅ 명시
+_numAmount = new NumericUpDown { Minimum = 0, Maximum = 100_000, ImeMode = ImeMode.Disable };
+_txtName = new TextBox { ImeMode = ImeMode.Hangul };
+_txtPhone = new TextBox { ImeMode = ImeMode.Alpha };
+```
+
+**규칙 6 — `NumericUpDown.Value`는 미커밋 상태일 수 있다**
+
+> 배경: v0.3.17 — 입력 직후 빠르게 버튼을 클릭하면 LostFocus 검증 전이라
+> 클릭 핸들러에서 `Value`가 0으로 읽히는 레이스가 있었음.
+
+`Value`는 LostFocus / Enter 시점에만 텍스트→Value 커밋된다. 빠른 입력→클릭이
+일어나는 화면에서는 `Text`를 직접 파싱해 폴백을 둔다.
+
+```csharp
+// ✅ 폼 텍스트 직접 파싱 + Min/Max 클램프
+var raw = num.Text?.Replace(",", "") ?? string.Empty;
+if (!int.TryParse(raw, out var v))
+    v = (int)num.Value;             // 폴백
+v = Math.Clamp(v, (int)num.Minimum, (int)num.Maximum);
+```
+
 ---
 
 ## 5. 주석 규칙
