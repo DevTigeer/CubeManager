@@ -23,6 +23,51 @@ public class ScheduleService : IScheduleService
             start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
     }
 
+    public async Task<int> CopyWeekToNextAsync(int year, int month, int weekNum, bool overwrite)
+    {
+        var (start, end) = TimeHelper.GetWeekRange(year, month, weekNum);
+        var source = (await _scheduleRepo.GetByDateRangeAsync(
+            start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"))).ToList();
+        if (source.Count == 0) return 0;
+
+        // 겹치지 않는 것만 복사하는 경우: 다음 주(+7일) 기존 스케줄을 미리 조회해 충돌 판정
+        var existing = new HashSet<string>();
+        if (!overwrite)
+        {
+            var nextStart = start.AddDays(7);
+            var nextEnd = end.AddDays(7);
+            var nextSchedules = await _scheduleRepo.GetByDateRangeAsync(
+                nextStart.ToString("yyyy-MM-dd"), nextEnd.ToString("yyyy-MM-dd"));
+            foreach (var s in nextSchedules)
+                existing.Add($"{s.EmployeeId}|{s.WorkDate}");
+        }
+
+        var copies = new List<Schedule>();
+        foreach (var s in source)
+        {
+            var newDate = DateTime.ParseExact(s.WorkDate, "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture)
+                .AddDays(7).ToString("yyyy-MM-dd");
+
+            if (!overwrite && existing.Contains($"{s.EmployeeId}|{newDate}"))
+                continue; // 다음 주에 이미 있는 직원·날짜는 건너뜀
+
+            copies.Add(new Schedule
+            {
+                EmployeeId = s.EmployeeId,
+                WorkDate = newDate,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                IsHoliday = await _holidayRepo.IsWeekdayHolidayAsync(newDate),
+                Note = s.Note
+            });
+        }
+
+        if (copies.Count > 0)
+            await _scheduleRepo.BulkInsertAsync(copies);
+        return copies.Count;
+    }
+
     public async Task AddScheduleAsync(int employeeId, string startTime, string endTime,
         DayOfWeek[] days, int year, int month, int[]? weekNums = null)
     {

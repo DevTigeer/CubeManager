@@ -66,6 +66,13 @@ public class ScheduleTab : UserControl
             TextAlign = ContentAlignment.MiddleLeft
         };
 
+        // 우: 다음주로 복사
+        var btnCopyNext = ButtonFactory.CreateSecondary("다음주로 복사", 120);
+        btnCopyNext.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        btnCopyNext.Location = new Point(topBar.Width - 260, 10);
+        btnCopyNext.Click += BtnCopyNext_Click;
+        _tip.SetToolTip(btnCopyNext, "이번 주 스케줄을 다음 주로 복사");
+
         // 우: 스케줄 추가
         var btnAdd = ButtonFactory.CreatePrimary("+ 스케줄 추가", 120);
         btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -73,8 +80,12 @@ public class ScheduleTab : UserControl
         btnAdd.Click += BtnAddSchedule_Click;
         _tip.SetToolTip(btnAdd, "새 스케줄 추가 (직원/시간/요일 선택)");
 
-        topBar.Controls.AddRange([btnPrev, btnNext, _lblDateRange, _lblWeekSub, btnAdd]);
-        topBar.Resize += (_, _) => btnAdd.Location = new Point(topBar.Width - 132, 10);
+        topBar.Controls.AddRange([btnPrev, btnNext, _lblDateRange, _lblWeekSub, btnCopyNext, btnAdd]);
+        topBar.Resize += (_, _) =>
+        {
+            btnAdd.Location = new Point(topBar.Width - 132, 10);
+            btnCopyNext.Location = new Point(topBar.Width - 260, 10);
+        };
 
         // ── 하단: 직원별 주간 요약 ──
         _summaryPanel = new Panel
@@ -253,6 +264,82 @@ public class ScheduleTab : UserControl
         {
             ToastNotification.Show($"스케줄 등록 실패: {ex.Message}", ToastType.Error);
         }
+    }
+
+    private async void BtnCopyNext_Click(object? sender, EventArgs e)
+    {
+        var current = (await _scheduleService.GetWeekScheduleAsync(_year, _month, _weekNum)).ToList();
+        if (current.Count == 0)
+        {
+            ToastNotification.Show("복사할 스케줄이 없습니다.", ToastType.Warning);
+            return;
+        }
+
+        var (start, _) = TimeHelper.GetWeekRange(_year, _month, _weekNum);
+        var nextStart = start.AddDays(7);
+
+        // 복사 방식 선택: 덮어쓰기 / 겹치지 않는 것만 / 취소
+        bool? overwrite = AskCopyMode(current.Count, nextStart);
+        if (overwrite is null) return;
+
+        try
+        {
+            var copied = await _scheduleService.CopyWeekToNextAsync(
+                _year, _month, _weekNum, overwrite.Value);
+
+            if (copied == 0)
+                ToastNotification.Show("복사된 스케줄이 없습니다. (이미 모두 존재)", ToastType.Info);
+            else
+                ToastNotification.Show($"{copied}건을 다음 주로 복사했습니다.", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show($"복사 실패: {ex.Message}", ToastType.Error);
+        }
+    }
+
+    /// <summary>복사 방식 선택 다이얼로그. true=덮어쓰기, false=겹치지 않는 것만, null=취소</summary>
+    private bool? AskCopyMode(int sourceCount, DateTime nextStart)
+    {
+        using var dlg = new Form
+        {
+            Text = "다음주로 복사",
+            Size = new Size(380, 180),
+            FormBorderStyle = FormBorderStyle.None,
+            StartPosition = FormStartPosition.CenterParent,
+            BackColor = ColorPalette.Surface
+        };
+
+        var lbl = new Label
+        {
+            Text = $"이번 주 스케줄 {sourceCount}건을 다음 주({nextStart:MM.dd}~)로 복사합니다.\n" +
+                   "다음 주에 이미 있는 스케줄을 어떻게 할까요?",
+            Location = new Point(18, 16), Size = new Size(344, 56),
+            Font = DesignTokens.FontBody, ForeColor = ColorPalette.Text
+        };
+
+        // DialogResult: OK=덮어쓰기, Ignore=겹치면 건너뛰기, Cancel=취소
+        var btnOverwrite = ButtonFactory.CreatePrimary("덮어쓰기", 110);
+        btnOverwrite.Location = new Point(18, 92);
+        btnOverwrite.DialogResult = DialogResult.OK;
+
+        var btnSkip = ButtonFactory.CreateSecondary("겹치면 건너뛰기", 130);
+        btnSkip.Location = new Point(134, 92);
+        btnSkip.DialogResult = DialogResult.Ignore;
+
+        var btnCancel = ButtonFactory.CreateGhost("취소", 70);
+        btnCancel.Location = new Point(272, 92);
+        btnCancel.DialogResult = DialogResult.Cancel;
+
+        dlg.Controls.AddRange([lbl, btnOverwrite, btnSkip, btnCancel]);
+        dlg.CancelButton = btnCancel;
+
+        return dlg.ShowDialog(this) switch
+        {
+            DialogResult.OK => true,
+            DialogResult.Ignore => false,
+            _ => (bool?)null
+        };
     }
 
     private async void TimeTable_EmptyCellDoubleClicked(object? sender, EmptyCellClickEventArgs e)
