@@ -137,6 +137,7 @@ static class Program
         services.AddSingleton<IHolidayService, HolidayService>();
         services.AddSingleton<IAlertService, AlertService>();
         services.AddSingleton<IUpdateCheckService, UpdateCheckService>();
+        services.AddSingleton<ILogMailService, LogMailService>();
 
         // Telegram Bot
         services.AddCubeManagerTelegram();

@@ -1,4 +1,5 @@
 using System.Drawing;
+using Microsoft.Extensions.DependencyInjection;
 using CubeManager.Core.Helpers;
 using CubeManager.Core.Interfaces.Repositories;
 using CubeManager.Core.Interfaces.Services;
@@ -86,6 +87,85 @@ public class SettingsTab : UserControl
 
         webPanel.Controls.AddRange([lblUrl, txtUrl, lblId, txtId, lblPw, txtPw, btnTest, btnSaveWeb]);
 
+        // === 에러 로그 전송 패널 ===
+        var mailPanel = new GroupBox
+        {
+            Text = "에러 로그 전송 (개발자에게 메일)",
+            Dock = DockStyle.Top,
+            Height = 175,
+            Font = new Font("맑은 고딕", 10f, FontStyle.Bold),
+            Padding = new Padding(10)
+        };
+
+        var lblMailInfo = new Label
+        {
+            Text = "Gmail 계정과 앱 비밀번호로 로그 파일을 개발자에게 전송합니다.",
+            Location = new Point(15, 26),
+            Size = new Size(430, 20),
+            Font = new Font("맑은 고딕", 9f, FontStyle.Regular),
+            ForeColor = ColorPalette.TextSecondary
+        };
+        var lblSender = new Label { Text = "발신 Gmail:", Location = new Point(15, 54), Size = new Size(75, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+        var txtSender = new TextBox { Name = "txtMailSender", Location = new Point(95, 52), Size = new Size(220, 25), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+        var lblAppPw = new Label { Text = "앱 비밀번호:", Location = new Point(15, 84), Size = new Size(75, 22), Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+        var txtAppPw = new TextBox { Name = "txtMailAppPw", Location = new Point(95, 82), Size = new Size(220, 25), UseSystemPasswordChar = true, Font = new Font("맑은 고딕", 10f, FontStyle.Regular) };
+
+        var btnSaveMail = ButtonFactory.CreatePrimary("계정 저장", 100);
+        btnSaveMail.Location = new Point(330, 50);
+        btnSaveMail.Height = 30;
+        btnSaveMail.Click += async (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(txtSender.Text) || string.IsNullOrWhiteSpace(txtAppPw.Text))
+            {
+                ToastNotification.Show("발신 Gmail과 앱 비밀번호를 입력하세요.", ToastType.Warning);
+                return;
+            }
+
+            var mailService = Program.ServiceProvider.GetRequiredService<ILogMailService>();
+            await mailService.SaveCredentialsAsync(txtSender.Text, txtAppPw.Text);
+            txtAppPw.Text = "";
+            ToastNotification.Show("메일 발신 계정이 저장되었습니다.", ToastType.Success);
+        };
+
+        var btnSendLog = ButtonFactory.CreateSecondary("로그 전송", 100);
+        btnSendLog.Location = new Point(330, 82);
+        btnSendLog.Height = 30;
+        btnSendLog.Click += async (_, _) =>
+        {
+            var mailService = Program.ServiceProvider.GetRequiredService<ILogMailService>();
+
+            if (!await mailService.IsConfiguredAsync())
+            {
+                ToastNotification.Show("먼저 발신 Gmail 계정을 저장하세요.", ToastType.Warning);
+                return;
+            }
+
+            // 1단계 확인
+            var first = MessageBox.Show(
+                "로그 파일을 개발자(dev.tigeer@gmail.com)에게 전송하시겠습니까?",
+                "로그 전송 확인",
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+            if (first != DialogResult.OK)
+                return;
+
+            // 2단계 재확인 (반복 자동전송 방지)
+            var second = MessageBox.Show(
+                "정말 전송하시겠습니까?\n확인을 누르면 로그가 즉시 전송됩니다.",
+                "로그 전송 최종 확인",
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (second != DialogResult.OK)
+                return;
+
+            await ButtonFactory.RunWithLoadingAsync(btnSendLog, "전송 중...", async () =>
+            {
+                var result = await mailService.SendLogsAsync();
+                ToastNotification.Show(result.Message,
+                    result.Success ? ToastType.Success : ToastType.Error);
+            });
+        };
+
+        mailPanel.Controls.AddRange([lblMailInfo, lblSender, txtSender, lblAppPw, txtAppPw, btnSaveMail, btnSendLog]);
+
         // === 업데이트 설정 패널 ===
         var updatePanel = new GroupBox
         {
@@ -148,6 +228,7 @@ public class SettingsTab : UserControl
         updatePanel.Controls.AddRange([lblVersion, chkAutoUpdate, lblLastCheck, btnCheckUpdate]);
 
         content.Controls.Add(updatePanel);
+        content.Controls.Add(mailPanel);
         content.Controls.Add(webPanel);
 
         Controls.Add(content);
@@ -155,6 +236,7 @@ public class SettingsTab : UserControl
 
         _ = LoadWebSettingsAsync(txtUrl, txtId);
         _ = LoadUpdateSettingsAsync(chkAutoUpdate, lblLastCheck);
+        _ = LoadMailSettingsAsync(txtSender);
     }
 
     private async Task LoadWebSettingsAsync(TextBox txtUrl, TextBox txtId)
@@ -164,6 +246,13 @@ public class SettingsTab : UserControl
         txtUrl.Text = url ?? "http://www.cubeescape.co.kr";
         txtId.Text = string.IsNullOrEmpty(encId) ? "" : CredentialHelper.Decrypt(encId);
         // PW는 표시하지 않음 (보안)
+    }
+
+    private async Task LoadMailSettingsAsync(TextBox txtSender)
+    {
+        var mailService = Program.ServiceProvider.GetRequiredService<ILogMailService>();
+        txtSender.Text = await mailService.GetSenderEmailAsync();
+        // 앱 비밀번호는 표시하지 않음 (보안)
     }
 
     private async Task LoadUpdateSettingsAsync(CheckBox chkAutoUpdate, Label lblLastCheck)
