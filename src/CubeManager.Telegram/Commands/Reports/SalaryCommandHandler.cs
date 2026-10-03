@@ -28,7 +28,14 @@ public sealed class SalaryCommandHandler : ICommandHandler
         var firstDay = DateArgParser.ParseMonthOrCurrent(ctx.Args);
         var ym = DateArgParser.FormatMonth(firstDay);
 
-        var records = (await _salary.GetMonthlySalaryTableAsync(ym))
+        await SendSalaryTableAsync(ctx, _salary, _renderer, firstDay, ym);
+    }
+
+    /// <summary>저장된 월 급여(salary_records)를 표 이미지로 전송. /급여계산 에서도 재사용.</summary>
+    internal static async Task SendSalaryTableAsync(
+        CommandContext ctx, ISalaryService salary, IBotImageRenderer renderer, DateOnly firstDay, string ym)
+    {
+        var records = (await salary.GetMonthlySalaryTableAsync(ym))
             .OrderBy(r => r.EmployeeName)
             .ToList();
 
@@ -65,7 +72,7 @@ public sealed class SalaryCommandHandler : ICommandHandler
             });
         }
 
-        using var stream = _renderer.RenderTable(
+        using var stream = renderer.RenderTable(
             $"급여 요약 — {records.Count}명",
             $"{firstDay:yyyy-MM} ({firstDay.Year}년 {firstDay.Month}월)",
             headers,

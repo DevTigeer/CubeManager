@@ -32,6 +32,7 @@ public static class TelegramServiceCollectionExtensions
         services.AddSingleton<ICommandHandler, DashboardCommandHandler>();
 
         services.AddSingleton<ICommandHandler, SalaryCommandHandler>();
+        services.AddSingleton<ICommandHandler, SalaryRecalcCommandHandler>();
         services.AddSingleton<ICommandHandler, AttendanceAdminCommandHandler>();
 
         return services;
