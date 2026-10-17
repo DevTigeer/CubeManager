@@ -68,4 +68,12 @@ public class EmployeeService : IEmployeeService
 
     public Task<bool> DeactivateAsync(int id) =>
         _employeeRepo.DeactivateAsync(id);
+
+    public async Task<bool> DeleteEmployeeAsync(int id)
+    {
+        if (await _employeeRepo.HasRelatedDataAsync(id))
+            throw new InvalidOperationException(
+                "스케줄/출퇴근/급여 기록이 있는 직원은 삭제할 수 없습니다. 비활성화를 사용하세요.");
+        return await _employeeRepo.DeleteAsync(id);
+    }
 }

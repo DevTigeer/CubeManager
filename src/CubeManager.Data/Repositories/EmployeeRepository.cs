@@ -70,4 +70,26 @@ public class EmployeeRepository : IEmployeeRepository
             new { id });
         return rows > 0;
     }
+
+    public async Task<bool> HasRelatedDataAsync(int id)
+    {
+        using var conn = _db.CreateConnection();
+        var count = await conn.ExecuteScalarAsync<int>(
+            "SELECT " +
+            "(SELECT COUNT(1) FROM schedules WHERE employee_id = @id) + " +
+            "(SELECT COUNT(1) FROM attendance WHERE employee_id = @id) + " +
+            "(SELECT COUNT(1) FROM salary_records WHERE employee_id = @id) + " +
+            "(SELECT COUNT(1) FROM alert_logs WHERE employee_id = @id)",
+            new { id });
+        return count > 0;
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        using var conn = _db.CreateConnection();
+        var rows = await conn.ExecuteAsync(
+            "DELETE FROM employees WHERE id = @id",
+            new { id });
+        return rows > 0;
+    }
 }

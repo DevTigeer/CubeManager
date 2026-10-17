@@ -644,6 +644,20 @@ public class AdminTab : UserControl
         btnDeactivateEmp.Click += BtnDeactivateEmployee_Click;
         toolbar.Controls.Add(btnDeactivateEmp);
 
+        var btnActivateEmp = ButtonFactory.CreateSecondary("활성화", 90);
+        btnActivateEmp.Height = 32;
+        btnActivateEmp.Font = nf;
+        btnActivateEmp.Margin = new Padding(10, 0, 0, 0);
+        btnActivateEmp.Click += BtnActivateEmployee_Click;
+        toolbar.Controls.Add(btnActivateEmp);
+
+        var btnDeleteEmp = ButtonFactory.CreateDanger("삭제", 80);
+        btnDeleteEmp.Height = 32;
+        btnDeleteEmp.Font = nf;
+        btnDeleteEmp.Margin = new Padding(10, 0, 0, 0);
+        btnDeleteEmp.Click += BtnDeleteEmployee_Click;
+        toolbar.Controls.Add(btnDeleteEmp);
+
         GridTheme.ApplyTheme(_gridEmployees);
         _gridEmployees.AllowUserToAddRows = false;
         _gridEmployees.ReadOnly = true;
@@ -1240,6 +1254,51 @@ public class AdminTab : UserControl
             await _employeeService.DeactivateAsync(id);
             ToastNotification.Show($"'{name}' 비활성화 완료.", ToastType.Success);
             await LoadEmployeesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    private async void BtnActivateEmployee_Click(object? sender, EventArgs e)
+    {
+        if (_gridEmployees.CurrentRow == null) return;
+        var id = (int)_gridEmployees.CurrentRow.Cells["EmpId"].Value;
+        var name = _gridEmployees.CurrentRow.Cells["EmpName"].Value?.ToString();
+
+        try
+        {
+            await _employeeService.ToggleActiveAsync(id, true);
+            ToastNotification.Show($"'{name}' 활성화 완료.", ToastType.Success);
+            await LoadEmployeesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    private async void BtnDeleteEmployee_Click(object? sender, EventArgs e)
+    {
+        if (_gridEmployees.CurrentRow == null) return;
+        var id = (int)_gridEmployees.CurrentRow.Cells["EmpId"].Value;
+        var name = _gridEmployees.CurrentRow.Cells["EmpName"].Value?.ToString();
+
+        if (MessageBox.Show($"'{name}' 직원을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.", "삭제 확인",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        try
+        {
+            await _employeeService.DeleteEmployeeAsync(id);
+            Serilog.Log.Information("[AUDIT] 직원 삭제: ID={Id}, Name={Name}", id, name);
+            ToastNotification.Show($"'{name}' 삭제 완료.", ToastType.Success);
+            await LoadEmployeesAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Warning);
         }
         catch (Exception ex)
         {

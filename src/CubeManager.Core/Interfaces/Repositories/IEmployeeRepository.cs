@@ -10,4 +10,6 @@ public interface IEmployeeRepository
     Task<int> InsertAsync(Employee employee);
     Task<bool> UpdateAsync(Employee employee);
     Task<bool> DeactivateAsync(int id);
+    Task<bool> HasRelatedDataAsync(int id);
+    Task<bool> DeleteAsync(int id);
 }
