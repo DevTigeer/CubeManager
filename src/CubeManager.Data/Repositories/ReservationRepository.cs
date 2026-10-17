@@ -78,6 +78,17 @@ public class ReservationRepository : IReservationRepository
             new { id, status });
     }
 
+    public async Task UpdateDetailsAsync(int id, string? timeSlot, string? themeName,
+        string? customerName, string? customerPhone, int headcount)
+    {
+        using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE reservations SET time_slot = @timeSlot, theme_name = @themeName, " +
+            "customer_name = @customerName, customer_phone = @customerPhone, headcount = @headcount " +
+            "WHERE id = @id",
+            new { id, timeSlot, themeName, customerName, customerPhone, headcount });
+    }
+
     public async Task UpdateNoteAsync(int id, string? note)
     {
         using var conn = _db.CreateConnection();

@@ -5,7 +5,7 @@ namespace CubeManager.Dialogs;
 
 /// <summary>
 /// 손님 요금 계산기.
-/// 성인 요금표 + 아동(초2이하) + 할인정책(계좌/군인/생일/재방문/리뷰) 적용.
+/// 성인 요금표 + 아동(초2이하) + 할인정책(계좌/군인/생일/재방문/리뷰/마지막) 적용.
 /// </summary>
 public class CustomerCalcDialog : Form
 {
@@ -23,6 +23,7 @@ public class CustomerCalcDialog : Form
     private const int BirthdayDiscount = 2_000; // 인당
     private const int RevisitPerTheme = 1_000;  // 테마당
     private const int ReviewDiscount = 1_000;   // 인당
+    private const int LastVisitUnit = 1_000;    // 마지막 방문 50% 할인 후 1,000원 미만 절삭
 
     private readonly NumericUpDown _numAdults;
     private readonly NumericUpDown _numChildren;
@@ -105,7 +106,7 @@ public class CustomerCalcDialog : Form
         // ─── 인별 할인 (동적) ───
         Controls.Add(new Label
         {
-            Text = "── 인별 할인 (택1: 군인/생일/재방문/리뷰) ──",
+            Text = "── 인별 할인 (택1: 군인/생일/재방문/리뷰/마지막) ──",
             Location = new Point(15, y), Size = new Size(370, 22),
             Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
             ForeColor = Color.White
@@ -208,7 +209,7 @@ public class CustomerCalcDialog : Form
             {
                 Location = new Point(75, py), Size = new Size(100, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Items = { "없음", "군인", "생일", "재방문", "리뷰" },
+                Items = { "없음", "군인", "생일", "재방문", "리뷰", "마지막(50%)" },
                 Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
                 BackColor = ColorPalette.Card,
                 ForeColor = Color.White
@@ -275,6 +276,7 @@ public class CustomerCalcDialog : Form
         var birthdayCount = 0;
         var revisitThemeTotal = 0;
         var reviewCount = 0;
+        var lastVisitCount = 0;
 
         for (var i = 0; i < _personDiscounts.Count; i++)
         {
@@ -284,6 +286,7 @@ public class CustomerCalcDialog : Form
                 case 2: birthdayCount++; break;
                 case 3: revisitThemeTotal += (int)_revisitThemes[i].Value; break;
                 case 4: reviewCount++; break;
+                case 5: lastVisitCount++; break;
             }
         }
 
@@ -292,7 +295,12 @@ public class CustomerCalcDialog : Form
         var revisitDsc = revisitThemeTotal * RevisitPerTheme;
         var reviewDsc = reviewCount * ReviewDiscount;
 
-        var totalDiscount = accountDsc + militaryDsc + birthdayDsc + revisitDsc + reviewDsc;
+        // 마지막 방문: 해당 손님 1인분(성인 기본가 ÷ 인원)의 50%만 결제, 1,000원 미만 절삭
+        var perPerson = adults > 0 ? basePrice / adults : 0;
+        var lastVisitPay = perPerson / 2 / LastVisitUnit * LastVisitUnit;
+        var lastVisitDsc = lastVisitCount * (perPerson - lastVisitPay);
+
+        var totalDiscount = accountDsc + militaryDsc + birthdayDsc + revisitDsc + reviewDsc + lastVisitDsc;
         var finalPrice = basePrice + childTotal - totalDiscount;
         if (finalPrice < 0) finalPrice = 0;
 
@@ -314,6 +322,9 @@ public class CustomerCalcDialog : Form
             lines.Add($"재방문 할인: -{revisitDsc:N0}원 ({revisitThemeTotal}테마)");
         if (reviewDsc > 0)
             lines.Add($"리뷰 할인: -{reviewDsc:N0}원 ({reviewCount}명)");
+
+        if (lastVisitDsc > 0)
+            lines.Add($"마지막 50% 할인: -{lastVisitDsc:N0}원 ({lastVisitCount}명 × 1인 {perPerson:N0} → {lastVisitPay:N0})");
 
         _lblBreakdown.Text = string.Join("\n", lines);
         _lblResult.Text = $"{finalPrice:N0}원";

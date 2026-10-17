@@ -13,6 +13,10 @@ public interface IReservationRepository
     /// <summary>예약 상태 변경 (confirmed → removed → confirmed)</summary>
     Task UpdateStatusAsync(int id, string status);
 
+    /// <summary>워크인 예약 상세(시간/테마/예약자/연락처/인원) 수정</summary>
+    Task UpdateDetailsAsync(int id, string? timeSlot, string? themeName,
+        string? customerName, string? customerPhone, int headcount);
+
     /// <summary>예약 비고 변경</summary>
     Task UpdateNoteAsync(int id, string? note);
 

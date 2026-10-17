@@ -209,6 +209,7 @@ public class ReservationSalesTab : UserControl
         );
         _gridMain.CellEndEdit += GridMain_CellEndEdit;
         _gridMain.CellMouseClick += GridMain_CellMouseClick;
+        _gridMain.CellDoubleClick += GridMain_CellDoubleClick;
         // 체크박스(Verified)는 클릭 즉시 dirty 상태가 되지만 EndEdit 까지 Value 가 commit 되지 않는다.
         // CurrentCellDirtyStateChanged 에서 CommitEdit 을 호출해야 CellValueChanged 가 즉시 발화한다.
         _gridMain.CurrentCellDirtyStateChanged += GridMain_CurrentCellDirtyStateChanged;
@@ -1039,6 +1040,31 @@ public class ReservationSalesTab : UserControl
         ToastNotification.Show("워크인 추가 완료.", ToastType.Success);
     }
 
+    // ===== 워크인 수정 (더블클릭) =====
+    private async void GridMain_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0) return;
+        // 금액/비고/정산체크 셀은 기존 인라인 편집 유지
+        var colName = _gridMain.Columns[e.ColumnIndex].Name;
+        if (colName is not ("Time" or "Theme" or "Customer" or "Phone" or "Count" or "Status")) return;
+        if (_gridMain.Rows[e.RowIndex].Tag is not Reservation r || r.Status != "walkin" || r.Id <= 0) return;
+
+        using var dlg = new WalkinDialog(r);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            await _reservationRepo.UpdateDetailsAsync(
+                r.Id, dlg.TimeSlot, dlg.ThemeName, dlg.CustomerName, dlg.Phone, dlg.Headcount);
+            await LoadReservationsFromDb();
+            ToastNotification.Show("워크인이 수정되었습니다.", ToastType.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastNotification.Show(ex.Message, ToastType.Error);
+        }
+    }
+
     // ===== 매출 삭제 =====
     private async void DeleteRevenueItem()
     {
@@ -1242,6 +1268,9 @@ internal class WalkinDialog : Form
         get
         {
             var start = _dtpTime.Value;
+            // 수정 모드에서 시간을 건드리지 않았으면 기존 구간(종료시각 포함) 유지
+            if (_origSlot != null && _origSlot.StartsWith($"{start:HH:mm}"))
+                return _origSlot;
             var end = start.AddHours(1);
             return $"{start:HH:mm}-{end:HH:mm}";
         }
@@ -1253,10 +1282,12 @@ internal class WalkinDialog : Form
     private readonly TextBox _txtTheme, _txtName, _txtPhone;
     private readonly DateTimePicker _dtpTime;
     private readonly NumericUpDown _numCount;
+    private readonly string? _origSlot;
 
-    public WalkinDialog()
+    public WalkinDialog(Reservation? existing = null)
     {
-        Text = "워크인 추가";
+        _origSlot = existing?.TimeSlot;
+        Text = existing == null ? "워크인 추가" : "워크인 수정";
         Size = new Size(380, 300);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
@@ -1300,7 +1331,7 @@ internal class WalkinDialog : Form
 
         var btnOk = new Button
         {
-            Text = "추가", Location = new Point(170, y), Size = new Size(80, 35),
+            Text = existing == null ? "추가" : "수정", Location = new Point(170, y), Size = new Size(80, 35),
             BackColor = ColorPalette.Primary, ForeColor = ColorPalette.TextWhite,
             FlatStyle = FlatStyle.Flat, DialogResult = DialogResult.None
         };
@@ -1316,6 +1347,16 @@ internal class WalkinDialog : Form
         Controls.Add(btnOk);
         Controls.Add(new Button { Text = "취소", Location = new Point(260, y), Size = new Size(80, 35), DialogResult = DialogResult.Cancel });
         AcceptButton = btnOk;
+
+        if (existing != null)
+        {
+            _txtTheme.Text = existing.ThemeName ?? "";
+            _txtName.Text = existing.CustomerName ?? "";
+            _txtPhone.Text = existing.CustomerPhone ?? "";
+            _numCount.Value = Math.Clamp(existing.Headcount, (int)_numCount.Minimum, (int)_numCount.Maximum);
+            if (TimeSpan.TryParse(existing.TimeSlot?.Split('-')[0], out var t))
+                _dtpTime.Value = DateTime.Today.Add(t);
+        }
     }
 
     private void AddLabel(string text, ref int y)

@@ -18,6 +18,7 @@ public class MainForm : Form
     private readonly System.Windows.Forms.Timer _backupTimer;
     private readonly System.Windows.Forms.Timer _miceTimer;
     private readonly System.Windows.Forms.Timer _alertTimer;
+    private readonly System.Windows.Forms.Timer _updateTimer;
     private Label? _alertBadge;
 
     private static readonly string[] TabNames =
@@ -75,6 +76,11 @@ public class MainForm : Form
         _alertTimer = new System.Windows.Forms.Timer { Interval = 300_000 }; // 5분
         _alertTimer.Tick += AlertTimer_Tick;
         _alertTimer.Enabled = true;
+
+        // 실행 중 업데이트 확인 (30분 주기)
+        _updateTimer = new System.Windows.Forms.Timer { Interval = 1_800_000 };
+        _updateTimer.Tick += UpdateTimer_Tick;
+        _updateTimer.Enabled = true;
 
         // 헤더에 알림 뱃지 추가
         _alertBadge = new Label
@@ -319,6 +325,32 @@ public class MainForm : Form
 
         Log.Information("앱 종료");
         base.OnFormClosing(e);
+    }
+
+    private bool _updateChecking;
+
+    private async void UpdateTimer_Tick(object? sender, EventArgs e)
+    {
+        // 다른 모달(팝업/업데이트창) 중이거나 이미 확인 중이면 건너뜀
+        if (_updateChecking || !Enabled || !CanFocus) return;
+        _updateChecking = true;
+        try
+        {
+            var configRepo = _sp.GetRequiredService<IConfigRepository>();
+            if (await configRepo.GetIntAsync("update_check_enabled", 1) != 1) return;
+
+            var updateService = _sp.GetRequiredService<IUpdateCheckService>();
+            await UpdateCoordinator.CheckAndPromptAsync(
+                this, updateService, showUpToDateToast: false, skipAlreadyPrompted: true);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "주기 업데이트 확인 실패");
+        }
+        finally
+        {
+            _updateChecking = false;
+        }
     }
 
     private async Task CheckForUpdatesOnStartupAsync()
