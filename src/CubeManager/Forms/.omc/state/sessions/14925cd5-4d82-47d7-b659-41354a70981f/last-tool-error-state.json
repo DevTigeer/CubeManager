@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd /Users/hackersdevelop18/Documents/Personal/CubeManager/.claude/worktrees/ct-cubemanager-1507/src/CubeManager && sed -n 1255,1290p Forms/AdminTab.cs; grep -n \\\"IsActive\\\\|isActive\\\\|Acti...",
-  "error": "Exit code 2\n        if (emp == null) return;\n\n        using var dlg = new EmployeeEditDialog(emp);\n        if (dlg.ShowDialog(this) != DialogResult.OK) return;\n\n        try\n        {\n            await _employeeService.UpdateEmployeeAsync(id, dlg.EmpName, dlg.Wage, dlg.Phone);\n            ToastNotification.Show(\"직원 정보가 수정되었습니다.\", ToastType.Success);\n            await LoadEmployeesAsync();\n        }\n        catch (ArgumentException ex)\n        {\n            ToastNotification.Show(ex.Message, Toast...",
-  "timestamp": "2026-10-17T06:08:48.862Z",
-  "retry_count": 1
-}

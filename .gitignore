@@ -45,3 +45,6 @@ logs/
 .claude/*
 !.claude/skills/
 .omx/
+
+# oh-my-claudecode 세션 상태
+**/.omc/
