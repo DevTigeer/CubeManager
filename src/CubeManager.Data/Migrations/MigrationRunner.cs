@@ -38,7 +38,8 @@ public class MigrationRunner
             new V023_ThemeJsonTemplateMetadata(),
             new V024_RecomputeCashBalance(),
             new V025_CashRefDateReset(),
-            new V026_ReservationVerified()
+            new V026_ReservationVerified(),
+            new V027_FixHolidays()
         ];
     }
 
