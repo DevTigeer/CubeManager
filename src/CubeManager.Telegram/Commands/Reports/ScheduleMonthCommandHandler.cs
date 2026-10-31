@@ -61,6 +61,9 @@ public sealed class ScheduleMonthCommandHandler : ICommandHandler
         return new ScheduleWeekImage(start, end, label, schedules, holidayDates);
     }
 
+    /// <summary>
+    /// 사진(SendPhoto)은 텔레그램이 ~1280px 로 압축하므로 원본 PNG 파일(SendDocument)로 전송.
+    /// </summary>
     internal static async Task SendImagesAsync(
         CommandContext ctx, IScheduleTimeTableRenderer renderer, IReadOnlyList<ScheduleWeekImage> weeks)
     {
@@ -69,8 +72,11 @@ public sealed class ScheduleMonthCommandHandler : ICommandHandler
         {
             for (var i = 0; i < images.Count; i++)
             {
-                var photo = InputFile.FromStream(images[i], $"schedule-{weeks[i].WeekStart:yyyy-MM-dd}.png");
-                await ctx.Client.SendPhoto(ctx.ChatId, photo, cancellationToken: ctx.CancellationToken);
+                var week = weeks[i];
+                var file = InputFile.FromStream(images[i], $"schedule-{week.WeekStart:yyyy-MM-dd}.png");
+                await ctx.Client.SendDocument(ctx.ChatId, file,
+                    caption: $"{week.WeekStart:yyyy.MM.dd} - {week.WeekEnd:MM.dd} · {week.Label}",
+                    cancellationToken: ctx.CancellationToken);
             }
         }
         finally

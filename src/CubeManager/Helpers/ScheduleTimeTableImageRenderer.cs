@@ -13,7 +13,7 @@ namespace CubeManager.Helpers;
 /// </summary>
 public sealed class ScheduleTimeTableImageRenderer : IScheduleTimeTableRenderer
 {
-    private const int ImageWidth = 840;
+    private const int ImageWidth = 1400;     // 요일 칸 ~189px — 겹치는 이름도 잘리지 않도록 넓게
     private const int Pad = 12;              // 스케줄탭 Padding
     private const int TopBarHeight = 50;     // 스케줄탭 상단 헤더
     private const int TableHeaderHeight = 42; // TimeTablePanel.HeaderHeight
@@ -22,7 +22,7 @@ public sealed class ScheduleTimeTableImageRenderer : IScheduleTimeTableRenderer
     private const int ChipHeight = 36;
     private const int ChipGap = 8;
     private const int SummaryTopPadding = 6;
-    private const float Scale = 1.5f;        // 모바일에서 글자가 뭉개지지 않도록 확대 렌더링
+    private const float Scale = 2f;          // 고해상도 (2800px) — 텔레그램엔 압축 없는 파일로 전송
 
     public IReadOnlyList<Stream> RenderWeeks(IReadOnlyList<ScheduleWeekImage> weeks)
     {
