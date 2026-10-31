@@ -22,7 +22,7 @@ public sealed class ScheduleCommandHandler : ICommandHandler
 
     public string Command => "schedule";
     public IReadOnlyList<string> Aliases => new[] { "스케줄", "스케쥴" };
-    public string Description => "스케줄표 (인자 없음=현재주, /schedule YYYY-MM-DD~YYYY-MM-DD)";
+    public string Description => "스케줄표 (인자 없음=현재주, 지난주/다음주, /schedule YYYY-MM-DD~YYYY-MM-DD)";
 
     public async Task HandleAsync(CommandContext ctx)
     {

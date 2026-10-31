@@ -65,7 +65,12 @@ public class TimeTablePanel : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        var g = e.Graphics;
+        RenderTo(e.Graphics, Width, Height);
+    }
+
+    /// <summary>타임테이블을 지정 크기로 그림. 화면(OnPaint)과 텔레그램 스케줄 이미지가 공유.</summary>
+    public void RenderTo(Graphics g, int width, int height)
+    {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
@@ -73,8 +78,8 @@ public class TimeTablePanel : Panel
         var days = (int)(_weekEnd - _weekStart).TotalDays + 1;
         if (days <= 0) return;
 
-        var cellW = (Width - TimeColWidth) / days;
-        var cellH = Math.Max(18, (Height - HeaderHeight) / slots.Length);
+        var cellW = (width - TimeColWidth) / days;
+        var cellH = Math.Max(18, (height - HeaderHeight) / slots.Length);
 
         // ──── Fonts (모두 Bold) ────
         using var headerDateFont = DesignTokens.FontTabMenu;           // Aptos 10.5f Bold
@@ -85,18 +90,18 @@ public class TimeTablePanel : Panel
 
         // ──── 1. 전체 배경: MainDark ────
         using var bgBrush = new SolidBrush(ColorPalette.Background);
-        g.FillRectangle(bgBrush, 0, 0, Width, Height);
+        g.FillRectangle(bgBrush, 0, 0, width, height);
 
         // ──── 2. 표 영역 배경: TableBg (밝은 회색, 대비) ────
         using var tableBg = new SolidBrush(ColorPalette.TableBg);
-        g.FillRectangle(tableBg, TimeColWidth, HeaderHeight, Width - TimeColWidth, Height - HeaderHeight);
+        g.FillRectangle(tableBg, TimeColWidth, HeaderHeight, width - TimeColWidth, height - HeaderHeight);
 
         // ──── 3. 헤더 배경: Main (#2D3047) ────
         using var headerBg = new SolidBrush(ColorPalette.Main);
-        g.FillRectangle(headerBg, 0, 0, Width, HeaderHeight);
+        g.FillRectangle(headerBg, 0, 0, width, HeaderHeight);
 
         // 시간 열 배경: Main
-        g.FillRectangle(headerBg, 0, HeaderHeight, TimeColWidth, Height - HeaderHeight);
+        g.FillRectangle(headerBg, 0, HeaderHeight, TimeColWidth, height - HeaderHeight);
 
         // ──── 4. 오늘 열 강조 ────
         var todayDate = DateTime.Today;
@@ -110,7 +115,7 @@ public class TimeTablePanel : Panel
             g.FillRectangle(todayHdrBg, todayX, 0, cellW, HeaderHeight);
             // 본문: 연한 청록 tint
             using var todayBodyBg = new SolidBrush(Color.FromArgb(15, ColorPalette.Primary));
-            g.FillRectangle(todayBodyBg, todayX, HeaderHeight, cellW, Height - HeaderHeight);
+            g.FillRectangle(todayBodyBg, todayX, HeaderHeight, cellW, height - HeaderHeight);
         }
 
         // ──── 5. 요일 헤더 ────
@@ -145,13 +150,13 @@ public class TimeTablePanel : Panel
             if (d > 0)
             {
                 using var divPen = new Pen(Color.FromArgb(30, ColorPalette.Border));
-                g.DrawLine(divPen, x, HeaderHeight, x, Height);
+                g.DrawLine(divPen, x, HeaderHeight, x, height);
             }
         }
 
         // 헤더 하단 구분선
         using var hdrLine = new Pen(ColorPalette.Border);
-        g.DrawLine(hdrLine, 0, HeaderHeight, Width, HeaderHeight);
+        g.DrawLine(hdrLine, 0, HeaderHeight, width, HeaderHeight);
 
         // ──── 6. 시간 라벨 + 격자 ────
         using var gridPen = new Pen(Color.FromArgb(25, 0, 0, 0));           // 밝은 배경 위 연한 선
@@ -160,7 +165,7 @@ public class TimeTablePanel : Panel
         for (var r = 0; r < slots.Length; r++)
         {
             var y = HeaderHeight + r * cellH;
-            g.DrawLine(r % 2 == 0 ? gridPen : halfPen, TimeColWidth, y, Width, y);
+            g.DrawLine(r % 2 == 0 ? gridPen : halfPen, TimeColWidth, y, width, y);
 
             if (r % 2 == 0)
             {
@@ -343,11 +348,11 @@ public class TimeTablePanel : Panel
             var startMinutes = 10 * 60;
             var nowY = HeaderHeight + (nowMinutes - startMinutes) / 30.0f * cellH;
 
-            if (nowY > HeaderHeight && nowY < Height)
+            if (nowY > HeaderHeight && nowY < height)
             {
                 // 주황 시간선 (보색)
                 using var timePen = new Pen(ColorPalette.Accent, 2f);
-                g.DrawLine(timePen, TimeColWidth, nowY, Width, nowY);
+                g.DrawLine(timePen, TimeColWidth, nowY, width, nowY);
 
                 // 좌측 원형
                 var dotSize = 8;

@@ -29,6 +29,8 @@ public static class TelegramServiceCollectionExtensions
         services.AddSingleton<ICommandHandler, AttendanceCommandHandler>();
         services.AddSingleton<ICommandHandler, ChecklistCommandHandler>();
         services.AddSingleton<ICommandHandler, ScheduleCommandHandler>();
+        services.AddSingleton<ICommandHandler, ScheduleNextWeekCommandHandler>();
+        services.AddSingleton<ICommandHandler, ScheduleMonthCommandHandler>();
         services.AddSingleton<ICommandHandler, DashboardCommandHandler>();
 
         services.AddSingleton<ICommandHandler, SalaryCommandHandler>();

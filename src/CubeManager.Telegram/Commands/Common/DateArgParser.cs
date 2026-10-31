@@ -35,7 +35,7 @@ public static class DateArgParser
 
     /// <summary>
     /// 월 인자 파싱. 인자 없으면 이번달 1일.
-    /// 지원: "이번달", "지난달", "YYYY-MM", "YYYYMM"
+    /// 지원: "이번달", "지난달", "다음달", "YYYY-MM", "YYYYMM"
     /// </summary>
     public static DateOnly ParseMonthOrCurrent(string[] args, DateOnly? today = null)
     {
@@ -52,6 +52,7 @@ public static class DateArgParser
         var firstOfThis = new DateOnly(today.Year, today.Month, 1);
         if (x is "이번달") return firstOfThis;
         if (x is "지난달") return firstOfThis.AddMonths(-1);
+        if (x is "다음달") return firstOfThis.AddMonths(1);
 
         if (DateOnly.TryParseExact(x + "-01", new[] { "yyyy-MM-dd", "yyyy/MM/dd" },
             CultureInfo.InvariantCulture, DateTimeStyles.None, out var ym))
@@ -66,7 +67,7 @@ public static class DateArgParser
 
     /// <summary>
     /// 기간 파싱. 인자 없으면 현재주(월~일).
-    /// 지원: "이번주", "지난주", "YYYY-MM-DD~YYYY-MM-DD", 단일날짜(그날 하루)
+    /// 지원: "이번주", "지난주", "다음주", "YYYY-MM-DD~YYYY-MM-DD", 단일날짜(그날 하루)
     /// </summary>
     public static (DateOnly Start, DateOnly End) ParseRangeOrCurrentWeek(string[] args, DateOnly? today = null)
     {
@@ -79,6 +80,11 @@ public static class DateArgParser
         {
             var (s, e) = CurrentWeek(t);
             return (s.AddDays(-7), e.AddDays(-7));
+        }
+        if (joined is "다음주")
+        {
+            var (s, e) = CurrentWeek(t);
+            return (s.AddDays(7), e.AddDays(7));
         }
 
         // YYYY-MM-DD~YYYY-MM-DD (또는 공백 구분 두 인자)

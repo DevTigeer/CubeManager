@@ -7,7 +7,9 @@ using CubeManager.Data;
 using CubeManager.Data.Migrations;
 using CubeManager.Data.Repositories;
 using CubeManager.Dialogs;
+using CubeManager.Helpers;
 using CubeManager.Telegram;
+using CubeManager.Telegram.Imaging;
 using Serilog;
 
 namespace CubeManager;
@@ -141,6 +143,7 @@ static class Program
 
         // Telegram Bot
         services.AddCubeManagerTelegram();
+        services.AddSingleton<IScheduleTimeTableRenderer, ScheduleTimeTableImageRenderer>();
     }
 
     private static void EnsureAdminPassword()
