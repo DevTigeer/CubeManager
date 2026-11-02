@@ -21,17 +21,18 @@ public sealed class SalaryCommandHandler : ICommandHandler
 
     public string Command => "salary";
     public IReadOnlyList<string> Aliases => new[] { "급여", "급여관리" };
-    public string Description => "월간 급여표 (인자 없음=이번달, /salary YYYY-MM)";
+    public string Description => "월간 급여표 — 재계산 후 전송 (인자 없음=이번달, /salary YYYY-MM)";
 
     public async Task HandleAsync(CommandContext ctx)
     {
         var firstDay = DateArgParser.ParseMonthOrCurrent(ctx.Args);
         var ym = DateArgParser.FormatMonth(firstDay);
 
+        await SalaryRecalcCommandHandler.RecalculateAsync(ctx, _salary, ym);
         await SendSalaryTableAsync(ctx, _salary, _renderer, firstDay, ym);
     }
 
-    /// <summary>저장된 월 급여(salary_records)를 표 이미지로 전송. /급여계산 에서도 재사용.</summary>
+    /// <summary>저장된 월 급여(salary_records)를 표 이미지로 전송.</summary>
     internal static async Task SendSalaryTableAsync(
         CommandContext ctx, ISalaryService salary, IBotImageRenderer renderer, DateOnly firstDay, string ym)
     {

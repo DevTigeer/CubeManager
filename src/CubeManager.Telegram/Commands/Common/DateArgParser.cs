@@ -54,7 +54,7 @@ public static class DateArgParser
         if (x is "지난달") return firstOfThis.AddMonths(-1);
         if (x is "다음달") return firstOfThis.AddMonths(1);
 
-        if (DateOnly.TryParseExact(x + "-01", new[] { "yyyy-MM-dd", "yyyy/MM/dd" },
+        if (DateOnly.TryParseExact(x + "-01", new[] { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy-M-dd" },
             CultureInfo.InvariantCulture, DateTimeStyles.None, out var ym))
             return new DateOnly(ym.Year, ym.Month, 1);
 
@@ -63,6 +63,44 @@ public static class DateArgParser
             return new DateOnly(y, m, 1);
 
         return null;
+    }
+
+    /// <summary>
+    /// 월 범위 파싱. 인자 없으면 이번달 하나. 형식이 틀리면 false (조용히 이번달로 대체하지 않음).
+    /// 지원: 단일 월(ParseMonth 형식), "YYYY-MM~YYYY-MM", "YYYY-MM YYYY-MM"
+    /// </summary>
+    public static bool TryParseMonthRange(string[] args, DateOnly today, out DateOnly from, out DateOnly to)
+    {
+        from = to = new DateOnly(today.Year, today.Month, 1);
+        if (args.Length == 0) return true;
+
+        var joined = string.Join(" ", args);
+        string? a = null, b = null;
+        if (joined.Contains('~'))
+        {
+            var parts = joined.Split('~', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2) return false;
+            a = parts[0]; b = parts[1];
+        }
+        else if (args.Length == 2)
+        {
+            a = args[0]; b = args[1];
+        }
+        else if (args.Length == 1)
+        {
+            var single = ParseMonth(args[0], today);
+            if (single == null) return false;
+            from = to = single.Value;
+            return true;
+        }
+
+        if (a == null || b == null) return false;
+        var s = ParseMonth(a, today);
+        var e = ParseMonth(b, today);
+        if (s == null || e == null || s > e) return false;
+        from = s.Value;
+        to = e.Value;
+        return true;
     }
 
     /// <summary>
